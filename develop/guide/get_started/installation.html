@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-    <title>Introduction &#8212; OpenVINO™ Training Extensions 1.4.0 documentation</title>
+    <title>Installation &#8212; OpenVINO™ Training Extensions 1.4.0 documentation</title>
   
   
   
@@ -42,11 +42,11 @@
     <script src="../../_static/sphinx_highlight.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'guide/get_started/introduction';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'guide/get_started/installation';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Installation" href="installation.html" />
-    <link rel="prev" title="Guide" href="../index.html" />
+    <link rel="next" title="OpenVINO™ Training Extensions CLI commands" href="cli_commands.html" />
+    <link rel="prev" title="Introduction" href="introduction.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="docsearch:language" content="en">
   </head>
@@ -221,8 +221,8 @@
   <div class="bd-toc-item navbar-nav">
     <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cli_commands.html">OpenVINO™ Training Extensions CLI commands</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
@@ -454,78 +454,138 @@
             
             <article class="bd-article" role="main">
               
-  <div style="margin-bottom:30px;">
-<img src="../../_static/logos/otx-logo-black.png" alt="Logo" width="900" style="display:block;margin:auto;">
-</div><section id="introduction">
-<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this heading">#</a></h1>
-<p><strong>OpenVINO™ Training Extensions</strong> is a low-code transfer learning framework for Computer Vision.</p>
-<p>The CLI commands of the framework allows users to train, infer, optimize and deploy models easily and quickly even with low expertise in the deep learning field. OpenVINO™ Training Extensions offers diverse combinations of model architectures, learning methods, and task types based on <a class="reference external" href="https://pytorch.org/">PyTorch</a> and <a class="reference external" href="https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html">OpenVINO™ toolkit</a>.</p>
-<p>OpenVINO™ Training Extensions provides a <strong>“model template”</strong> for every supported task type, which consolidates necessary information to build a model. Model templates are validated on various datasets and serve one-stop shop for obtaining the best models in general. If you are an experienced user, you can configure your own model based on <a class="reference external" href="https://pytorch.org/vision/stable/index.html">torchvision</a>, <a class="reference external" href="https://github.com/osmr/imgclsmob">pytorchcv</a>, <a class="reference external" href="https://github.com/open-mmlab/mmcv">mmcv</a> and <a class="reference external" href="https://github.com/openvinotoolkit/open_model_zoo">OpenVINO Model Zoo (OMZ)</a> frameworks.</p>
-<p>Furthermore, OpenVINO™ Training Extensions provides <a class="reference internal" href="../explanation/additional_features/auto_configuration.html"><span class="doc">automatic configuration</span></a> of task types and hyperparameters. The framework will identify the most suitable model template based on your dataset, and choose the best hyperparameter configuration. The development team is continuously extending functionalities to make training as simple as possible so that single CLI command can obtain accurate, efficient and robust models ready to be integrated into your project.</p>
-<section id="key-features">
-<h2>Key Features<a class="headerlink" href="#key-features" title="Permalink to this heading">#</a></h2>
-<p>OpenVINO™ Training Extensions supports the following computer vision tasks:</p>
+  <section id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">#</a></h1>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading">#</a></h2>
+<p>The current version of OpenVINO™ Training Extensions was tested in the following environment:</p>
 <ul class="simple">
-<li><p><strong>Classification</strong>, including multi-class, multi-label and hierarchical image classification tasks.</p></li>
-<li><p><strong>Object detection</strong> including rotated bounding box support</p></li>
-<li><p><strong>Semantic segmentation</strong></p></li>
-<li><p><strong>Instance segmentation</strong> including tiling algorithm support</p></li>
-<li><p><strong>Action recognition</strong> including action classification and detection</p></li>
-<li><p><strong>Anomaly recognition</strong> tasks including anomaly classification, detection and segmentation</p></li>
+<li><p>Ubuntu 20.04</p></li>
+<li><p>Python 3.8 ~ 3.10</p></li>
+<li><p>(Optional) To use the NVidia GPU for the training: <a class="reference external" href="https://developer.nvidia.com/cuda-11-7-0-download-archive">CUDA Toolkit 11.7</a></p></li>
 </ul>
-<p>OpenVINO™ Training Extensions supports the <a class="reference internal" href="../explanation/algorithms/index.html"><span class="doc">following learning methods</span></a>:</p>
-<ul class="simple">
-<li><p><strong>Supervised</strong>, incremental training, which includes class incremental scenario and contrastive learning for classification and semantic segmentation tasks</p></li>
-<li><p><strong>Semi-supervised learning</strong></p></li>
-<li><p><strong>Self-supervised learning</strong></p></li>
-</ul>
-<p>OpenVINO™ Training Extensions will provide the <a class="reference internal" href="../explanation/additional_features/index.html"><span class="doc">following features</span></a> in coming releases:</p>
-<ul class="simple">
-<li><p><strong>Distributed training</strong> to accelerate the training process when you have multiple GPUs</p></li>
-<li><p><strong>Half-precision training</strong> to save GPUs memory and use larger batch sizes</p></li>
-<li><p>Integrated, efficient <a class="reference internal" href="../explanation/additional_features/hpo.html"><span class="doc">hyper-parameter optimization module</span></a> (<strong>HPO</strong>). Through dataset proxy and built-in hyper-parameter optimizer, you can get much faster hyper-parameter optimization compared to other off-the-shelf tools. The hyperparameter optimization is dynamically scheduled based on your resource budget.</p></li>
-<li><p>OpenVINO™ Training Extensions uses <a class="reference external" href="https://openvinotoolkit.github.io/datumaro/docs/">Datumaro</a> as the backend to handle datasets. On account of that, OpenVINO™ Training Extensions supports the most common academic field dataset formats for each task. In the future there will be more supported formats available to give more freedom of datasets format choice.</p></li>
-<li><p>Improved <a class="reference internal" href="../explanation/additional_features/auto_configuration.html"><span class="doc">auto-configuration functionality</span></a>. OpenVINO™ Training Extensions analyzes provided dataset and selects the proper task and model template to provide the best accuracy/speed trade-off. It will also make a random auto-split of your dataset if there is no validation set provided.</p></li>
-</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If using CUDA, make sure you are using a proper driver version. To do so, use <code class="docutils literal notranslate"><span class="pre">ls</span> <span class="pre">-la</span> <span class="pre">/usr/local</span> <span class="pre">|</span> <span class="pre">grep</span> <span class="pre">cuda</span></code>.</p>
+<p>If necessary, <a class="reference external" href="https://developer.nvidia.com/cuda-11-7-0-download-archive?target_os=Linux&amp;target_arch=x86_64&amp;Distribution=Ubuntu&amp;target_version=20.04&amp;target_type=runfile_local">install CUDA 11.7</a> (requires ‘sudo’ permission) and select it with <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">CUDA_HOME=/usr/local/cuda-11.7</span></code>.</p>
+</div>
 </section>
-<section id="documentation-content">
-<h2>Documentation content<a class="headerlink" href="#documentation-content" title="Permalink to this heading">#</a></h2>
-<ol class="arabic">
-<li><p><strong>Quick start guide</strong>:</p>
-<ol class="arabic simple">
-<li><p>Installation</p></li>
-<li><p>All possible OpenVINO™ Training Extensions CLI commands</p></li>
+<section id="install-openvino-training-extensions-for-users">
+<h2>Install OpenVINO™ Training Extensions for users<a class="headerlink" href="#install-openvino-training-extensions-for-users" title="Permalink to this heading">#</a></h2>
+<p>1. Clone the training_extensions
+repository with the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">openvinotoolkit</span><span class="o">/</span><span class="n">training_extensions</span><span class="o">.</span><span class="n">git</span>
+<span class="n">cd</span> <span class="n">training_extensions</span>
+<span class="n">git</span> <span class="n">checkout</span> <span class="n">develop</span>
+</pre></div>
+</div>
+<p>2. Set up a
+virtual environment.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create virtual env.</span>
+<span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">venv</span> <span class="o">.</span><span class="n">otx</span>
+
+<span class="c1"># Activate virtual env.</span>
+<span class="n">source</span> <span class="o">.</span><span class="n">otx</span><span class="o">/</span><span class="nb">bin</span><span class="o">/</span><span class="n">activate</span>
+</pre></div>
+</div>
+<p>3. Install PyTorch according to your system environment.
+Refer to the <a class="reference external" href="https://pytorch.org/get-started/previous-versions/">official installation guide</a></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Currently, only torch==1.13.1 was fully validated, torch==2.x will be supported in the future (Previous versions are not supported due to security issues).</p>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># install command for torch==1.13.1 for CUDA 11.7:</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">torch</span><span class="o">==</span><span class="mf">1.13.1</span> <span class="n">torchvision</span><span class="o">==</span><span class="mf">0.14.1</span> <span class="o">--</span><span class="n">extra</span><span class="o">-</span><span class="n">index</span><span class="o">-</span><span class="n">url</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">download</span><span class="o">.</span><span class="n">pytorch</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">whl</span><span class="o">/</span><span class="n">cu117</span>
+
+<span class="c1"># or install command for torch==1.13.1 for CUDA 11.1:</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">torch</span><span class="o">==</span><span class="mf">1.13.1</span> <span class="n">torchvision</span><span class="o">==</span><span class="mf">0.14.1</span> <span class="o">--</span><span class="n">extra</span><span class="o">-</span><span class="n">index</span><span class="o">-</span><span class="n">url</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">download</span><span class="o">.</span><span class="n">pytorch</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">whl</span><span class="o">/</span><span class="n">cu111</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Install OpenVINO™ Training Extensions package from either:</p></li>
 </ol>
-</li>
-<li><p><strong>Tutorials</strong>:</p>
-<p>This section reveals tutorials on how to use CLI for every supported task and training type.
-It provides the end-to-end solution from installation to model deployment and demo visualization on specific examples for each of the supported tasks.
-In the advanced section tutorial on how to use APIs instead of CLI is presented.</p>
-</li>
-<li><p><strong>Explanation section</strong>:</p>
-<p>This section consists of an algorithms explanation and describes additional features that are supported by OpenVINO™ Training Extensions.
-<a class="reference internal" href="../explanation/algorithms/index.html#algo-section-ref"><span class="std std-ref">Algorithms</span></a> section includes a description of all supported algorithms:</p>
-<ol class="arabic simple">
-<li><p>Explanation of the task and main supervised training pipeline.</p></li>
-<li><p>Description of the supported datasets formats for each task.</p></li>
-<li><p>Available templates and models.</p></li>
-<li><p>Incremental learning approach.</p></li>
-<li><p>Semi-supervised and Self-supervised algorithms.</p></li>
-</ol>
-<p><a class="reference internal" href="../explanation/additional_features/index.html#features-section-ref"><span class="std std-ref">Additional Features</span></a> section consists of:</p>
-<ol class="arabic simple">
-<li><p>Overview of model optimization algorithms.</p></li>
-<li><p>Hyperparameters optimization functionality (HPO).</p></li>
-<li><p>Auto-configuration algorithm to select the most appropriate training pipeline for a given dataset.</p></li>
-</ol>
-</li>
-<li><p><strong>Reference</strong>:</p>
-<p>This section gives an overview of the OpenVINO™ Training Extensions code base. There source code for Entities, classes and functions can be found.</p>
-</li>
-<li><p><strong>Release Notes</strong>:</p>
-<p>There can be found a description of new and previous releases.</p>
-</li>
-</ol>
+<ul class="simple">
+<li><p>A local source in development mode</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span><span class="p">[</span><span class="n">full</span><span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>PyPI</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">otx</span><span class="p">[</span><span class="n">full</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>5. Once the package is installed in the virtual environment, you can use full
+OpenVINO™ Training Extensions command line functionality.</p>
+</section>
+<section id="install-openvino-training-extensions-for-developers">
+<h2>Install OpenVINO™ Training Extensions for developers<a class="headerlink" href="#install-openvino-training-extensions-for-developers" title="Permalink to this heading">#</a></h2>
+<p>Install <code class="docutils literal notranslate"><span class="pre">tox</span></code> and create a development environment:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">tox</span>
+<span class="c1"># -- need to replace &#39;310&#39; below if another python version needed</span>
+<span class="n">tox</span> <span class="n">devenv</span> <span class="n">venv</span><span class="o">/</span><span class="n">otx</span> <span class="o">-</span><span class="n">e</span> <span class="n">tests</span><span class="o">-</span><span class="nb">all</span><span class="o">-</span><span class="n">py310</span>
+<span class="n">source</span> <span class="n">venv</span><span class="o">/</span><span class="n">otx</span><span class="o">/</span><span class="nb">bin</span><span class="o">/</span><span class="n">activate</span>
+</pre></div>
+</div>
+<p>Then you may change code, and all fixes will be directly applied to the editable package.</p>
+</section>
+<section id="install-openvino-training-extensions-by-using-docker">
+<h2>Install OpenVINO™ Training Extensions by using Docker<a class="headerlink" href="#install-openvino-training-extensions-by-using-docker" title="Permalink to this heading">#</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ docker build \
+    -t trainer \ # image tag, required
+    --build-arg UBUNTU_VER=20.04 \ # default Ubunutu version, optional
+    --build-arg PYTHON_VER=3.9 \ # default Python version, optional
+    --build-arg SOURCE=https://download.pytorch.org/whl/cpu \ # default (CPU) deps, optional
+    . # training_extensions/
+$ docker run \
+    -it \ # enter interactive terminal
+    --rm \ # remove container after use
+    -v &quot;$(pwd)/shared:/mnt/shared:rw&quot; \ # shared volume to host machine
+    --shm-size=4g \ # increase mounted shared memory
+    trainer
+trainer$ otx # ... installed on Ubuntu 20.04 with /mnt/shared as shared directory
+</pre></div>
+</div>
+</section>
+<section id="run-tests">
+<h2>Run tests<a class="headerlink" href="#run-tests" title="Permalink to this heading">#</a></h2>
+<p>To run some tests, need to have development environment on your host. The development requirements file (requirements/dev.txt)
+would be used to setup them.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install -r requirements/dev.txt
+$ pytest tests/
+</pre></div>
+</div>
+<p>Another option to run the tests is using the testing automation tool <a class="reference external" href="https://tox.wiki/en/latest/index.html">tox</a>. Following commands will install
+the tool <code class="docutils literal notranslate"><span class="pre">tox</span></code> to your host and run all test codes inside of <code class="docutils literal notranslate"><span class="pre">tests/</span></code> folder.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install tox
+$ tox -e tests-all-py310 -- tests/
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When running the <code class="docutils literal notranslate"><span class="pre">tox</span></code> command above first time, it will create virtual env by installing all dependencies of this project into
+the newly created environment for your testing before running the actual testing. So, it is expected to wait more than 10 minutes
+before to see the actual testing results.</p>
+</div>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this heading">#</a></h2>
+<p>1. If you have problems when you try to use <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span></code> command,
+please update pip version by following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pip</span> <span class="n">install</span> <span class="o">--</span><span class="n">upgrade</span> <span class="n">pip</span>
+</pre></div>
+</div>
+<p>2. If you’re facing a problem with <code class="docutils literal notranslate"><span class="pre">torch</span></code> or <code class="docutils literal notranslate"><span class="pre">mmcv</span></code> installation, please check that your CUDA version is compatible with torch version.
+Consider updating CUDA and CUDA drivers if needed.
+Check the <a class="reference external" href="https://developer.nvidia.com/cuda-11-7-0-download-archive?target_os=Linux&amp;target_arch=x86_64&amp;Distribution=Ubuntu&amp;target_version=20.04&amp;target_type=runfile_local">command example</a> to install CUDA 11.7 with drivers on Ubuntu 20.04.</p>
+<p>3. If you use Anaconda environment, you should consider that OpenVINO has limited <a class="reference external" href="https://docs.openvino.ai/2021.4/openvino_docs_install_guides_installing_openvino_conda.html">Conda support</a> for Python 3.6 and 3.7 versions only.
+So to use these python versions, please use other tools to create the environment (like <code class="docutils literal notranslate"><span class="pre">venv</span></code> or <code class="docutils literal notranslate"><span class="pre">virtualenv</span></code>) and use <code class="docutils literal notranslate"><span class="pre">pip</span></code> as a package manager.</p>
+<p>4. If you have access to the Internet through the proxy server only,
+please use pip with proxy call as demonstrated by command below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pip</span> <span class="n">install</span> <span class="o">--</span><span class="n">proxy</span> <span class="n">http</span><span class="p">:</span><span class="o">//&lt;</span><span class="n">usr_name</span><span class="o">&gt;</span><span class="p">:</span><span class="o">&lt;</span><span class="n">password</span><span class="o">&gt;@&lt;</span><span class="n">proxyserver_name</span><span class="o">&gt;</span><span class="p">:</span><span class="o">&lt;</span><span class="n">port</span><span class="c1">#&gt; &lt;pkg_name&gt;</span>
+</pre></div>
+</div>
 </section>
 </section>
 
@@ -537,17 +597,17 @@ In the advanced section tutorial on how to use APIs instead of CLI is presented.
             <footer class="bd-footer-article">
                 <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-  <a class='left-prev' id="prev-link" href="../index.html" title="previous page">
+  <a class='left-prev' id="prev-link" href="introduction.html" title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
           <p class="prev-next-subtitle">previous</p>
-          <p class="prev-next-title">Guide</p>
+          <p class="prev-next-title">Introduction</p>
       </div>
   </a>
-  <a class='right-next' id="next-link" href="installation.html" title="next page">
+  <a class='right-next' id="next-link" href="cli_commands.html" title="next page">
   <div class="prev-next-info">
       <p class="prev-next-subtitle">next</p>
-      <p class="prev-next-title">Installation</p>
+      <p class="prev-next-title">OpenVINO™ Training Extensions CLI commands</p>
   </div>
   <i class="fa-solid fa-angle-right"></i>
   </a>
@@ -568,13 +628,33 @@ In the advanced section tutorial on how to use APIs instead of CLI is presented.
 <nav id="bd-toc-nav" class="page-toc">
     <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#key-features">
-   Key Features
+  <a class="reference internal nav-link" href="#prerequisites">
+   Prerequisites
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#documentation-content">
-   Documentation content
+  <a class="reference internal nav-link" href="#install-openvino-training-extensions-for-users">
+   Install OpenVINO™ Training Extensions for users
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#install-openvino-training-extensions-for-developers">
+   Install OpenVINO™ Training Extensions for developers
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#install-openvino-training-extensions-by-using-docker">
+   Install OpenVINO™ Training Extensions by using Docker
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#run-tests">
+   Run tests
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#troubleshooting">
+   Troubleshooting
   </a>
  </li>
 </ul>
@@ -594,7 +674,7 @@ In the advanced section tutorial on how to use APIs instead of CLI is presented.
 <div class="toc-item">
   
 <div class="tocsection sourcelink">
-    <a href="../../_sources/guide/get_started/introduction.rst.txt">
+    <a href="../../_sources/guide/get_started/installation.rst.txt">
         <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
 </div>

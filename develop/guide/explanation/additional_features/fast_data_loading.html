@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-    <title>Noisy Label Detection &#8212; OpenVINO™ Training Extensions 1.4.0 documentation</title>
+    <title>Fast Data Loading &#8212; OpenVINO™ Training Extensions 1.4.0 documentation</title>
   
   
   
@@ -42,11 +42,11 @@
     <script src="../../../_static/sphinx_highlight.js"></script>
     <script src="../../../_static/clipboard.min.js"></script>
     <script src="../../../_static/copybutton.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'guide/explanation/additional_features/noisy_label_detection';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'guide/explanation/additional_features/fast_data_loading';</script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="Fast Data Loading" href="fast_data_loading.html" />
-    <link rel="prev" title="Explainable AI (XAI)" href="xai.html" />
+    <link rel="next" title="API" href="../../reference/api/index.html" />
+    <link rel="prev" title="Noisy Label Detection" href="noisy_label_detection.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="docsearch:language" content="en">
   </head>
@@ -283,8 +283,8 @@
 <li class="toctree-l2"><a class="reference internal" href="hpo.html">Hyperparameters Optimization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="auto_configuration.html">Auto-configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="xai.html">Explainable AI (XAI)</a></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#">Noisy Label Detection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="fast_data_loading.html">Fast Data Loading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="noisy_label_detection.html">Noisy Label Detection</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Fast Data Loading</a></li>
 </ul>
 </li>
 </ul>
@@ -454,41 +454,59 @@
             
             <article class="bd-article" role="main">
               
-  <section id="noisy-label-detection">
-<h1>Noisy Label Detection<a class="headerlink" href="#noisy-label-detection" title="Permalink to this heading">#</a></h1>
-<p>OpenVINO™ Training Extensions provide a feature for detecting noisy labels during model training.
-With this feature, you can identify noisy labeled samples in your training dataset.
-Our algorithm accumulates the training loss dynamics during the model training
-and exports it to <a class="reference external" href="https://github.com/openvinotoolkit/datumaro">Datumaro</a>.
-The training loss dynamics are then post-processed by exponential moving average (EMA),
-a strong criterion for detecting noisy label samples <a class="footnote-reference brackets" href="#id3" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.
-Finally, Datumaro ranks the top-k samples, which can be considered as noisy labeled candidates.
-We provide an end-to-end example written in a Jupyter notebook, which you can find at the link in the note below.</p>
-<p>In OpenVINO™ Training Extensions CLI, you can enable this feature
-by adding the argument <code class="docutils literal notranslate"><span class="pre">--algo_backend.enable_noisy_label_detection</span> <span class="pre">true</span></code> as follows.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ otx train ... params --algo_backend.enable_noisy_label_detection true
+  <section id="fast-data-loading">
+<h1>Fast Data Loading<a class="headerlink" href="#fast-data-loading" title="Permalink to this heading">#</a></h1>
+<p>OpenVINO™ Training Extensions provides several ways to boost model training speed,
+one of which is fast data loading.</p>
+<section id="faster-augmentation">
+<h2>Faster Augmentation<a class="headerlink" href="#faster-augmentation" title="Permalink to this heading">#</a></h2>
+<section id="augmix">
+<h3>AugMix<a class="headerlink" href="#augmix" title="Permalink to this heading">#</a></h3>
+<p>AugMix <a class="footnote-reference brackets" href="#id2" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> is a simple yet powerful augmentation technique
+to improve robustness and uncertainty estimates of image classification task.
+OpenVINO™ Training Extensions implemented it in <a class="reference external" href="https://cython.org/">Cython</a> for faster augmentation.
+Users do not need to configure anything as cythonized AugMix is used by default.</p>
+</section>
+</section>
+<section id="caching">
+<h2>Caching<a class="headerlink" href="#caching" title="Permalink to this heading">#</a></h2>
+<section id="in-memory-caching">
+<h3>In-Memory Caching<a class="headerlink" href="#in-memory-caching" title="Permalink to this heading">#</a></h3>
+<p>OpenVINO™ Training Extensions provides in-memory caching for decoded images in main memory.
+If the batch size is large, such as for classification tasks, or if dataset contains
+high-resolution images, image decoding can account for a non-negligible overhead
+in data pre-processing.
+One can enable in-memory caching for maximizing GPU utilization and reducing model
+training time in those cases.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ otx train --mem-cache-size=8GB ..
 </pre></div>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Currently, it supports both multi-class classification task and detection task with single GPU training.</p>
+</section>
+<section id="storage-caching">
+<h3>Storage Caching<a class="headerlink" href="#storage-caching" title="Permalink to this heading">#</a></h3>
+<p>OpenVINO™ Training Extensions uses <a class="reference external" href="https://github.com/openvinotoolkit/datumaro">Datumaro</a>
+under the hood for dataset managements.
+Since Datumaro <a class="reference external" href="https://openvinotoolkit.github.io/datumaro/latest/docs/explanation/formats/arrow.html">supports</a>
+<a class="reference external" href="https://arrow.apache.org/overview/">Apache Arrow</a>, OpenVINO™ Training Extensions
+can exploit fast data loading using memory-mapped arrow file at the expanse of storage consumtion.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ otx train .. params --algo_backend.storage_cache_scheme JPEG/75
+</pre></div>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p><strong>Important!</strong>
-The post-processing step to analyze the training loss dynamics requires <a class="reference external" href="https://github.com/openvinotoolkit/datumaro">Datumaro</a>.
-Please see the following Jupyter notebook examples:</p>
-<ol class="arabic simple">
-<li><p><a class="reference external" href="https://github.com/openvinotoolkit/datumaro/blob/develop/notebooks/10_noisy_label_detection_cls.ipynb">Multi-class classification task</a>.</p></li>
-<li><p><a class="reference external" href="https://github.com/openvinotoolkit/datumaro/blob/develop/notebooks/13_noisy_label_detection_det.ipynb">Detection task</a>.</p></li>
-</ol>
+<p>The cache would be saved in <code class="docutils literal notranslate"><span class="pre">$HOME/.cache/otx</span></code> by default.
+One could change it by modifying <code class="docutils literal notranslate"><span class="pre">OTX_CACHE</span></code> environment variable.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ OTX_CACHE=/path/to/cache otx train .. params --algo_backend.storage_cache_scheme JPEG/75
+</pre></div>
 </div>
+<p>Please refere <a class="reference external" href="https://openvinotoolkit.github.io/datumaro/latest/docs/explanation/formats/arrow.html#export-to-arrow">Datumaro document</a>
+for available schemes to choose but we recommend <code class="docutils literal notranslate"><span class="pre">JPEG/75</span></code> for fast data loaidng.</p>
 <aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id3" role="note">
+<aside class="footnote brackets" id="id2" role="note">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
-<p>Zhou, Tianyi, Shengjie Wang, and Jeff Bilmes. “Robust curriculum learning: from clean label detection to noisy label self-correction.” International Conference on Learning Representations. 2021.</p>
+<p>Dan Hendrycks, Norman Mu, Ekin D. Cubuk, Barret Zoph, Justin Gilmer, and Balaji Lakshminarayanan. “AugMix: A Simple Data Processing Method to Improve Robustness and Uncertainty” International Conference on Learning Representations. 2020.</p>
 </aside>
 </aside>
+</section>
+</section>
 </section>
 
 
@@ -499,17 +517,17 @@ Please see the following Jupyter notebook examples:</p>
             <footer class="bd-footer-article">
                 <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-  <a class='left-prev' id="prev-link" href="xai.html" title="previous page">
+  <a class='left-prev' id="prev-link" href="noisy_label_detection.html" title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
           <p class="prev-next-subtitle">previous</p>
-          <p class="prev-next-title">Explainable AI (XAI)</p>
+          <p class="prev-next-title">Noisy Label Detection</p>
       </div>
   </a>
-  <a class='right-next' id="next-link" href="fast_data_loading.html" title="next page">
+  <a class='right-next' id="next-link" href="../../reference/api/index.html" title="next page">
   <div class="prev-next-info">
       <p class="prev-next-subtitle">next</p>
-      <p class="prev-next-title">Fast Data Loading</p>
+      <p class="prev-next-title">API</p>
   </div>
   <i class="fa-solid fa-angle-right"></i>
   </a>
@@ -524,6 +542,47 @@ Please see the following Jupyter notebook examples:</p>
               
 <div class="toc-item">
   
+<div class="tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+</div>
+<nav id="bd-toc-nav" class="page-toc">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#faster-augmentation">
+   Faster Augmentation
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#augmix">
+     AugMix
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#caching">
+   Caching
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#in-memory-caching">
+     In-Memory Caching
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#storage-caching">
+     Storage Caching
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+</nav>
+</div>
+
+<div class="toc-item">
+  
 <div id="searchbox"></div>
 </div>
 
@@ -534,7 +593,7 @@ Please see the following Jupyter notebook examples:</p>
 <div class="toc-item">
   
 <div class="tocsection sourcelink">
-    <a href="../../../_sources/guide/explanation/additional_features/noisy_label_detection.rst.txt">
+    <a href="../../../_sources/guide/explanation/additional_features/fast_data_loading.rst.txt">
         <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
 </div>
