@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-    <title>General &#8212; OpenVINO™ Training Extensions 1.4.0 documentation</title>
+    <title>General &#8212; OpenVINO™ Training Extensions 1.5.0rc0 documentation</title>
   
   
   
@@ -276,15 +276,19 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../explanation/algorithms/action/action_detection.html">Action Detection</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/algorithms/visual_prompting/index.html">Visual Prompting</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../explanation/additional_features/index.html">Additional Features</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-9"><i class="fa-solid fa-chevron-down"></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/models_optimization.html">Models Optimization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/hpo.html">Hyperparameters Optimization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/auto_configuration.html">Auto-configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/adaptive_training.html">Adaptive Training</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/xai.html">Explainable AI (XAI)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/noisy_label_detection.html">Noisy Label Detection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/fast_data_loading.html">Fast Data Loading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/tiling.html">Improve Small Object Detection with Image Tiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/config_input_size.html">Configurable Input Size</a></li>
 </ul>
 </li>
 </ul>
@@ -1225,6 +1229,26 @@ purpose (DatasetPurpose): Purpose for dataset. Refer to <a class="reference inte
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="otx.api.entities.datasets.DatasetEntity.get_combined_subset">
+<span class="sig-name descname"><span class="pre">get_combined_subset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">subsets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#otx.api.entities.subset.Subset" title="otx.api.entities.subset.Subset"><span class="pre">Subset</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#otx.api.entities.datasets.DatasetEntity" title="otx.api.entities.datasets.DatasetEntity"><span class="pre">DatasetEntity</span></a></span></span><a class="headerlink" href="#otx.api.entities.datasets.DatasetEntity.get_combined_subset" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns a new DatasetEntity with just the dataset items matching the subsets.</p>
+<p>These subsets are DatasetEntity. The dataset items in the subset datasets are the same dataset items as
+in the original dataset.
+Altering one of the objects in the output of this function, will also alter them in the original.</p>
+<dl>
+<dt>Example:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">DatasetEntity</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">training_subset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_combined_subset</span><span class="p">([</span><span class="n">Subset</span><span class="o">.</span><span class="n">TRAINING</span><span class="p">,</span> <span class="n">Subset</span><span class="o">.</span><span class="n">UNLABELED</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd>
+<dt>Args:</dt><dd><p>subsets (List): List of subsets to return.</p>
+</dd>
+<dt>Returns:</dt><dd><p>DatasetEntity: DatasetEntity with items matching subsets</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="otx.api.entities.datasets.DatasetEntity.get_labels">
 <span class="sig-name descname"><span class="pre">get_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">include_empty</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#otx.api.entities.label.LabelEntity" title="otx.api.entities.label.LabelEntity"><span class="pre">LabelEntity</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#otx.api.entities.datasets.DatasetEntity.get_labels" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the list of all unique labels that are in the dataset.</p>
@@ -2074,12 +2098,12 @@ edge_value: The value of the new edge. Defaults to None.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="otx.api.entities.label_schema.natural_sort_label_id">
-<span class="sig-prename descclassname"><span class="pre">otx.api.entities.label_schema.</span></span><span class="sig-name descname"><span class="pre">natural_sort_label_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#otx.api.entities.id.ID" title="otx.api.entities.id.ID"><span class="pre">ID</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#otx.api.entities.label.LabelEntity" title="otx.api.entities.label.LabelEntity"><span class="pre">LabelEntity</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#otx.api.entities.scored_label.ScoredLabel" title="otx.api.entities.scored_label.ScoredLabel"><span class="pre">ScoredLabel</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span></span></span><a class="headerlink" href="#otx.api.entities.label_schema.natural_sort_label_id" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">otx.api.entities.label_schema.</span></span><span class="sig-name descname"><span class="pre">natural_sort_label_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#otx.api.entities.id.ID" title="otx.api.entities.id.ID"><span class="pre">ID</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#otx.api.entities.label.LabelEntity" title="otx.api.entities.label.LabelEntity"><span class="pre">LabelEntity</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#otx.api.entities.scored_label.ScoredLabel" title="otx.api.entities.scored_label.ScoredLabel"><span class="pre">ScoredLabel</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#otx.api.entities.label_schema.natural_sort_label_id" title="Permalink to this definition">#</a></dt>
 <dd><p>Generates a natural sort key for a LabelEntity object based on its ID.</p>
 <p>Args:
 target (Union[ID, LabelEntity]): The ID or LabelEntity or ScoredLabel object to be sorted.</p>
 <p>Returns:
-List[int]: A list of integers representing the numeric substrings in the ID
+List[Union[int, str]]: A list of integers representing the numeric substrings in the ID
 in the order they appear.</p>
 <p>Example:
 origin_sorted_labels = sorted(labels, key=lambda x: <a href="#id1"><span class="problematic" id="id2">x.id_</span></a>)
@@ -3104,6 +3128,32 @@ and whether the metadata values that should be overridden are valid metadata att
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="otx.api.entities.model_template.ModelCategory">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.api.entities.model_template.</span></span><span class="sig-name descname"><span class="pre">ModelCategory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#otx.api.entities.model_template.ModelCategory" title="Permalink to this definition">#</a></dt>
+<dd><p>Represents model category regarding accuracy &amp; speed trade-off.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="otx.api.entities.model_template.ModelCategory.ACCURACY">
+<span class="sig-name descname"><span class="pre">ACCURACY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#otx.api.entities.model_template.ModelCategory.ACCURACY" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="otx.api.entities.model_template.ModelCategory.BALANCE">
+<span class="sig-name descname"><span class="pre">BALANCE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#otx.api.entities.model_template.ModelCategory.BALANCE" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="otx.api.entities.model_template.ModelCategory.OTHER">
+<span class="sig-name descname"><span class="pre">OTHER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#otx.api.entities.model_template.ModelCategory.OTHER" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="otx.api.entities.model_template.ModelCategory.SPEED">
+<span class="sig-name descname"><span class="pre">SPEED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#otx.api.entities.model_template.ModelCategory.SPEED" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="otx.api.entities.model_template.ModelOptimizationMethod">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.api.entities.model_template.</span></span><span class="sig-name descname"><span class="pre">ModelOptimizationMethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#otx.api.entities.model_template.ModelOptimizationMethod" title="Permalink to this definition">#</a></dt>
 <dd><p>Optimized model format.</p>
@@ -3120,8 +3170,24 @@ and whether the metadata values that should be overridden are valid metadata att
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="otx.api.entities.model_template.ModelStatus">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.api.entities.model_template.</span></span><span class="sig-name descname"><span class="pre">ModelStatus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#otx.api.entities.model_template.ModelStatus" title="Permalink to this definition">#</a></dt>
+<dd><p>Represents model status regarding deprecation process.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="otx.api.entities.model_template.ModelStatus.ACTIVE">
+<span class="sig-name descname"><span class="pre">ACTIVE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#otx.api.entities.model_template.ModelStatus.ACTIVE" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="otx.api.entities.model_template.ModelStatus.DEPRECATED">
+<span class="sig-name descname"><span class="pre">DEPRECATED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#otx.api.entities.model_template.ModelStatus.DEPRECATED" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="otx.api.entities.model_template.ModelTemplate">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.api.entities.model_template.</span></span><span class="sig-name descname"><span class="pre">ModelTemplate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_template_id:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_template_path:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_family:</span> <span class="pre">~otx.api.entities.model_template.TaskFamily</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_type:</span> <span class="pre">~otx.api.entities.model_template.TaskType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">instantiation:</span> <span class="pre">~otx.api.entities.model_template.InstantiationType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">summary:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">framework:</span> <span class="pre">~typing.Optional[str]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_nodes:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">application:</span> <span class="pre">~typing.Optional[str]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dependencies:</span> <span class="pre">~typing.List[~otx.api.entities.model_template.Dependency]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_weights:</span> <span class="pre">~typing.Optional[str]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">training_targets:</span> <span class="pre">~typing.List[~otx.api.entities.model_template.TargetDevice]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inference_targets:</span> <span class="pre">~typing.List[~otx.api.entities.model_template.TargetDevice]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_requirements:</span> <span class="pre">~otx.api.entities.model_template.DatasetRequirements</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_optimization_methods:</span> <span class="pre">~typing.List[~otx.api.entities.model_template.ModelOptimizationMethod]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hyper_parameters:</span> <span class="pre">~otx.api.entities.model_template.HyperParameterData</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_trainable:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">capabilities:</span> <span class="pre">~typing.List[str]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc_address:</span> <span class="pre">~typing.Optional[str]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entrypoints:</span> <span class="pre">~typing.Optional[~otx.api.entities.model_template.EntryPoints]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_model_path:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exportable_code_paths:</span> <span class="pre">~otx.api.entities.model_template.ExportableCodePaths</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_type_sort_priority:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gigaflops:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hpo:</span> <span class="pre">~typing.Optional[~typing.Dict]</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#otx.api.entities.model_template.ModelTemplate" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.api.entities.model_template.</span></span><span class="sig-name descname"><span class="pre">ModelTemplate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_template_id:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_template_path:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_family:</span> <span class="pre">~otx.api.entities.model_template.TaskFamily</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_type:</span> <span class="pre">~otx.api.entities.model_template.TaskType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">instantiation:</span> <span class="pre">~otx.api.entities.model_template.InstantiationType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">summary:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">framework:</span> <span class="pre">~typing.Optional[str]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_nodes:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">application:</span> <span class="pre">~typing.Optional[str]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dependencies:</span> <span class="pre">~typing.List[~otx.api.entities.model_template.Dependency]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_weights:</span> <span class="pre">~typing.Optional[str]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">training_targets:</span> <span class="pre">~typing.List[~otx.api.entities.model_template.TargetDevice]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inference_targets:</span> <span class="pre">~typing.List[~otx.api.entities.model_template.TargetDevice]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_requirements:</span> <span class="pre">~otx.api.entities.model_template.DatasetRequirements</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_optimization_methods:</span> <span class="pre">~typing.List[~otx.api.entities.model_template.ModelOptimizationMethod]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hyper_parameters:</span> <span class="pre">~otx.api.entities.model_template.HyperParameterData</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_trainable:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">capabilities:</span> <span class="pre">~typing.List[str]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc_address:</span> <span class="pre">~typing.Optional[str]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entrypoints:</span> <span class="pre">~typing.Optional[~otx.api.entities.model_template.EntryPoints]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_model_path:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exportable_code_paths:</span> <span class="pre">~otx.api.entities.model_template.ExportableCodePaths</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task_type_sort_priority:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gigaflops:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hpo:</span> <span class="pre">~typing.Optional[~typing.Dict]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_category:</span> <span class="pre">~otx.api.entities.model_template.ModelCategory</span> <span class="pre">=</span> <span class="pre">ModelCategory.OTHER</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_status:</span> <span class="pre">~otx.api.entities.model_template.ModelStatus</span> <span class="pre">=</span> <span class="pre">ModelStatus.ACTIVE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_default_for_task:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#otx.api.entities.model_template.ModelTemplate" title="Permalink to this definition">#</a></dt>
 <dd><p>This class represents a Task in the Task database.</p>
 <p>It can be either a CLASS type, with the class path specified or a GRPC type with its address.
 The task chain uses this information to setup a <cite>ChainLink</cite> (A task in the chain)</p>
@@ -3164,7 +3230,10 @@ priority. mobilenet is less important, and has a higher value. Default is zero (
 </dd>
 </dl>
 <p>gigaflops (float): how many billions of operations are required to do inference on a single data item.
-size (float): how much disk space the model will approximately take.</p>
+size (float): how much disk space the model will approximately take.
+model_category (ModelCategory): Represents model category regarding accuracy &amp; speed trade-off. Default to OTHER.
+model_status (ModelStatus): Represents model status regarding deprecation process. Default to ACTIVE.
+is_default_for_task (bool): Whether this model is a default recommendation for the task</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="otx.api.entities.model_template.ModelTemplate.application">
 <span class="sig-name descname"><span class="pre">application</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#otx.api.entities.model_template.ModelTemplate.application" title="Permalink to this definition">#</a></dt>
@@ -3252,6 +3321,11 @@ size (float): how much disk space the model will approximately take.</p>
 <span class="sig-name descname"><span class="pre">instantiation</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#otx.api.entities.model_template.InstantiationType" title="otx.api.entities.model_template.InstantiationType"><span class="pre">InstantiationType</span></a></em><a class="headerlink" href="#otx.api.entities.model_template.ModelTemplate.instantiation" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="otx.api.entities.model_template.ModelTemplate.is_default_for_task">
+<span class="sig-name descname"><span class="pre">is_default_for_task</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#otx.api.entities.model_template.ModelTemplate.is_default_for_task" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="otx.api.entities.model_template.ModelTemplate.is_task_global">
 <span class="sig-name descname"><span class="pre">is_task_global</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#otx.api.entities.model_template.ModelTemplate.is_task_global" title="Permalink to this definition">#</a></dt>
@@ -3269,8 +3343,18 @@ size (float): how much disk space the model will approximately take.</p>
 <dd></dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="otx.api.entities.model_template.ModelTemplate.model_category">
+<span class="sig-name descname"><span class="pre">model_category</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#otx.api.entities.model_template.ModelCategory" title="otx.api.entities.model_template.ModelCategory"><span class="pre">ModelCategory</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#otx.api.entities.model_template.ModelTemplate.model_category" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="otx.api.entities.model_template.ModelTemplate.model_optimization_methods">
 <span class="sig-name descname"><span class="pre">model_optimization_methods</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#otx.api.entities.model_template.ModelOptimizationMethod" title="otx.api.entities.model_template.ModelOptimizationMethod"><span class="pre">ModelOptimizationMethod</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#otx.api.entities.model_template.ModelTemplate.model_optimization_methods" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="otx.api.entities.model_template.ModelTemplate.model_status">
+<span class="sig-name descname"><span class="pre">model_status</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#otx.api.entities.model_template.ModelStatus" title="otx.api.entities.model_template.ModelStatus"><span class="pre">ModelStatus</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#otx.api.entities.model_template.ModelTemplate.model_status" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -3773,13 +3857,6 @@ model. Skip deletion parameter should only be true if replacing bytes data with 
 <dt class="sig sig-object py" id="otx.api.entities.model.ModelEntity.version">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">version</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#otx.api.entities.model.ModelEntity.version" title="Permalink to this definition">#</a></dt>
 <dd><p>Gets or sets the version.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="otx.api.entities.model.ModelEntity.weight_paths">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">weight_paths</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#otx.api.entities.url.URL" title="otx.api.entities.url.URL"><span class="pre">URL</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#otx.api.entities.model.ModelEntity.weight_paths" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns the the path to URLs for each data key.</p>
-<p>Note that this function will raise an error if the model was not saved to a database.</p>
 </dd></dl>
 
 </dd></dl>
@@ -4417,44 +4494,6 @@ training if for some reason training was suspended.</p>
 <dt class="sig sig-object py" id="otx.api.entities.train_parameters.default_save_model_callback">
 <span class="sig-prename descclassname"><span class="pre">otx.api.entities.train_parameters.</span></span><span class="sig-name descname"><span class="pre">default_save_model_callback</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#otx.api.entities.train_parameters.default_save_model_callback" title="Permalink to this definition">#</a></dt>
 <dd><p>Default save model callback. It is a placeholder (does nothing) and is used in empty TrainParameters.</p>
-</dd></dl>
-
-<span class="target" id="module-otx.api.entities.url"></span><p>This file defines the URL class.</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="otx.api.entities.url.URL">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.api.entities.url.</span></span><span class="sig-name descname"><span class="pre">URL</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#otx.api.entities.url.URL" title="otx.api.entities.url.URL"><span class="pre">URL</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#otx.api.entities.url.URL" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for working with URLs.</p>
-<p>Provides functions for getting components of the URL such as &lt;scheme&gt;://&lt;host&gt;/&lt;path&gt;</p>
-<dl class="py property">
-<dt class="sig sig-object py" id="otx.api.entities.url.URL.extension">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">extension</span></span><a class="headerlink" href="#otx.api.entities.url.URL.extension" title="Permalink to this definition">#</a></dt>
-<dd><p>Gets the extension of the URL.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="otx.api.entities.url.URL.host">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">host</span></span><a class="headerlink" href="#otx.api.entities.url.URL.host" title="Permalink to this definition">#</a></dt>
-<dd><p>Gets the host of the URL.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="otx.api.entities.url.URL.path">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">path</span></span><a class="headerlink" href="#otx.api.entities.url.URL.path" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns the full path to the full.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="otx.api.entities.url.URL.relative_path">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">relative_path</span></span><a class="headerlink" href="#otx.api.entities.url.URL.relative_path" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns the relative path to the full.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="otx.api.entities.url.URL.scheme">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">scheme</span></span><a class="headerlink" href="#otx.api.entities.url.URL.scheme" title="Permalink to this definition">#</a></dt>
-<dd><p>Gets the scheme of the URL.</p>
-</dd></dl>
-
 </dd></dl>
 
 </section>
@@ -5157,6 +5196,15 @@ training if for some reason training was suspended.</p>
      <code class="docutils literal notranslate">
       <span class="pre">
        DatasetEntity.append()
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.api.entities.datasets.DatasetEntity.get_combined_subset">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       DatasetEntity.get_combined_subset()
       </span>
      </code>
     </a>
@@ -7256,6 +7304,53 @@ training if for some reason training was suspended.</p>
   </ul>
  </li>
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelCategory">
+   <code class="docutils literal notranslate">
+    <span class="pre">
+     ModelCategory
+    </span>
+   </code>
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelCategory.ACCURACY">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       ModelCategory.ACCURACY
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelCategory.BALANCE">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       ModelCategory.BALANCE
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelCategory.OTHER">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       ModelCategory.OTHER
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelCategory.SPEED">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       ModelCategory.SPEED
+      </span>
+     </code>
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelOptimizationMethod">
    <code class="docutils literal notranslate">
     <span class="pre">
@@ -7278,6 +7373,35 @@ training if for some reason training was suspended.</p>
      <code class="docutils literal notranslate">
       <span class="pre">
        ModelOptimizationMethod.TENSORRT
+      </span>
+     </code>
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelStatus">
+   <code class="docutils literal notranslate">
+    <span class="pre">
+     ModelStatus
+    </span>
+   </code>
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelStatus.ACTIVE">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       ModelStatus.ACTIVE
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelStatus.DEPRECATED">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       ModelStatus.DEPRECATED
       </span>
      </code>
     </a>
@@ -7447,6 +7571,15 @@ training if for some reason training was suspended.</p>
     </a>
    </li>
    <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelTemplate.is_default_for_task">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       ModelTemplate.is_default_for_task
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
     <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelTemplate.is_task_global">
      <code class="docutils literal notranslate">
       <span class="pre">
@@ -7474,10 +7607,28 @@ training if for some reason training was suspended.</p>
     </a>
    </li>
    <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelTemplate.model_category">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       ModelTemplate.model_category
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
     <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelTemplate.model_optimization_methods">
      <code class="docutils literal notranslate">
       <span class="pre">
        ModelTemplate.model_optimization_methods
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.api.entities.model_template.ModelTemplate.model_status">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       ModelTemplate.model_status
       </span>
      </code>
     </a>
@@ -8201,15 +8352,6 @@ training if for some reason training was suspended.</p>
      <code class="docutils literal notranslate">
       <span class="pre">
        ModelEntity.version
-      </span>
-     </code>
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#otx.api.entities.model.ModelEntity.weight_paths">
-     <code class="docutils literal notranslate">
-      <span class="pre">
-       ModelEntity.weight_paths
       </span>
      </code>
     </a>
@@ -8954,62 +9096,6 @@ training if for some reason training was suspended.</p>
     </span>
    </code>
   </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#otx.api.entities.url.URL">
-   <code class="docutils literal notranslate">
-    <span class="pre">
-     URL
-    </span>
-   </code>
-  </a>
-  <ul class="nav section-nav flex-column">
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#otx.api.entities.url.URL.extension">
-     <code class="docutils literal notranslate">
-      <span class="pre">
-       URL.extension
-      </span>
-     </code>
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#otx.api.entities.url.URL.host">
-     <code class="docutils literal notranslate">
-      <span class="pre">
-       URL.host
-      </span>
-     </code>
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#otx.api.entities.url.URL.path">
-     <code class="docutils literal notranslate">
-      <span class="pre">
-       URL.path
-      </span>
-     </code>
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#otx.api.entities.url.URL.relative_path">
-     <code class="docutils literal notranslate">
-      <span class="pre">
-       URL.relative_path
-      </span>
-     </code>
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#otx.api.entities.url.URL.scheme">
-     <code class="docutils literal notranslate">
-      <span class="pre">
-       URL.scheme
-      </span>
-     </code>
-    </a>
-   </li>
-  </ul>
  </li>
 </ul>
 

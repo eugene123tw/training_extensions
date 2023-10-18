@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-    <title>Fast Data Loading &#8212; OpenVINO™ Training Extensions 1.4.0 documentation</title>
+    <title>Fast Data Loading &#8212; OpenVINO™ Training Extensions 1.5.0rc0 documentation</title>
   
   
   
@@ -45,7 +45,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'guide/explanation/additional_features/fast_data_loading';</script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="API" href="../../reference/api/index.html" />
+    <link rel="next" title="Improve Small Object Detection with Image Tiling" href="tiling.html" />
     <link rel="prev" title="Noisy Label Detection" href="noisy_label_detection.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="docsearch:language" content="en">
@@ -276,15 +276,19 @@
 <li class="toctree-l3"><a class="reference internal" href="../algorithms/action/action_detection.html">Action Detection</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../algorithms/visual_prompting/index.html">Visual Prompting</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Additional Features</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-9"><i class="fa-solid fa-chevron-down"></i></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="models_optimization.html">Models Optimization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="hpo.html">Hyperparameters Optimization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="auto_configuration.html">Auto-configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="adaptive_training.html">Adaptive Training</a></li>
 <li class="toctree-l2"><a class="reference internal" href="xai.html">Explainable AI (XAI)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="noisy_label_detection.html">Noisy Label Detection</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Fast Data Loading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tiling.html">Improve Small Object Detection with Image Tiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config_input_size.html">Configurable Input Size</a></li>
 </ul>
 </li>
 </ul>
@@ -486,7 +490,7 @@ training time in those cases.</p>
 <h3>Storage Caching<a class="headerlink" href="#storage-caching" title="Permalink to this heading">#</a></h3>
 <p>OpenVINO™ Training Extensions uses <a class="reference external" href="https://github.com/openvinotoolkit/datumaro">Datumaro</a>
 under the hood for dataset managements.
-Since Datumaro <a class="reference external" href="https://openvinotoolkit.github.io/datumaro/latest/docs/explanation/formats/arrow.html">supports</a>
+Since Datumaro <a class="reference external" href="https://openvinotoolkit.github.io/datumaro/stable/docs/data-formats/formats/arrow.html">supports</a>
 <a class="reference external" href="https://arrow.apache.org/overview/">Apache Arrow</a>, OpenVINO™ Training Extensions
 can exploit fast data loading using memory-mapped arrow file at the expanse of storage consumtion.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ otx train .. params --algo_backend.storage_cache_scheme JPEG/75
@@ -497,7 +501,7 @@ One could change it by modifying <code class="docutils literal notranslate"><spa
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ OTX_CACHE=/path/to/cache otx train .. params --algo_backend.storage_cache_scheme JPEG/75
 </pre></div>
 </div>
-<p>Please refere <a class="reference external" href="https://openvinotoolkit.github.io/datumaro/latest/docs/explanation/formats/arrow.html#export-to-arrow">Datumaro document</a>
+<p>Please refere <a class="reference external" href="https://openvinotoolkit.github.io/datumaro/stable/docs/data-formats/formats/arrow.html#export-to-arrow">Datumaro document</a>
 for available schemes to choose but we recommend <code class="docutils literal notranslate"><span class="pre">JPEG/75</span></code> for fast data loaidng.</p>
 <aside class="footnote-list brackets">
 <aside class="footnote brackets" id="id2" role="note">
@@ -524,10 +528,10 @@ for available schemes to choose but we recommend <code class="docutils literal n
           <p class="prev-next-title">Noisy Label Detection</p>
       </div>
   </a>
-  <a class='right-next' id="next-link" href="../../reference/api/index.html" title="next page">
+  <a class='right-next' id="next-link" href="tiling.html" title="next page">
   <div class="prev-next-info">
       <p class="prev-next-subtitle">next</p>
-      <p class="prev-next-title">API</p>
+      <p class="prev-next-title">Improve Small Object Detection with Image Tiling</p>
   </div>
   <i class="fa-solid fa-angle-right"></i>
   </a>

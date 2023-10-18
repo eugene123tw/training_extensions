@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-    <title>Object Detection model &#8212; OpenVINO™ Training Extensions 1.4.0 documentation</title>
+    <title>Object Detection model &#8212; OpenVINO™ Training Extensions 1.5.0rc0 documentation</title>
   
   
   
@@ -276,15 +276,19 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../explanation/algorithms/action/action_detection.html">Action Detection</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/algorithms/visual_prompting/index.html">Visual Prompting</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../explanation/additional_features/index.html">Additional Features</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-9"><i class="fa-solid fa-chevron-down"></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/models_optimization.html">Models Optimization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/hpo.html">Hyperparameters Optimization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/auto_configuration.html">Auto-configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/adaptive_training.html">Adaptive Training</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/xai.html">Explainable AI (XAI)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/noisy_label_detection.html">Noisy Label Detection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/fast_data_loading.html">Fast Data Loading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/tiling.html">Improve Small Object Detection with Image Tiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/config_input_size.html">Configurable Input Size</a></li>
 </ul>
 </li>
 </ul>
@@ -491,8 +495,8 @@ environment:</p>
 <p>Currently, we support the following object detection dataset formats:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://cocodataset.org/#format-data">COCO</a></p></li>
-<li><p><a class="reference external" href="https://openvinotoolkit.github.io/datumaro/docs/formats/pascal_voc/">Pascal-VOC</a></p></li>
-<li><p><a class="reference external" href="https://openvinotoolkit.github.io/datumaro/docs/formats/yolo/">YOLO</a></p></li>
+<li><p><a class="reference external" href="https://openvinotoolkit.github.io/datumaro/stable/docs/data-formats/formats/pascal_voc.html">Pascal-VOC</a></p></li>
+<li><p><a class="reference external" href="https://openvinotoolkit.github.io/datumaro/stable/docs/data-formats/formats/yolo.html">YOLO</a></p></li>
 </ul>
 </div>
 <p>1. Clone a repository with
@@ -560,13 +564,17 @@ The list of supported templates for object detection is available with the comma
 <p>To modify the architecture of supported models with various backbones, please refer to the <a class="reference internal" href="../../advanced/backbones.html"><span class="doc">advanced tutorial for backbone replacement</span></a>.</p>
 </div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>(otx) ...$ otx find --template --task DETECTION
-+-----------+-----------------------------------+-------+-------------------------------------------------------------------------------+
-|    TASK   |                 ID                |  NAME |                                      PATH                                     |
-+-----------+-----------------------------------+-------+-------------------------------------------------------------------------------+
-| DETECTION |   Custom_Object_Detection_YOLOX   | YOLOX | src/otx/algorithms/detection/configs/detection/cspdarknet_yolox/template.yaml |
-| DETECTION |  Custom_Object_Detection_Gen3_SSD |  SSD  |  src/otx/algorithms/detection/configs/detection/mobilenetv2_ssd/template.yaml |
-| DETECTION | Custom_Object_Detection_Gen3_ATSS |  ATSS | src/otx/algorithms/detection/configs/detection/mobilenetv2_atss/template.yaml |
-+-----------+-----------------------------------+-------+-------------------------------------------------------------------------------+
++-----------+-----------------------------------+------------------+------------------------------------------------------------------------------------+
+|    TASK   |                 ID                |       NAME       |                                     BASE PATH                                      |
++-----------+-----------------------------------+------------------+------------------------------------------------------------------------------------+
+| DETECTION | Custom_Object_Detection_Gen3_ATSS | MobileNetV2-ATSS |   src/otx/algorithms/detection/configs/detection/mobilenetv2_atss/template.yaml    |
+| DETECTION |  Object_Detection_ResNeXt101_ATSS | ResNeXt101-ATSS  |    src/otx/algorithms/detection/configs/detection/resnext101_atss/template.yaml    |
+| DETECTION |  Custom_Object_Detection_Gen3_SSD |       SSD        |    src/otx/algorithms/detection/configs/detection/mobilenetv2_ssd/template.yaml    |
+| DETECTION |      Object_Detection_YOLOX_L     |     YOLOX-L      |  src/otx/algorithms/detection/configs/detection/cspdarknet_yolox_l/template.yaml   |
+| DETECTION |      Object_Detection_YOLOX_S     |     YOLOX-S      |  src/otx/algorithms/detection/configs/detection/cspdarknet_yolox_s/template.yaml   |
+| DETECTION |   Custom_Object_Detection_YOLOX   |    YOLOX-TINY    | src/otx/algorithms/detection/configs/detection/cspdarknet_yolox_tiny/template.yaml |
+| DETECTION |      Object_Detection_YOLOX_X     |     YOLOX-X      |  src/otx/algorithms/detection/configs/detection/cspdarknet_yolox_x/template.yaml   |
++-----------+-----------------------------------+------------------+------------------------------------------------------------------------------------+
 </pre></div>
 </div>
 <p id="detection-workspace">2. On this step we will create <strong>otx-workspace-Detection</strong>
@@ -585,15 +593,15 @@ So, if you’d like to add <code class="docutils literal notranslate"><span clas
 (otx) ...$ otx build Custom_Object_Detection_Gen3_ATSS --train-data-roots data/wgisd
 
 # or its name
-(otx) ...$ otx build ATSS --train-data-roots data/wgisd
+(otx) ...$ otx build MobileNetV2-ATSS --train-data-roots data/wgisd
 
 # or its path
-(otx) ...$ otx build otx/algorithms/detection/configs/detection/mobilenetv2_atss/template.yaml --train-data-roots data/wgisd
+(otx) ...$ otx build src/otx/algorithms/detection/configs/detection/mobilenetv2_atss/template.yaml --train-data-roots data/wgisd
 
 ...
 [*] Workspace Path: otx-workspace-DETECTION
 [*] Load Model Template ID: Custom_Object_Detection_Gen3_ATSS
-[*] Load Model Name: ATSS
+[*] Load Model Name: MobileNetV2-ATSS
 [*]     - Updated: otx-workspace-DETECTION/model.py
 [*]     - Updated: otx-workspace-DETECTION/data_pipeline.py
 [*]     - Updated: otx-workspace-DETECTION/tile_pipeline.py
@@ -738,6 +746,17 @@ using <code class="docutils literal notranslate"><span class="pre">otx</span> <s
 2023-01-10 06:24:54,944 | INFO : Start OpenVINO metric evaluation
 2023-01-10 06:24:55,117 | INFO : OpenVINO metric evaluation completed
 Performance(score: 0.5487693710118504, dashboard: (1 metric groups))
+</pre></div>
+</div>
+<p>4. <code class="docutils literal notranslate"><span class="pre">Optional</span></code> Additionally, we can tune confidence threshold via the command line.
+Learn more about template-specific parameters using <code class="docutils literal notranslate"><span class="pre">otx</span> <span class="pre">export</span> <span class="pre">params</span> <span class="pre">--help</span></code>.</p>
+<p>For example, if there are too many False-Positive predictions (there we have a prediction, but don’t have annotated object for it), we can suppress its number by increasing the confidence threshold as it is shown below.</p>
+<p>Please note, by default, the optimal confidence threshold is detected based on validation results to maximize the final F1 metric. To set a custom confidence threshold, please disable <code class="docutils literal notranslate"><span class="pre">result_based_confidence_threshold</span></code> option.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>(otx) ...$ otx export --load-weights ../outputs/weights.pth \
+                    --output ../outputs \
+                    params \
+                    --postprocessing.confidence_threshold 0.5 \
+                    --postprocessing.result_based_confidence_threshold false
 </pre></div>
 </div>
 </section>

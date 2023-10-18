@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-    <title>Entities &#8212; OpenVINO™ Training Extensions 1.4.0 documentation</title>
+    <title>Entities &#8212; OpenVINO™ Training Extensions 1.5.0rc0 documentation</title>
   
   
   
@@ -276,15 +276,19 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../explanation/algorithms/action/action_detection.html">Action Detection</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/algorithms/visual_prompting/index.html">Visual Prompting</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../explanation/additional_features/index.html">Additional Features</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-9"><i class="fa-solid fa-chevron-down"></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/models_optimization.html">Models Optimization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/hpo.html">Hyperparameters Optimization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/auto_configuration.html">Auto-configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/adaptive_training.html">Adaptive Training</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/xai.html">Explainable AI (XAI)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/noisy_label_detection.html">Noisy Label Detection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/fast_data_loading.html">Fast Data Loading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/tiling.html">Improve Small Object Detection with Image Tiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../explanation/additional_features/config_input_size.html">Configurable Input Size</a></li>
 </ul>
 </li>
 </ul>
@@ -548,6 +552,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="general.html#otx.api.entities.datasets.DatasetEntity"><code class="docutils literal notranslate"><span class="pre">DatasetEntity</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.datasets.DatasetEntity.append"><code class="docutils literal notranslate"><span class="pre">DatasetEntity.append()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.datasets.DatasetEntity.get_combined_subset"><code class="docutils literal notranslate"><span class="pre">DatasetEntity.get_combined_subset()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.datasets.DatasetEntity.get_labels"><code class="docutils literal notranslate"><span class="pre">DatasetEntity.get_labels()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.datasets.DatasetEntity.get_subset"><code class="docutils literal notranslate"><span class="pre">DatasetEntity.get_subset()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.datasets.DatasetEntity.purpose"><code class="docutils literal notranslate"><span class="pre">DatasetEntity.purpose</span></code></a></li>
@@ -850,9 +855,21 @@
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.InstantiationType.NONE"><code class="docutils literal notranslate"><span class="pre">InstantiationType.NONE</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelCategory"><code class="docutils literal notranslate"><span class="pre">ModelCategory</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelCategory.ACCURACY"><code class="docutils literal notranslate"><span class="pre">ModelCategory.ACCURACY</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelCategory.BALANCE"><code class="docutils literal notranslate"><span class="pre">ModelCategory.BALANCE</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelCategory.OTHER"><code class="docutils literal notranslate"><span class="pre">ModelCategory.OTHER</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelCategory.SPEED"><code class="docutils literal notranslate"><span class="pre">ModelCategory.SPEED</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelOptimizationMethod"><code class="docutils literal notranslate"><span class="pre">ModelOptimizationMethod</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelOptimizationMethod.OPENVINO"><code class="docutils literal notranslate"><span class="pre">ModelOptimizationMethod.OPENVINO</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelOptimizationMethod.TENSORRT"><code class="docutils literal notranslate"><span class="pre">ModelOptimizationMethod.TENSORRT</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelStatus"><code class="docutils literal notranslate"><span class="pre">ModelStatus</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelStatus.ACTIVE"><code class="docutils literal notranslate"><span class="pre">ModelStatus.ACTIVE</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelStatus.DEPRECATED"><code class="docutils literal notranslate"><span class="pre">ModelStatus.DEPRECATED</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate"><code class="docutils literal notranslate"><span class="pre">ModelTemplate</span></code></a><ul>
@@ -873,10 +890,13 @@
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.inference_targets"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.inference_targets</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.initial_weights"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.initial_weights</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.instantiation"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.instantiation</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.is_default_for_task"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.is_default_for_task</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.is_task_global"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.is_task_global()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.is_trainable"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.is_trainable</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.max_nodes"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.max_nodes</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.model_category"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.model_category</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.model_optimization_methods"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.model_optimization_methods</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.model_status"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.model_status</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.model_template_id"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.model_template_id</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.model_template_path"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.model_template_path</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model_template.ModelTemplate.name"><code class="docutils literal notranslate"><span class="pre">ModelTemplate.name</span></code></a></li>
@@ -968,7 +988,6 @@
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model.ModelEntity.train_dataset"><code class="docutils literal notranslate"><span class="pre">ModelEntity.train_dataset</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model.ModelEntity.training_duration"><code class="docutils literal notranslate"><span class="pre">ModelEntity.training_duration</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model.ModelEntity.version"><code class="docutils literal notranslate"><span class="pre">ModelEntity.version</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.model.ModelEntity.weight_paths"><code class="docutils literal notranslate"><span class="pre">ModelEntity.weight_paths</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="general.html#otx.api.entities.model.ModelFormat"><code class="docutils literal notranslate"><span class="pre">ModelFormat</span></code></a><ul>
@@ -1078,14 +1097,6 @@
 <li class="toctree-l2"><a class="reference internal" href="general.html#otx.api.entities.train_parameters.UpdateProgressCallback"><code class="docutils literal notranslate"><span class="pre">UpdateProgressCallback</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="general.html#otx.api.entities.train_parameters.default_progress_callback"><code class="docutils literal notranslate"><span class="pre">default_progress_callback()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="general.html#otx.api.entities.train_parameters.default_save_model_callback"><code class="docutils literal notranslate"><span class="pre">default_save_model_callback()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="general.html#otx.api.entities.url.URL"><code class="docutils literal notranslate"><span class="pre">URL</span></code></a><ul>
-<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.url.URL.extension"><code class="docutils literal notranslate"><span class="pre">URL.extension</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.url.URL.host"><code class="docutils literal notranslate"><span class="pre">URL.host</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.url.URL.path"><code class="docutils literal notranslate"><span class="pre">URL.path</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.url.URL.relative_path"><code class="docutils literal notranslate"><span class="pre">URL.relative_path</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="general.html#otx.api.entities.url.URL.scheme"><code class="docutils literal notranslate"><span class="pre">URL.scheme</span></code></a></li>
-</ul>
-</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="shapes.html">Shapes</a><ul>
