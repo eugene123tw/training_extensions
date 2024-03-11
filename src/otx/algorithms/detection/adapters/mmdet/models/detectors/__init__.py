@@ -9,6 +9,7 @@ from .custom_dino_detector import CustomDINO
 from .custom_lite_dino import CustomLiteDINO
 from .custom_maskrcnn_detector import CustomMaskRCNN
 from .custom_maskrcnn_tile_optimized import CustomMaskRCNNTileOptimized
+from .custom_rtmdet import CustomRTMDetInst
 from .custom_single_stage_detector import CustomSingleStageDetector
 from .custom_two_stage_detector import CustomTwoStageDetector
 from .custom_vfnet_detector import CustomVFNet
@@ -30,5 +31,6 @@ __all__ = [
     "L2SPDetectorMixin",
     "SAMDetectorMixin",
     "CustomMaskRCNNTileOptimized",
+    "CustomRTMDetInst",
     "MeanTeacher",
 ]

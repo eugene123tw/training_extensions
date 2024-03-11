@@ -248,6 +248,9 @@ class BaseConfig(ConfigurableParameters):
             affects_outcome_of=ModelLifecycle.INFERENCE,
         )
 
+        # TODO: Add IoU configurable parameters test here
+        
+
     @attrs
     class BaseNNCFOptimization(ParameterGroup):
         """BaseNNCFOptimization for OTX Algorithms."""

@@ -61,6 +61,7 @@ from otx.api.usecases.evaluation.metrics_helper import MetricsHelper
 from otx.api.usecases.exportable_code import demo
 from otx.api.usecases.exportable_code.inference import IInferencer
 from otx.api.usecases.exportable_code.prediction_to_annotation_converter import (
+    BitmapAnnotationConverter,
     DetectionToAnnotationConverter,
     IPredictionToAnnotationConverter,
     MaskToAnnotationConverter,
@@ -249,7 +250,7 @@ class OpenVINOMaskInferencer(BaseInferencerWithConverter):
         configuration.update(model_configuration)
 
         model = Model.create_model(model_adapter, "MaskRCNN", configuration, preload=True)
-        converter = MaskToAnnotationConverter(label_schema, configuration)
+        converter = BitmapAnnotationConverter(label_schema, configuration)
 
         super().__init__(configuration, model, converter)
 
@@ -335,7 +336,10 @@ class OpenVINOTileClassifierWrapper(BaseInferencerWithConverter):
             "max_pred_number": max_number,
         }
 
-        is_segm = isinstance(inferencer.converter, (MaskToAnnotationConverter, RotatedRectToAnnotationConverter))
+        is_segm = isinstance(
+            inferencer.converter,
+            (MaskToAnnotationConverter, RotatedRectToAnnotationConverter, BitmapAnnotationConverter),
+        )
         if is_segm:
             self.tiler = InstanceSegmentationTiler(
                 inferencer.model, tiler_config, execution_mode=mode, tile_classifier_model=classifier
@@ -450,7 +454,8 @@ class OpenVINODetectionTask(IDeploymentTask, IInferenceTask, IEvaluationTask, IO
             if not self.config.tiling_parameters.enable_tiling:
                 args.append({"resize_type": "standard"})
             else:
-                args.append({"resize_type": "fit_to_window_letterbox", "pad_value": 0})
+                pad_value = 114 if "RTMDet" in self.task_environment.model_template.model_template_id else 0
+                args.append({"resize_type": "fit_to_window_letterbox", "pad_value": pad_value})
 
             if self.task_type == TaskType.INSTANCE_SEGMENTATION:
                 inferencer = OpenVINOMaskInferencer(*args)
@@ -557,6 +562,7 @@ class OpenVINODetectionTask(IDeploymentTask, IInferenceTask, IEvaluationTask, IO
 
         self._avg_time_per_image = total_time / len(dataset)
         logger.info(f"Avg time per image: {self._avg_time_per_image} secs")
+        logger.info(f"FPS: {len(dataset)/total_time} FPS")
         logger.info(f"Total time: {total_time} secs")
         logger.info("OpenVINO inference completed")
         return dataset

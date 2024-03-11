@@ -182,6 +182,8 @@ class TestMMDetectionTask:
     @e2e_pytest_unit
     def test_load_postprocessing(self):
         """Test _load_postprocessing function."""
+
+        # TODO: Add IoU configurable parameters test here
         mock_model_data = {
             "config": {"postprocessing": {"use_ellipse_shapes": {"value": True}}},
             "confidence_threshold": 0.75,
