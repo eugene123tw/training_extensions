@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../../../../../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>otx.algo.segmentation.losses.cross_entropy_loss_with_ignore &#8212; OpenVINO™ Training Extensions 2.0.0 documentation</title>
+    <title>otx.algo.segmentation.losses.cross_entropy_loss_with_ignore &#8212; OpenVINO™ Training Extensions 2.0.0rc0 documentation</title>
   
   
   
@@ -25,26 +24,23 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
-    <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../../_static/copybutton.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../../_static/tabs.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css?v=0a3b3ea7" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css?v=d626d52b" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script data-url_root="../../../../../" id="documentation_options" src="../../../../../_static/documentation_options.js"></script>
-    <script src="../../../../../_static/jquery.js"></script>
-    <script src="../../../../../_static/underscore.js"></script>
-    <script src="../../../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../../../../../_static/doctools.js"></script>
-    <script src="../../../../../_static/sphinx_highlight.js"></script>
-    <script src="../../../../../_static/clipboard.min.js"></script>
-    <script src="../../../../../_static/copybutton.js"></script>
-    <script src="../../../../../_static/tabs.js"></script>
-    <script src="../../../../../_static/design-tabs.js"></script>
+    <script src="../../../../../_static/documentation_options.js?v=4fff8b0c"></script>
+    <script src="../../../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../../_static/tabs.js?v=3030b3cb"></script>
+    <script src="../../../../../_static/design-tabs.js?v=36754332"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/otx/algo/segmentation/losses/cross_entropy_loss_with_ignore';</script>
     <link rel="index" title="Index" href="../../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../../search.html" />
@@ -246,14 +242,18 @@
 
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>  <span class="c1"># noqa: N812</span>
-<span class="kn">from</span> <span class="nn">mmseg.models.losses</span> <span class="kn">import</span> <span class="n">CrossEntropyLoss</span>
-<span class="kn">from</span> <span class="nn">mmseg.models.losses.utils</span> <span class="kn">import</span> <span class="n">weight_reduce_loss</span>
-<span class="kn">from</span> <span class="nn">mmseg.registry</span> <span class="kn">import</span> <span class="n">MODELS</span>
+<span class="kn">from</span> <span class="nn">torch.nn</span> <span class="kn">import</span> <span class="n">CrossEntropyLoss</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">Tensor</span>
 
 
-<div class="viewcode-block" id="CrossEntropyLossWithIgnore"><a class="viewcode-back" href="../../../../../guide/reference/_autosummary/otx.algo.segmentation.losses.cross_entropy_loss_with_ignore.html#otx.algo.segmentation.losses.CrossEntropyLossWithIgnore">[docs]</a><span class="nd">@MODELS</span><span class="o">.</span><span class="n">register_module</span><span class="p">()</span>
+<div class="viewcode-block" id="CrossEntropyLossWithIgnore">
+<a class="viewcode-back" href="../../../../../guide/reference/_autosummary/otx.algo.segmentation.losses.html#otx.algo.segmentation.losses.CrossEntropyLossWithIgnore">[docs]</a>
 <span class="k">class</span> <span class="nc">CrossEntropyLossWithIgnore</span><span class="p">(</span><span class="n">CrossEntropyLoss</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;CrossEntropyLossWithIgnore with Ignore Mode Support for Class Incremental Learning.</span>
 
@@ -263,18 +263,43 @@
 <span class="sd">    CrossEntropyLossWithIgnore can be used to ignore the unseen classes.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_loss_name</span> <span class="o">=</span> <span class="s2">&quot;loss_ce_ignore&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">weight</span><span class="p">:</span> <span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">size_average</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ignore_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">100</span><span class="p">,</span>
+        <span class="n">reduce</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">reduction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mean&quot;</span><span class="p">,</span>
+        <span class="n">label_smoothing</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the CrossEntropyLossWithIgnore.</span>
 
-<div class="viewcode-block" id="CrossEntropyLossWithIgnore.forward"><a class="viewcode-back" href="../../../../../guide/reference/_autosummary/otx.algo.segmentation.losses.cross_entropy_loss_with_ignore.html#otx.algo.segmentation.losses.CrossEntropyLossWithIgnore.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+<span class="sd">        Args:</span>
+<span class="sd">            weight (Tensor, optional): Sample-wise loss weight. Defaults to None.</span>
+<span class="sd">            size_average (Optional[str], optional): Deprecated (see `reduction`).</span>
+<span class="sd">                Defaults to None.</span>
+<span class="sd">            ignore_index (int, optional): Specifies a target value that is ignored</span>
+<span class="sd">                and does not contribute to the input gradients. Defaults to -100.</span>
+<span class="sd">            reduce (Optional[bool], optional): Deprecated (see `reduction`).</span>
+<span class="sd">                Defaults to None.</span>
+<span class="sd">            reduction (str, optional): Specifies the reduction to apply to the</span>
+<span class="sd">                output. Defaults to &#39;mean&#39;.</span>
+<span class="sd">            label_smoothing (float, optional): The amount of label smoothing to</span>
+<span class="sd">                apply. Defaults to 0.0.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">weight</span><span class="p">,</span> <span class="n">size_average</span><span class="p">,</span> <span class="n">ignore_index</span><span class="p">,</span> <span class="n">reduce</span><span class="p">,</span> <span class="n">reduction</span><span class="p">,</span> <span class="n">label_smoothing</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;loss_ce_ignore&quot;</span>
+
+<div class="viewcode-block" id="CrossEntropyLossWithIgnore.forward">
+<a class="viewcode-back" href="../../../../../guide/reference/_autosummary/otx.algo.segmentation.losses.html#otx.algo.segmentation.losses.CrossEntropyLossWithIgnore.forward">[docs]</a>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">cls_score</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
         <span class="n">label</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">img_metas</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">weight</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">avg_factor</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">reduction_override</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mean&quot;</span><span class="p">,</span>
-        <span class="n">ignore_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">255</span><span class="p">,</span>
         <span class="n">valid_label_mask</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
@@ -291,11 +316,6 @@
 <span class="sd">                the loss. Default: None.</span>
 <span class="sd">            reduction_override (str, optional): The method used to reduce the loss.</span>
 <span class="sd">                Options are &#39;none&#39;, &#39;mean&#39; and &#39;sum&#39;. Default: &#39;mean&#39;.</span>
-<span class="sd">            ignore_index (int): Specifies a target value that is ignored and</span>
-<span class="sd">                does not contribute to the input gradients. When</span>
-<span class="sd">                ``avg_non_ignore `` is ``True``, and the ``reduction`` is</span>
-<span class="sd">                ``&#39;&#39;mean&#39;&#39;``, the loss is averaged over non-ignored targets.</span>
-<span class="sd">                Defaults: 255.</span>
 <span class="sd">            valid_label_mask (torch.Tensor, optional): The valid labels with</span>
 <span class="sd">                shape (N, num_classes).</span>
 <span class="sd">                If the value in the valid_label_mask is 0, mask label of the</span>
@@ -304,7 +324,7 @@
 <span class="sd">            **kwargs (Any): Additional keyword arguments.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">valid_label_mask</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">cls_score</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">avg_factor</span><span class="p">,</span> <span class="n">reduction_override</span><span class="p">,</span> <span class="n">ignore_index</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">cls_score</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
         <span class="n">reduction</span> <span class="o">=</span> <span class="n">reduction_override</span> <span class="k">if</span> <span class="n">reduction_override</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">reduction</span>
         <span class="n">batch_size</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">batch_size</span><span class="p">):</span>
@@ -313,11 +333,12 @@
             <span class="k">for</span> <span class="n">inv_l</span> <span class="ow">in</span> <span class="n">invalid_labels</span><span class="p">:</span>
                 <span class="n">cls_score</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">cls_score</span><span class="p">[:,</span> <span class="p">:</span><span class="n">inv_l</span><span class="p">],</span> <span class="n">cls_score</span><span class="p">[:,</span> <span class="n">inv_l</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:]),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-        <span class="n">losses</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">cross_entropy</span><span class="p">(</span><span class="n">cls_score</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="n">ignore_index</span><span class="p">)</span>
+        <span class="n">losses</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">cross_entropy</span><span class="p">(</span><span class="n">cls_score</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_index</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">weight</span> <span class="o">=</span> <span class="n">weight</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">weight_reduce_loss</span><span class="p">(</span><span class="n">losses</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="n">weight</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="n">reduction</span><span class="p">,</span> <span class="n">avg_factor</span><span class="o">=</span><span class="n">avg_factor</span><span class="p">)</span></div>
+
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">loss_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -333,6 +354,69 @@
 <span class="sd">            str: The name of this loss item.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loss_name</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">weight_reduce_loss</span><span class="p">(</span>
+    <span class="n">loss</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">weight</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">reduction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mean&quot;</span><span class="p">,</span>
+    <span class="n">avg_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply element-wise weight and reduce loss.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        loss (torch.Tensor): Element-wise loss.</span>
+<span class="sd">        weight (torch.Tensor, optional): Element-wise weights.</span>
+<span class="sd">        reduction (str): Same as built-in losses of PyTorch.</span>
+<span class="sd">        avg_factor (float, optional): Average factor when computing the mean of losses.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        torch.Tensor: Processed loss values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># if weight is specified, apply element-wise weight</span>
+    <span class="k">if</span> <span class="n">weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">weight</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">!=</span> <span class="n">loss</span><span class="o">.</span><span class="n">dim</span><span class="p">():</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;weight` dim </span><span class="si">{</span><span class="n">weight</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span><span class="si">}</span><span class="s2"> does not match loss dim </span><span class="si">{</span><span class="n">loss</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">weight</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">weight</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">weight</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="n">loss</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;In weight dimension, the dim 1 must be 1 or the same as the loss.&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">loss</span> <span class="o">*</span> <span class="n">weight</span>
+
+    <span class="c1"># if avg_factor is not specified, just reduce the loss</span>
+    <span class="k">if</span> <span class="n">avg_factor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">reduce_loss</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">reduction</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">reduction</span> <span class="o">==</span> <span class="s2">&quot;mean&quot;</span><span class="p">:</span>
+        <span class="c1"># Avoid causing ZeroDivisionError when avg_factor is 0.0,</span>
+        <span class="c1"># i.e., all labels of an image belong to ignore index.</span>
+        <span class="n">eps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">loss</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="n">avg_factor</span> <span class="o">+</span> <span class="n">eps</span><span class="p">)</span>
+    <span class="c1"># if reduction is &#39;none&#39;, then do nothing, otherwise raise an error</span>
+    <span class="k">elif</span> <span class="n">reduction</span> <span class="o">!=</span> <span class="s2">&quot;none&quot;</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;avg_factor can not be used with reduction=&quot;sum&quot;&#39;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">loss</span>
+
+
+<span class="k">def</span> <span class="nf">reduce_loss</span><span class="p">(</span><span class="n">loss</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">reduction</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reduce loss as specified.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        loss (Tensor): Elementwise loss tensor.</span>
+<span class="sd">        reduction (str): Options are &quot;none&quot;, &quot;mean&quot; and &quot;sum&quot;.</span>
+
+<span class="sd">    Return:</span>
+<span class="sd">        Tensor: Reduced loss tensor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">reduction_enum</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">_Reduction</span><span class="o">.</span><span class="n">get_enum</span><span class="p">(</span><span class="n">reduction</span><span class="p">)</span>  <span class="c1"># noqa: SLF001</span>
+    <span class="c1"># none: 0, elementwise_mean:1, sum: 2</span>
+    <span class="k">if</span> <span class="n">reduction_enum</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">loss</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">reduction_enum</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">loss</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">loss</span>
 </pre></div>
 
             </article>
@@ -409,7 +493,7 @@
   <div class="footer-item">
     
 <p class="sphinx-version">
-Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.3.0.<br>
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.2.6.<br>
 </p>
 
   </div>

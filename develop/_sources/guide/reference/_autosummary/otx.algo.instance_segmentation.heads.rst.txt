@@ -13,6 +13,12 @@ otx.algo.instance\_segmentation.heads
 
    
    
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      CustomRTMDetInsSepBNHead
+   
    
 
    
@@ -20,12 +26,4 @@ otx.algo.instance\_segmentation.heads
    
 
 
-
-.. rubric:: Modules
-
-.. autosummary::
-   :toctree:
-   :recursive:
-
-   otx.algo.instance_segmentation.heads.custom_roi_head
 

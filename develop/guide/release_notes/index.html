@@ -1,12 +1,11 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../../">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Releases &#8212; OpenVINO™ Training Extensions 2.0.0 documentation</title>
+    <title>Releases &#8212; OpenVINO™ Training Extensions 2.0.0rc0 documentation</title>
   
   
   
@@ -26,29 +25,26 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css?v=0a3b3ea7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=d626d52b" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/jquery.js"></script>
-    <script src="../../_static/underscore.js"></script>
-    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../../_static/doctools.js"></script>
-    <script src="../../_static/sphinx_highlight.js"></script>
-    <script src="../../_static/clipboard.min.js"></script>
-    <script src="../../_static/copybutton.js"></script>
-    <script src="../../_static/design-tabs.js"></script>
+    <script src="../../_static/documentation_options.js?v=4fff8b0c"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=36754332"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'guide/release_notes/index';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="prev" title="otx.utils.utils" href="../reference/_autosummary/otx.utils.utils.html" />
+    <link rel="prev" title="otx.utils" href="../reference/_autosummary/otx.utils.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="docsearch:language" content="en">
   </head>
@@ -224,14 +220,14 @@
     <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../get_started/introduction.html">Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../get_started/installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../get_started/cli_commands.html">OpenVINO™ Training Extensions CLI Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../get_started/api_tutorial.html">OpenVINO™ Training Extensions API Quick-Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../get_started/installation.html"><svg aria-hidden="true" class="sd-octicon sd-octicon-package" height="1.0em" version="1.1" viewbox="0 0 16 16" width="1.0em"><path d="M8.878.392a1.75 1.75 0 00-1.756 0l-5.25 3.045A1.75 1.75 0 001 4.951v6.098c0 .624.332 1.2.872 1.514l5.25 3.045a1.75 1.75 0 001.756 0l5.25-3.045c.54-.313.872-.89.872-1.514V4.951c0-.624-.332-1.2-.872-1.514L8.878.392zM7.875 1.69a.25.25 0 01.25 0l4.63 2.685L8 7.133 3.245 4.375l4.63-2.685zM2.5 5.677v5.372c0 .09.047.171.125.216l4.625 2.683V8.432L2.5 5.677zm6.25 8.271l4.625-2.683a.25.25 0 00.125-.216V5.677L8.75 8.432v5.516z" fill-rule="evenodd"></path></svg> Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../get_started/cli_commands.html"><svg aria-hidden="true" class="sd-octicon sd-octicon-terminal" height="1.0em" version="1.1" viewbox="0 0 16 16" width="1.0em"><path d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0114.25 15H1.75A1.75 1.75 0 010 13.25V2.75zm1.75-.25a.25.25 0 00-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 00.25-.25V2.75a.25.25 0 00-.25-.25H1.75zM7.25 8a.75.75 0 01-.22.53l-2.25 2.25a.75.75 0 11-1.06-1.06L5.44 8 3.72 6.28a.75.75 0 111.06-1.06l2.25 2.25c.141.14.22.331.22.53zm1.5 1.5a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3z" fill-rule="evenodd"></path></svg> CLI Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../get_started/api_tutorial.html"><svg aria-hidden="true" class="sd-octicon sd-octicon-code-square" height="1.0em" version="1.1" viewbox="0 0 16 16" width="1.0em"><path d="M1.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h12.5a.25.25 0 00.25-.25V1.75a.25.25 0 00-.25-.25H1.75zM0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0114.25 16H1.75A1.75 1.75 0 010 14.25V1.75zm9.22 3.72a.75.75 0 000 1.06L10.69 8 9.22 9.47a.75.75 0 101.06 1.06l2-2a.75.75 0 000-1.06l-2-2a.75.75 0 00-1.06 0zM6.78 6.53a.75.75 0 00-1.06-1.06l-2 2a.75.75 0 000 1.06l2 2a.75.75 0 101.06-1.06L5.31 8l1.47-1.47z" fill-rule="evenodd"></path></svg> API Quick-Guide</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/base/index.html">Base Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../tutorials/base/how_to_train/index.html">How to train, validate, export and optimize the model</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-2"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../tutorials/base/how_to_train/index.html">Training to deployment tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-2"><i class="fa-solid fa-chevron-down"></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../tutorials/base/how_to_train/classification.html">Classification  model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../tutorials/base/how_to_train/detection.html">Object Detection model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../tutorials/base/how_to_train/instance_segmentation.html">Instance Segmentation model</a></li>
@@ -239,9 +235,11 @@
 <li class="toctree-l3"><a class="reference internal" href="../tutorials/base/how_to_train/anomaly_detection.html">Anomaly Detection Tutorial</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../tutorials/base/how_to_train/action_classification.html">Action Classification model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../tutorials/base/how_to_train/action_detection.html">Action Detection model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/base/how_to_train/visual_prompting.html">Visual Prompting model</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../tutorials/base/explain.html">How to explain the model behavior</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/base/explain.html">XAI Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/base/export.html">Deploy &amp; Demo</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/advanced/index.html">Advanced Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-3"><i class="fa-solid fa-chevron-down"></i></label><ul>
@@ -288,8 +286,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../explanation/additional_features/xai.html">Explainable AI (XAI)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../explanation/additional_features/fast_data_loading.html">Fast Data Loading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../explanation/additional_features/tiling.html">Improve Small Object Detection with Image Tiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../explanation/additional_features/class_incremental_sampler.html">Class-Incremental Sampler</a></li>
+
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../explanation/product_design.html">Product Design</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
 <ul class="nav bd-sidenav">
@@ -297,18 +298,13 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../reference/_autosummary/otx.html">otx</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-12"><i class="fa-solid fa-chevron-down"></i></label><ul>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../reference/_autosummary/otx.algo.html">otx.algo</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-13"><i class="fa-solid fa-chevron-down"></i></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.action_classification.html">otx.algo.action_classification</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.action_detection.html">otx.algo.action_detection</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.anomaly.html">otx.algo.anomaly</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.callbacks.html">otx.algo.callbacks</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.classification.html">otx.algo.classification</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.detection.html">otx.algo.detection</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.hooks.html">otx.algo.hooks</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.instance_segmentation.html">otx.algo.instance_segmentation</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.samplers.html">otx.algo.samplers</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.schedulers.html">otx.algo.schedulers</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.segmentation.html">otx.algo.segmentation</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.utils.html">otx.algo.utils</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.visual_prompting.html">otx.algo.visual_prompting</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.strategies.html">otx.algo.strategies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.accelerators.html">otx.algo.accelerators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.plugins.html">otx.algo.plugins</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.algo.instance_segmentation.html">otx.algo.instance_segmentation</a></li>
 </ul>
 </li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../reference/_autosummary/otx.cli.html">otx.cli</a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-14"><i class="fa-solid fa-chevron-down"></i></label><ul>
@@ -323,39 +319,21 @@
 <li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.core.exporter.html">otx.core.exporter</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.core.metrics.html">otx.core.metrics</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.core.model.html">otx.core.model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.core.optimizer.html">otx.core.optimizer</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.core.schedulers.html">otx.core.schedulers</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.core.types.html">otx.core.types</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.core.utils.html">otx.core.utils</a></li>
 </ul>
 </li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="../reference/_autosummary/otx.data.html">otx.data</a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-16"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.data.anomaly.html">otx.data.anomaly</a></li>
-</ul>
-</li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="../reference/_autosummary/otx.engine.html">otx.engine</a><input class="toctree-checkbox" id="toctree-checkbox-17" name="toctree-checkbox-17" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-17"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.engine.engine.html">otx.engine.engine</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.engine.hpo.html">otx.engine.hpo</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.engine.utils.html">otx.engine.utils</a></li>
-</ul>
-</li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="../reference/_autosummary/otx.hpo.html">otx.hpo</a><input class="toctree-checkbox" id="toctree-checkbox-18" name="toctree-checkbox-18" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-18"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.hpo.hpo_base.html">otx.hpo.hpo_base</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.hpo.hpo_runner.html">otx.hpo.hpo_runner</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.hpo.hyperband.html">otx.hpo.hyperband</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.hpo.resource_manager.html">otx.hpo.resource_manager</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.hpo.search_space.html">otx.hpo.search_space</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.hpo.utils.html">otx.hpo.utils</a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/_autosummary/otx.engine.html">otx.engine</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/_autosummary/otx.hpo.html">otx.hpo</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../reference/_autosummary/otx.recipe.html">otx.recipe</a></li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="../reference/_autosummary/otx.tools.html">otx.tools</a><input class="toctree-checkbox" id="toctree-checkbox-19" name="toctree-checkbox-19" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-19"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../reference/_autosummary/otx.tools.html">otx.tools</a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-16"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.tools.converter.html">otx.tools.converter</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.tools.translate_mmrecipe.html">otx.tools.translate_mmrecipe</a></li>
 </ul>
 </li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="../reference/_autosummary/otx.utils.html">otx.utils</a><input class="toctree-checkbox" id="toctree-checkbox-20" name="toctree-checkbox-20" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-20"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.utils.signal.html">otx.utils.signal</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../reference/_autosummary/otx.utils.utils.html">otx.utils.utils</a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/_autosummary/otx.utils.html">otx.utils</a></li>
 </ul>
 </li>
 </ul>
@@ -363,7 +341,7 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Release Notes</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">Releases</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-21" name="toctree-checkbox-21" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-21"><i class="fa-solid fa-chevron-down"></i></label><ul class="simple">
+<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">Releases</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-17" name="toctree-checkbox-17" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-17"><i class="fa-solid fa-chevron-down"></i></label><ul class="simple">
 </ul>
 </li>
 </ul>
@@ -398,11 +376,131 @@
             <article class="bd-article" role="main">
               
   <section id="releases">
-<h1>Releases<a class="headerlink" href="#releases" title="Permalink to this heading">#</a></h1>
+<h1>Releases<a class="headerlink" href="#releases" title="Link to this heading">#</a></h1>
 <div class="toctree-wrapper compound">
 </div>
+<section id="v2-0-0-2q24">
+<h2>v2.0.0 (2Q24)<a class="headerlink" href="#v2-0-0-2q24" title="Link to this heading">#</a></h2>
+</section>
+<section id="v1-6-1-2024-05">
+<h2>v1.6.1 (2024.05)<a class="headerlink" href="#v1-6-1-2024-05" title="Link to this heading">#</a></h2>
+<section id="enhancements">
+<h3>Enhancements<a class="headerlink" href="#enhancements" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Update pymongo version to 4.6.3 for resolving CVE-2024-21506</p></li>
+<li><p>Use torchvision in MRCNN on CUDA</p></li>
+<li><p>Update IPEX version in installation guide documentation</p></li>
+<li><p>Update benchmark</p></li>
+<li><p>Bump idan version to 3.7</p></li>
+<li><p>Support benchmark history summary</p></li>
+<li><p>Upgrade MAPI</p></li>
+<li><p>Add NMS iou threshold configurable parameter</p></li>
+<li><p>Remedy some medium/low severity bandit issues</p></li>
+<li><p>Update documentations</p></li>
+<li><p>Add perf benchmark test cases for action and visual prompting</p></li>
+</ul>
+</section>
+<section id="bug-fixes">
+<h3>Bug fixes<a class="headerlink" href="#bug-fixes" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Explicitly cast incorrect output type in OV model</p></li>
+<li><p>Update QAT configs for rotated detection</p></li>
+<li><p>Hotfix :wrench: Bypass ClsIncrSampler for tiling</p></li>
+<li><p>[NNCF] Dynamic shape datasets WA</p></li>
+<li><p>[Hotfix] :fire: Fixing detection oriented OV inferencer</p></li>
+<li><p>Revert adaptive batch size</p></li>
+<li><p>Fix e2e tests for XPU</p></li>
+<li><p>Remove torch.xpu.optimize for semantic_segmentation task</p></li>
+</ul>
+</section>
+</section>
+<section id="v1-6-0-2024-04">
+<h2>v1.6.0 (2024.04)<a class="headerlink" href="#v1-6-0-2024-04" title="Link to this heading">#</a></h2>
+<section id="new-features">
+<h3>New features<a class="headerlink" href="#new-features" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Changed supported Python version range (&gt;=3.9, &lt;=3.11)</p></li>
+<li><p>Support MMDetection COCO format</p></li>
+<li><p>Develop JsonSectionPageMapper in Rust API</p></li>
+<li><p>Add Filtering via User-Provided Python Functions</p></li>
+<li><p>Remove supporting MacOS platform</p></li>
+<li><p>Support Kaggle image data (<cite>KaggleImageCsvBase</cite>, <cite>KaggleImageTxtBase</cite>, <cite>KaggleImageMaskBase</cite>, <cite>KaggleVocBase</cite>, <cite>KaggleYoloBase</cite>)</p></li>
+<li><p>Add <cite>__getitem__()</cite> for random accessing with O(1) time complexity</p></li>
+<li><p>Add Data-aware Anchor Generator</p></li>
+<li><p>Support bounding box import within Kaggle extractors and add <cite>KaggleCocoBase</cite></p></li>
+</ul>
+</section>
+<section id="id1">
+<h3>Enhancements<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Optimize Python import to make CLI entrypoint faster</p></li>
+<li><p>Add ImageColorScale context manager</p></li>
+<li><p>Enhance visualizer to toggle plot title visibility</p></li>
+<li><p>Enhance Datumaro data format detect() to be memory-bounded and performant</p></li>
+<li><p>Change RoIImage and MosaicImage to have np.uint8 dtype as default</p></li>
+<li><p>Enable image backend and color channel format to be selectable</p></li>
+<li><p>Boost up <cite>CityscapesBase</cite> and <cite>KaggleImageMaskBase</cite> by dropping <cite>np.unique</cite></p></li>
+<li><p>Enhance RISE algortihm for explainable AI</p></li>
+<li><p>Enhance explore unit test to use real dataset from ImageNet</p></li>
+<li><p>Fix each method of the comparator to be used separately</p></li>
+</ul>
+</section>
+<section id="id2">
+<h3>Bug fixes<a class="headerlink" href="#id2" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Fix wrong example of Datumaro dataset creation in document</p></li>
+<li><p>Fix wrong command to install datumaro from github</p></li>
+<li><p>Update document to correct wrong <cite>datum project import</cite> command and add filtering example to filter out items containing annotations.</p></li>
+<li><p>Fix label compare of distance method</p></li>
+<li><p>Fix Datumaro visualizer’s import errors after introducing lazy import</p></li>
+<li><p>Fix broken link to supported formats in readme</p></li>
+<li><p>Fix Kinetics data format to have media data</p></li>
+<li><p>Handling undefined labels at the annotation statistics</p></li>
+<li><p>Add unit test for item rename</p></li>
+<li><p>Fix a bug in the previous behavior when importing nested datasets in the project</p></li>
+<li><p>Fix Kaggle importer when adding duplicated labels</p></li>
+<li><p>Fix input tensor shape in model interpreter for OpenVINO 2023.3</p></li>
+<li><p>Add default value for target in prune cli</p></li>
+<li><p>Remove deprecated MediaManager</p></li>
+<li><p>Fix explore command without project</p></li>
+</ul>
+</section>
+</section>
+<section id="v1-5-2-2024-01">
+<h2>v1.5.2 (2024.01)<a class="headerlink" href="#v1-5-2-2024-01" title="Link to this heading">#</a></h2>
+<section id="id3">
+<h3>Enhancements<a class="headerlink" href="#id3" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Add memory bounded datumaro data format detect</p></li>
+<li><p>Remove Protobuf version limitation (&lt;4)</p></li>
+</ul>
+</section>
+</section>
+<section id="v1-5-1-2023-11">
+<h2>v1.5.1 (2023.11)<a class="headerlink" href="#v1-5-1-2023-11" title="Link to this heading">#</a></h2>
+<section id="id4">
+<h3>Enhancements<a class="headerlink" href="#id4" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Enhance Datumaro data format stream importer performance</p></li>
+<li><p>Change image default dtype from float32 to uint8</p></li>
+<li><p>Add comparison level-up doc</p></li>
+<li><p>Add ImportError to catch GitPython import error</p></li>
+</ul>
+</section>
+<section id="id5">
+<h3>Bug fixes<a class="headerlink" href="#id5" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Modify the draw function in the visualizer not to raise an error for unsupported annotation types.</p></li>
+<li><p>Correct explore path in the related document.</p></li>
+<li><p>Fix errata in the voc document. Color values in the labelmap.txt should be separated by commas, not colons.</p></li>
+<li><p>Fix hyperlink errors in the document.</p></li>
+<li><p>Fix memory unbounded Arrow data format export/import.</p></li>
+<li><p>Update CVAT format doc to bypass warning.</p></li>
+</ul>
+</section>
+</section>
 <section id="v1-5-0-4q23">
-<h2>v1.5.0 (4Q23)<a class="headerlink" href="#v1-5-0-4q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.5.0 (4Q23)<a class="headerlink" href="#v1-5-0-4q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Enable configurable confidence threshold for otx eval and export</p></li>
 <li><p>Add YOLOX variants as new object detector models</p></li>
@@ -424,7 +522,7 @@
 </ul>
 </section>
 <section id="v1-4-4-4q23">
-<h2>v1.4.4 (4Q23)<a class="headerlink" href="#v1-4-4-4q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.4.4 (4Q23)<a class="headerlink" href="#v1-4-4-4q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Update ModelAPI configuration</p></li>
 <li><p>Add Anomaly modelAPI changes</p></li>
@@ -432,13 +530,13 @@
 </ul>
 </section>
 <section id="v1-4-3-4q23">
-<h2>v1.4.3 (4Q23)<a class="headerlink" href="#v1-4-3-4q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.4.3 (4Q23)<a class="headerlink" href="#v1-4-3-4q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Re introduce adaptive scheduling for training</p></li>
 </ul>
 </section>
 <section id="v1-4-2-4q23">
-<h2>v1.4.2 (4Q23)<a class="headerlink" href="#v1-4-2-4q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.4.2 (4Q23)<a class="headerlink" href="#v1-4-2-4q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Upgrade nncf version to 2.6.0</p></li>
 <li><p>Bump datumaro version to 1.5.0</p></li>
@@ -448,14 +546,14 @@
 </ul>
 </section>
 <section id="v1-4-1-3q23">
-<h2>v1.4.1 (3Q23)<a class="headerlink" href="#v1-4-1-3q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.4.1 (3Q23)<a class="headerlink" href="#v1-4-1-3q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Update the README file in exportable code</p></li>
 <li><p>Minor bug fixes</p></li>
 </ul>
 </section>
 <section id="v1-4-0-3q23">
-<h2>v1.4.0 (3Q23)<a class="headerlink" href="#v1-4-0-3q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.4.0 (3Q23)<a class="headerlink" href="#v1-4-0-3q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Support encrypted dataset training</p></li>
 <li><p>Add custom max iou assigner to prevent CPU OOM when large annotations are used</p></li>
@@ -478,13 +576,13 @@
 </ul>
 </section>
 <section id="v1-3-1-2q23">
-<h2>v1.3.1 (2Q23)<a class="headerlink" href="#v1-3-1-2q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.3.1 (2Q23)<a class="headerlink" href="#v1-3-1-2q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Minor bug fixes</p></li>
 </ul>
 </section>
 <section id="v1-3-0-2q23">
-<h2>v1.3.0 (2Q23)<a class="headerlink" href="#v1-3-0-2q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.3.0 (2Q23)<a class="headerlink" href="#v1-3-0-2q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Support direct annotation input for COCO format</p></li>
 <li><p>Action task supports multi GPU training</p></li>
@@ -502,7 +600,7 @@
 </ul>
 </section>
 <section id="v1-2-4-3q23">
-<h2>v1.2.4 (3Q23)<a class="headerlink" href="#v1-2-4-3q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.2.4 (3Q23)<a class="headerlink" href="#v1-2-4-3q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Per-class saliency maps for M-RCNN</p></li>
 <li><p>Disable semantic segmentation soft prediction processing</p></li>
@@ -511,14 +609,14 @@
 </ul>
 </section>
 <section id="v1-2-3-2q23">
-<h2>v1.2.3 (2Q23)<a class="headerlink" href="#v1-2-3-2q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.2.3 (2Q23)<a class="headerlink" href="#v1-2-3-2q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Improve warning message for tiling configurable parameter</p></li>
 <li><p>Minor bug fixes</p></li>
 </ul>
 </section>
 <section id="v1-2-1-2q23">
-<h2>v1.2.1 (2Q23)<a class="headerlink" href="#v1-2-1-2q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.2.1 (2Q23)<a class="headerlink" href="#v1-2-1-2q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Upgrade mmdeploy==0.14.0 from official PyPI</p></li>
 <li><p>Integrate new ignored loss in semantic segmentation</p></li>
@@ -529,7 +627,7 @@
 </ul>
 </section>
 <section id="v1-2-0-2q23">
-<h2>v1.2.0 (2Q23)<a class="headerlink" href="#v1-2-0-2q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.2.0 (2Q23)<a class="headerlink" href="#v1-2-0-2q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Add generating feature cli_report.log in output for otx training</p></li>
 <li><p>Support multiple python versions up to 3.10</p></li>
@@ -550,19 +648,19 @@
 </ul>
 </section>
 <section id="v1-1-2-2q23">
-<h2>v1.1.2 (2Q23)<a class="headerlink" href="#v1-1-2-2q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.1.2 (2Q23)<a class="headerlink" href="#v1-1-2-2q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Minor bug fixes</p></li>
 </ul>
 </section>
 <section id="v1-1-1-1q23">
-<h2>v1.1.1 (1Q23)<a class="headerlink" href="#v1-1-1-1q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.1.1 (1Q23)<a class="headerlink" href="#v1-1-1-1q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Minor bug fixes</p></li>
 </ul>
 </section>
 <section id="v1-1-0-1q23">
-<h2>v1.1.0 (1Q23)<a class="headerlink" href="#v1-1-0-1q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.1.0 (1Q23)<a class="headerlink" href="#v1-1-0-1q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Add FP16 IR export support</p></li>
 <li><p>Add in-memory caching in dataloader</p></li>
@@ -581,7 +679,7 @@
 </ul>
 </section>
 <section id="v1-0-1-1q23">
-<h2>v1.0.1 (1Q23)<a class="headerlink" href="#v1-0-1-1q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.0.1 (1Q23)<a class="headerlink" href="#v1-0-1-1q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Refine documents by proof review</p></li>
 <li><p>Separate installation for each tasks</p></li>
@@ -590,7 +688,7 @@
 </ul>
 </section>
 <section id="v1-0-0-1q23">
-<h2>v1.0.0 (1Q23)<a class="headerlink" href="#v1-0-0-1q23" title="Permalink to this heading">#</a></h2>
+<h2>v1.0.0 (1Q23)<a class="headerlink" href="#v1-0-0-1q23" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Installation through PyPI
 - Package will be renamed as OpenVINO™ Training Extensions</p></li>
@@ -611,11 +709,11 @@
             <footer class="bd-footer-article">
                 <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-  <a class='left-prev' id="prev-link" href="../reference/_autosummary/otx.utils.utils.html" title="previous page">
+  <a class='left-prev' id="prev-link" href="../reference/_autosummary/otx.utils.html" title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
           <p class="prev-next-subtitle">previous</p>
-          <p class="prev-next-title">otx.utils.utils</p>
+          <p class="prev-next-title">otx.utils</p>
       </div>
   </a>
 </div>
@@ -634,6 +732,79 @@
 </div>
 <nav id="bd-toc-nav" class="page-toc">
     <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#v2-0-0-2q24">
+   v2.0.0 (2Q24)
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#v1-6-1-2024-05">
+   v1.6.1 (2024.05)
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#enhancements">
+     Enhancements
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#bug-fixes">
+     Bug fixes
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#v1-6-0-2024-04">
+   v1.6.0 (2024.04)
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#new-features">
+     New features
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id1">
+     Enhancements
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id2">
+     Bug fixes
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#v1-5-2-2024-01">
+   v1.5.2 (2024.01)
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id3">
+     Enhancements
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#v1-5-1-2023-11">
+   v1.5.1 (2023.11)
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id4">
+     Enhancements
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id5">
+     Bug fixes
+    </a>
+   </li>
+  </ul>
+ </li>
  <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#v1-5-0-4q23">
    v1.5.0 (4Q23)
@@ -788,7 +959,7 @@
   <div class="footer-item">
     
 <p class="sphinx-version">
-Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.3.0.<br>
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.2.6.<br>
 </p>
 
   </div>

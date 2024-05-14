@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../../../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>otx.engine.engine &#8212; OpenVINO™ Training Extensions 2.0.0 documentation</title>
+    <title>otx.engine.engine &#8212; OpenVINO™ Training Extensions 2.0.0rc0 documentation</title>
   
   
   
@@ -25,26 +24,23 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/tabs.css" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css?v=0a3b3ea7" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=d626d52b" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-    <script src="../../../_static/jquery.js"></script>
-    <script src="../../../_static/underscore.js"></script>
-    <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../../../_static/doctools.js"></script>
-    <script src="../../../_static/sphinx_highlight.js"></script>
-    <script src="../../../_static/clipboard.min.js"></script>
-    <script src="../../../_static/copybutton.js"></script>
-    <script src="../../../_static/tabs.js"></script>
-    <script src="../../../_static/design-tabs.js"></script>
+    <script src="../../../_static/documentation_options.js?v=4fff8b0c"></script>
+    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/tabs.js?v=3030b3cb"></script>
+    <script src="../../../_static/design-tabs.js?v=36754332"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/otx/engine/engine';</script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
@@ -247,36 +243,39 @@
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Literal</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Literal</span>
 <span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
 
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">from</span> <span class="nn">lightning</span> <span class="kn">import</span> <span class="n">Trainer</span><span class="p">,</span> <span class="n">seed_everything</span>
 
+<span class="kn">from</span> <span class="nn">otx.algo.plugins</span> <span class="kn">import</span> <span class="n">MixedPrecisionXPUPlugin</span>
 <span class="kn">from</span> <span class="nn">otx.core.config.device</span> <span class="kn">import</span> <span class="n">DeviceConfig</span>
 <span class="kn">from</span> <span class="nn">otx.core.config.explain</span> <span class="kn">import</span> <span class="n">ExplainConfig</span>
 <span class="kn">from</span> <span class="nn">otx.core.config.hpo</span> <span class="kn">import</span> <span class="n">HpoConfig</span>
 <span class="kn">from</span> <span class="nn">otx.core.data.module</span> <span class="kn">import</span> <span class="n">OTXDataModule</span>
-<span class="kn">from</span> <span class="nn">otx.core.model.entity.base</span> <span class="kn">import</span> <span class="n">OTXModel</span><span class="p">,</span> <span class="n">OVModel</span>
-<span class="kn">from</span> <span class="nn">otx.core.model.module.base</span> <span class="kn">import</span> <span class="n">OTXLitModule</span>
+<span class="kn">from</span> <span class="nn">otx.core.model.base</span> <span class="kn">import</span> <span class="n">OTXModel</span><span class="p">,</span> <span class="n">OVModel</span>
 <span class="kn">from</span> <span class="nn">otx.core.types</span> <span class="kn">import</span> <span class="n">PathLike</span>
 <span class="kn">from</span> <span class="nn">otx.core.types.device</span> <span class="kn">import</span> <span class="n">DeviceType</span>
 <span class="kn">from</span> <span class="nn">otx.core.types.export</span> <span class="kn">import</span> <span class="n">OTXExportFormatType</span>
 <span class="kn">from</span> <span class="nn">otx.core.types.precision</span> <span class="kn">import</span> <span class="n">OTXPrecisionType</span>
 <span class="kn">from</span> <span class="nn">otx.core.types.task</span> <span class="kn">import</span> <span class="n">OTXTaskType</span>
 <span class="kn">from</span> <span class="nn">otx.core.utils.cache</span> <span class="kn">import</span> <span class="n">TrainerArgumentsCache</span>
+<span class="kn">from</span> <span class="nn">otx.utils.utils</span> <span class="kn">import</span> <span class="n">is_xpu_available</span>
 
+<span class="kn">from</span> <span class="nn">.adaptive_bs</span> <span class="kn">import</span> <span class="n">adapt_batch_size</span>
 <span class="kn">from</span> <span class="nn">.hpo</span> <span class="kn">import</span> <span class="n">execute_hpo</span><span class="p">,</span> <span class="n">update_hyper_parameter</span>
 <span class="kn">from</span> <span class="nn">.utils.auto_configurator</span> <span class="kn">import</span> <span class="n">DEFAULT_CONFIG_PER_TASK</span><span class="p">,</span> <span class="n">AutoConfigurator</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">lightning</span> <span class="kn">import</span> <span class="n">Callback</span>
-    <span class="kn">from</span> <span class="nn">lightning.pytorch.cli</span> <span class="kn">import</span> <span class="n">LRSchedulerCallable</span><span class="p">,</span> <span class="n">OptimizerCallable</span>
     <span class="kn">from</span> <span class="nn">lightning.pytorch.loggers</span> <span class="kn">import</span> <span class="n">Logger</span>
     <span class="kn">from</span> <span class="nn">lightning.pytorch.utilities.types</span> <span class="kn">import</span> <span class="n">EVAL_DATALOADERS</span><span class="p">,</span> <span class="n">TRAIN_DATALOADERS</span>
     <span class="kn">from</span> <span class="nn">pytorch_lightning.trainer.connectors.accelerator_connector</span> <span class="kn">import</span> <span class="n">_PRECISION_INPUT</span>
-    <span class="kn">from</span> <span class="nn">torchmetrics</span> <span class="kn">import</span> <span class="n">Metric</span>
 
     <span class="kn">from</span> <span class="nn">otx.core.metrics</span> <span class="kn">import</span> <span class="n">MetricCallable</span>
 
@@ -296,7 +295,29 @@
 <span class="p">}</span>
 
 
-<div class="viewcode-block" id="Engine"><a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.engine.html#otx.engine.Engine">[docs]</a><span class="k">class</span> <span class="nc">Engine</span><span class="p">:</span>
+<span class="nd">@contextmanager</span>
+<span class="k">def</span> <span class="nf">override_metric_callable</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">OTXModel</span><span class="p">,</span> <span class="n">new_metric_callable</span><span class="p">:</span> <span class="n">MetricCallable</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">OTXModel</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Override `OTXModel.metric_callable` to change the evaluation metric.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model: Model to override its metric callable</span>
+<span class="sd">        new_metric_callable: If not None, override the model&#39;s one with this. Otherwise, do not override.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">new_metric_callable</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">model</span>
+        <span class="k">return</span>
+
+    <span class="n">orig_metric_callable</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">metric_callable</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">metric_callable</span> <span class="o">=</span> <span class="n">new_metric_callable</span>
+        <span class="k">yield</span> <span class="n">model</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">metric_callable</span> <span class="o">=</span> <span class="n">orig_metric_callable</span>
+
+
+<div class="viewcode-block" id="Engine">
+<a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.html#otx.engine.Engine">[docs]</a>
+<span class="k">class</span> <span class="nc">Engine</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;OTX Engine.</span>
 
 <span class="sd">    This class defines the Engine for OTX, which governs each step of the OTX workflow.</span>
@@ -304,24 +325,29 @@
 <span class="sd">    Example:</span>
 <span class="sd">        The following examples show how to use the Engine class.</span>
 
-<span class="sd">        Auto-Configuration with data_root</span>
-<span class="sd">        &gt;&gt;&gt; engine = Engine(</span>
-<span class="sd">        ...     data_root=&lt;dataset/path&gt;,</span>
-<span class="sd">        ... )</span>
+<span class="sd">        Auto-Configuration with data_root::</span>
 
-<span class="sd">        Create Engine with Custom OTXModel</span>
-<span class="sd">        &gt;&gt;&gt; engine = Engine(</span>
-<span class="sd">        ...     data_root=&lt;dataset/path&gt;,</span>
-<span class="sd">        ...     model=OTXModel(...),</span>
-<span class="sd">        ...     checkpoint=&lt;checkpoint/path&gt;,</span>
-<span class="sd">        ... )</span>
+<span class="sd">            engine = Engine(</span>
+<span class="sd">                data_root=&lt;dataset/path&gt;,</span>
+<span class="sd">            )</span>
 
-<span class="sd">        Create Engine with Custom OTXDataModule</span>
-<span class="sd">        &gt;&gt;&gt; engine = Engine(</span>
-<span class="sd">        ...     model = OTXModel(...),</span>
-<span class="sd">        ...     datamodule = OTXDataModule(...),</span>
-<span class="sd">        ... )</span>
+<span class="sd">        Create Engine with Custom OTXModel::</span>
+
+<span class="sd">            engine = Engine(</span>
+<span class="sd">                data_root=&lt;dataset/path&gt;,</span>
+<span class="sd">                model=OTXModel(...),</span>
+<span class="sd">                checkpoint=&lt;checkpoint/path&gt;,</span>
+<span class="sd">            )</span>
+
+<span class="sd">        Create Engine with Custom OTXDataModule::</span>
+
+<span class="sd">            engine = Engine(</span>
+<span class="sd">                model = OTXModel(...),</span>
+<span class="sd">                datamodule = OTXDataModule(...),</span>
+<span class="sd">            )</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_EXPORTED_MODEL_BASE_NAME</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;exported_model&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -331,8 +357,6 @@
         <span class="n">work_dir</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">=</span> <span class="s2">&quot;./otx-workspace&quot;</span><span class="p">,</span>
         <span class="n">datamodule</span><span class="p">:</span> <span class="n">OTXDataModule</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">model</span><span class="p">:</span> <span class="n">OTXModel</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">optimizer</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">OptimizerCallable</span><span class="p">]</span> <span class="o">|</span> <span class="n">OptimizerCallable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">scheduler</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">LRSchedulerCallable</span><span class="p">]</span> <span class="o">|</span> <span class="n">LRSchedulerCallable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">checkpoint</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">device</span><span class="p">:</span> <span class="n">DeviceType</span> <span class="o">=</span> <span class="n">DeviceType</span><span class="o">.</span><span class="n">auto</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
@@ -345,10 +369,6 @@
 <span class="sd">            work_dir (PathLike, optional): Working directory for the engine. Defaults to &quot;./otx-workspace&quot;.</span>
 <span class="sd">            datamodule (OTXDataModule | None, optional): The data module for the engine. Defaults to None.</span>
 <span class="sd">            model (OTXModel | str | None, optional): The model for the engine. Defaults to None.</span>
-<span class="sd">            optimizer (list[OptimizerCallable] | OptimizerCallable | None, optional): The optimizer for the engine.</span>
-<span class="sd">                Defaults to None.</span>
-<span class="sd">            scheduler (list[LRSchedulerCallable] | LRSchedulerCallable | None, optional):</span>
-<span class="sd">                The learning rate scheduler for the engine. Defaults to None.</span>
 <span class="sd">            checkpoint (PathLike | None, optional): Path to the checkpoint file. Defaults to None.</span>
 <span class="sd">            device (DeviceType, optional): The device type to use. Defaults to DeviceType.auto.</span>
 <span class="sd">            **kwargs: Additional keyword arguments for pl.Trainer.</span>
@@ -376,20 +396,22 @@
                 <span class="n">label_info</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_datamodule</span><span class="o">.</span><span class="n">label_info</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datamodule</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">OptimizerCallable</span><span class="p">]</span> <span class="o">|</span> <span class="n">OptimizerCallable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">optimizer</span> <span class="k">if</span> <span class="n">optimizer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_optimizer</span><span class="p">()</span>
-        <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">scheduler</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">LRSchedulerCallable</span><span class="p">]</span> <span class="o">|</span> <span class="n">LRSchedulerCallable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">scheduler</span> <span class="k">if</span> <span class="n">scheduler</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_scheduler</span><span class="p">()</span>
-        <span class="p">)</span>
 
-    <span class="n">_EXPORTED_MODEL_BASE_NAME</span> <span class="o">=</span> <span class="s2">&quot;exported_model&quot;</span>
+        <span class="c1"># [TODO](ashwinvaidya17): Need to revisit how task, optimizer, and scheduler are assigned to the model</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">task</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="n">OTXTaskType</span><span class="o">.</span><span class="n">ANOMALY_CLASSIFICATION</span><span class="p">,</span>
+            <span class="n">OTXTaskType</span><span class="o">.</span><span class="n">ANOMALY_DETECTION</span><span class="p">,</span>
+            <span class="n">OTXTaskType</span><span class="o">.</span><span class="n">ANOMALY_SEGMENTATION</span><span class="p">,</span>
+        <span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_anomaly_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">)</span>
 
     <span class="c1"># ------------------------------------------------------------------------ #</span>
     <span class="c1"># General OTX Entry Points</span>
     <span class="c1"># ------------------------------------------------------------------------ #</span>
 
-<div class="viewcode-block" id="Engine.train"><a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.engine.html#otx.engine.Engine.train">[docs]</a>    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span>
+<div class="viewcode-block" id="Engine.train">
+<a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.html#otx.engine.Engine.train">[docs]</a>
+    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">max_epochs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
         <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -399,9 +421,11 @@
         <span class="n">callbacks</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Callback</span><span class="p">]</span> <span class="o">|</span> <span class="n">Callback</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">logger</span><span class="p">:</span> <span class="n">Logger</span> <span class="o">|</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Logger</span><span class="p">]</span> <span class="o">|</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">resume</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">metric</span><span class="p">:</span> <span class="n">Metric</span> <span class="o">|</span> <span class="n">MetricCallable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">metric</span><span class="p">:</span> <span class="n">MetricCallable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">run_hpo</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">hpo_config</span><span class="p">:</span> <span class="n">HpoConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">hpo_config</span><span class="p">:</span> <span class="n">HpoConfig</span> <span class="o">=</span> <span class="n">HpoConfig</span><span class="p">(),</span>  <span class="c1"># noqa: B008 https://github.com/omni-us/jsonargparse/issues/423</span>
+        <span class="n">checkpoint</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">adaptive_bs</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;None&quot;</span><span class="p">,</span> <span class="s2">&quot;Safe&quot;</span><span class="p">,</span> <span class="s2">&quot;Full&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;None&quot;</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Trains the model using the provided LightningModule and OTXDataModule.</span>
@@ -417,10 +441,14 @@
 <span class="sd">            callbacks (list[Callback] | Callback | None, optional): The callbacks to be used during training.</span>
 <span class="sd">            logger (Logger | Iterable[Logger] | bool | None, optional): The logger(s) to be used. Defaults to None.</span>
 <span class="sd">            resume (bool, optional): If True, tries to resume training from existing checkpoint.</span>
-<span class="sd">            metric (Metric | MetricCallable | None): The metric for the validation and test.</span>
-<span class="sd">                                            It could be None at export, predict, etc.</span>
+<span class="sd">            metric (MetricCallable | None): If not None, it will override `OTXModel.metric_callable` with the given</span>
+<span class="sd">                metric callable. It will temporarilly change the evaluation metric for the validation and test.</span>
 <span class="sd">            run_hpo (bool, optional): If True, optimizer hyper parameters before training a model.</span>
 <span class="sd">            hpo_config (HpoConfig | None, optional): Configuration for HPO.</span>
+<span class="sd">            checkpoint (PathLike | None, optional): Path to the checkpoint file. Defaults to None.</span>
+<span class="sd">            adaptive_bs (Literal[&quot;None&quot;, &quot;Safe&quot;, &quot;Full&quot;]):</span>
+<span class="sd">                Change the actual batch size depending on the current GPU status.</span>
+<span class="sd">                Safe =&gt; Prevent GPU out of memory. Full =&gt; Find a batch size using most of GPU memory.</span>
 <span class="sd">            **kwargs: Additional keyword arguments for pl.Trainer configuration.</span>
 
 <span class="sd">        Returns:</span>
@@ -456,24 +484,18 @@
 <span class="sd">                otx train --data_root &lt;DATASET_PATH&gt; --config &lt;CONFIG_PATH, str&gt;</span>
 <span class="sd">                ```</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">metric</span> <span class="o">=</span> <span class="n">metric</span> <span class="k">if</span> <span class="n">metric</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_metric</span><span class="p">()</span>
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="k">if</span> <span class="n">checkpoint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint</span>
+
+        <span class="k">if</span> <span class="n">adaptive_bs</span> <span class="o">!=</span> <span class="s2">&quot;None&quot;</span><span class="p">:</span>
+            <span class="n">adapt_batch_size</span><span class="p">(</span><span class="n">engine</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="nb">locals</span><span class="p">(),</span> <span class="n">not_increase</span><span class="o">=</span><span class="p">(</span><span class="n">adaptive_bs</span> <span class="o">!=</span> <span class="s2">&quot;Full&quot;</span><span class="p">))</span>
+
         <span class="k">if</span> <span class="n">run_hpo</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">hpo_config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">hpo_config</span> <span class="o">=</span> <span class="n">HpoConfig</span><span class="p">()</span>
             <span class="n">best_config</span><span class="p">,</span> <span class="n">best_trial_weight</span> <span class="o">=</span> <span class="n">execute_hpo</span><span class="p">(</span><span class="n">engine</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
             <span class="k">if</span> <span class="n">best_config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">update_hyper_parameter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">best_config</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">best_trial_weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint</span> <span class="o">=</span> <span class="n">best_trial_weight</span>
+                <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">best_trial_weight</span>
                 <span class="n">resume</span> <span class="o">=</span> <span class="kc">True</span>
-
-        <span class="n">lit_module</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_lightning_module</span><span class="p">(</span>
-            <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
-            <span class="n">optimizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">,</span>
-            <span class="n">scheduler</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scheduler</span><span class="p">,</span>
-            <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">lit_module</span><span class="o">.</span><span class="n">label_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span>
 
         <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">seed_everything</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">workers</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -488,26 +510,56 @@
             <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">fit_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">if</span> <span class="n">resume</span><span class="p">:</span>
-            <span class="n">fit_kwargs</span><span class="p">[</span><span class="s2">&quot;ckpt_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">loaded_checkpoint</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkpoint</span><span class="p">)</span>
-            <span class="c1"># loaded checkpoint have keys (OTX1.5): model, config, labels, input_size, VERSION</span>
-            <span class="n">lit_module</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">loaded_checkpoint</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
-            <span class="n">model</span><span class="o">=</span><span class="n">lit_module</span><span class="p">,</span>
-            <span class="n">datamodule</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="p">,</span>
-            <span class="o">**</span><span class="n">fit_kwargs</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="c1"># NOTE: Model&#39;s label info should be converted datamodule&#39;s label info before ckpt loading</span>
+        <span class="c1"># This is due to smart weight loading check label name as well as number of classes.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">label_info</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;Model label_info is not equal to the Datamodule label_info. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;It will be overriden: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">label_info</span><span class="si">}</span><span class="s2"> =&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">label_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span>
+
+        <span class="k">if</span> <span class="n">resume</span> <span class="ow">and</span> <span class="n">checkpoint</span><span class="p">:</span>
+            <span class="c1"># NOTE: If both `resume` and `checkpoint` are provided,</span>
+            <span class="c1"># load the entire model state from the checkpoint using the pl.Trainer&#39;s API.</span>
+            <span class="n">fit_kwargs</span><span class="p">[</span><span class="s2">&quot;ckpt_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">checkpoint</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">resume</span> <span class="ow">and</span> <span class="n">checkpoint</span><span class="p">:</span>
+            <span class="c1"># NOTE: If `resume` is not enabled but `checkpoint` is provided,</span>
+            <span class="c1"># load the model state from the checkpoint incrementally.</span>
+            <span class="c1"># This means only the model weights are loaded. If there is a mismatch in label_info,</span>
+            <span class="c1"># perform incremental weight loading for the model&#39;s classification layer.</span>
+            <span class="n">ckpt</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">load_state_dict_incrementally</span><span class="p">(</span><span class="n">ckpt</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">override_metric_callable</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">new_metric_callable</span><span class="o">=</span><span class="n">metric</span><span class="p">)</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">datamodule</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">fit_kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">checkpoint_callback</span><span class="o">.</span><span class="n">best_model_path</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkpoint</span><span class="p">,</span> <span class="p">(</span><span class="n">Path</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;self.checkpoint should be Path or str at this time.&quot;</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">best_checkpoint_symlink</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;best_checkpoint.ckpt&quot;</span>
+        <span class="k">if</span> <span class="n">best_checkpoint_symlink</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
+            <span class="n">best_checkpoint_symlink</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+        <span class="n">best_checkpoint_symlink</span><span class="o">.</span><span class="n">symlink_to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">checkpoint</span><span class="p">)</span>
+
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">callback_metrics</span></div>
 
-<div class="viewcode-block" id="Engine.test"><a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.engine.html#otx.engine.Engine.test">[docs]</a>    <span class="k">def</span> <span class="nf">test</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Engine.test">
+<a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.html#otx.engine.Engine.test">[docs]</a>
+    <span class="k">def</span> <span class="nf">test</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">checkpoint</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">datamodule</span><span class="p">:</span> <span class="n">EVAL_DATALOADERS</span> <span class="o">|</span> <span class="n">OTXDataModule</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">metric</span><span class="p">:</span> <span class="n">Metric</span> <span class="o">|</span> <span class="n">MetricCallable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">metric</span><span class="p">:</span> <span class="n">MetricCallable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the testing phase of the engine.</span>
@@ -516,8 +568,8 @@
 <span class="sd">            datamodule (EVAL_DATALOADERS | OTXDataModule | None, optional): The data module containing the test data.</span>
 <span class="sd">            checkpoint (PathLike | None, optional): Path to the checkpoint file to load the model from.</span>
 <span class="sd">                Defaults to None.</span>
-<span class="sd">            metric (Metric | MetricCallable | None): The metric for the validation and test.</span>
-<span class="sd">                                            It could be None at export, predict, etc.</span>
+<span class="sd">            metric (MetricCallable | None): If not None, it will override `OTXModel.metric_callable` with the given</span>
+<span class="sd">                metric callable. It will temporarilly change the evaluation metric for the validation and test.</span>
 <span class="sd">            **kwargs: Additional keyword arguments for pl.Trainer configuration.</span>
 
 <span class="sd">        Returns:</span>
@@ -547,34 +599,46 @@
 
         <span class="n">is_ir_ckpt</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">))</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;.xml&quot;</span><span class="p">,</span> <span class="s2">&quot;.onnx&quot;</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">is_ir_ckpt</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">OVModel</span><span class="p">):</span>
-            <span class="n">datamodule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_ov_datamodule</span><span class="p">()</span>
             <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_ov_model</span><span class="p">(</span><span class="n">model_name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">),</span> <span class="n">label_info</span><span class="o">=</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">accelerator</span> <span class="o">!=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;IR model supports inference only on CPU device. The device is changed automatic.&quot;</span>
+                <span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">DeviceType</span><span class="o">.</span><span class="n">cpu</span>  <span class="c1"># type: ignore[assignment]</span>
 
-        <span class="n">metric</span> <span class="o">=</span> <span class="n">metric</span> <span class="k">if</span> <span class="n">metric</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_metric</span><span class="p">()</span>
-        <span class="n">lit_module</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_lightning_module</span><span class="p">(</span>
-            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-            <span class="n">optimizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">,</span>
-            <span class="n">scheduler</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scheduler</span><span class="p">,</span>
-            <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">lit_module</span><span class="o">.</span><span class="n">label_info</span> <span class="o">=</span> <span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span>
+        <span class="c1"># NOTE: Re-initiate datamodule without tiling as model API supports its own tiling mechanism</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">OVModel</span><span class="p">):</span>
+            <span class="n">datamodule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">update_ov_subset_pipeline</span><span class="p">(</span><span class="n">datamodule</span><span class="o">=</span><span class="n">datamodule</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
 
         <span class="c1"># NOTE, trainer.test takes only lightning based checkpoint.</span>
         <span class="c1"># So, it can&#39;t take the OTX1.x checkpoint.</span>
         <span class="k">if</span> <span class="n">checkpoint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_ir_ckpt</span><span class="p">:</span>
-            <span class="n">loaded_checkpoint</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
-            <span class="n">lit_module</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">loaded_checkpoint</span><span class="p">)</span>
+            <span class="n">model_cls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="vm">__class__</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">model_cls</span><span class="o">.</span><span class="n">load_from_checkpoint</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="o">=</span><span class="n">checkpoint</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">label_info</span><span class="o">.</span><span class="n">as_dict</span><span class="p">()</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="o">.</span><span class="n">as_dict</span><span class="p">():</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;To launch a test pipeline, the label information should be same &quot;</span>
+                <span class="s2">&quot;between the training and testing datasets. &quot;</span>
+                <span class="s2">&quot;Please check whether you use the same dataset: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;model.label_info=</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">label_info</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;datamodule.label_info=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_build_trainer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">test</span><span class="p">(</span>
-            <span class="n">model</span><span class="o">=</span><span class="n">lit_module</span><span class="p">,</span>
-            <span class="n">dataloaders</span><span class="o">=</span><span class="n">datamodule</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="k">with</span> <span class="n">override_metric_callable</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">new_metric_callable</span><span class="o">=</span><span class="n">metric</span><span class="p">)</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">test</span><span class="p">(</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">dataloaders</span><span class="o">=</span><span class="n">datamodule</span><span class="p">,</span>
+            <span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">callback_metrics</span></div>
 
-<div class="viewcode-block" id="Engine.predict"><a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.engine.html#otx.engine.Engine.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Engine.predict">
+<a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.html#otx.engine.Engine.predict">[docs]</a>
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">checkpoint</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">datamodule</span><span class="p">:</span> <span class="n">EVAL_DATALOADERS</span> <span class="o">|</span> <span class="n">OTXDataModule</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -625,29 +689,39 @@
 
         <span class="n">is_ir_ckpt</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;.xml&quot;</span><span class="p">,</span> <span class="s2">&quot;.onnx&quot;</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">is_ir_ckpt</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">OVModel</span><span class="p">):</span>
-            <span class="n">datamodule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_ov_datamodule</span><span class="p">()</span>
             <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_ov_model</span><span class="p">(</span><span class="n">model_name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">),</span> <span class="n">label_info</span><span class="o">=</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="p">)</span>
 
-        <span class="n">lit_module</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_lightning_module</span><span class="p">(</span>
-            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-            <span class="n">optimizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">,</span>
-            <span class="n">scheduler</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scheduler</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">lit_module</span><span class="o">.</span><span class="n">label_info</span> <span class="o">=</span> <span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span>
+        <span class="c1"># NOTE: Re-initiate datamodule for OVModel as model API supports its own data pipeline.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">OVModel</span><span class="p">):</span>
+            <span class="n">datamodule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">update_ov_subset_pipeline</span><span class="p">(</span><span class="n">datamodule</span><span class="o">=</span><span class="n">datamodule</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">checkpoint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_ir_ckpt</span><span class="p">:</span>
-            <span class="n">loaded_checkpoint</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
-            <span class="n">lit_module</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">loaded_checkpoint</span><span class="p">)</span>
+            <span class="n">model_cls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="vm">__class__</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">model_cls</span><span class="o">.</span><span class="n">load_from_checkpoint</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="o">=</span><span class="n">checkpoint</span><span class="p">)</span>
 
-        <span class="n">lit_module</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span> <span class="o">=</span> <span class="n">explain</span>
+        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">label_info</span><span class="o">.</span><span class="n">as_dict</span><span class="p">()</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="o">.</span><span class="n">as_dict</span><span class="p">():</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;To launch a predict pipeline, the label information should be same &quot;</span>
+                <span class="s2">&quot;between the training and testing datasets. &quot;</span>
+                <span class="s2">&quot;Please check whether you use the same dataset: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;model.label_info=</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">label_info</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;datamodule.label_info=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_build_trainer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="n">predict_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
-            <span class="n">model</span><span class="o">=</span><span class="n">lit_module</span><span class="p">,</span>
-            <span class="n">dataloaders</span><span class="o">=</span><span class="n">datamodule</span><span class="p">,</span>
-            <span class="n">return_predictions</span><span class="o">=</span><span class="n">return_predictions</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="n">curr_explain_mode</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span> <span class="o">=</span> <span class="n">explain</span>
+            <span class="n">predict_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">dataloaders</span><span class="o">=</span><span class="n">datamodule</span><span class="p">,</span>
+                <span class="n">return_predictions</span><span class="o">=</span><span class="n">return_predictions</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span> <span class="o">=</span> <span class="n">curr_explain_mode</span>
 
         <span class="k">if</span> <span class="n">explain</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">explain_config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -655,12 +729,14 @@
 
             <span class="n">predict_result</span> <span class="o">=</span> <span class="n">process_saliency_maps_in_pred_entity</span><span class="p">(</span><span class="n">predict_result</span><span class="p">,</span> <span class="n">explain_config</span><span class="p">)</span>
 
-        <span class="n">lit_module</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="n">predict_result</span></div>
 
-<div class="viewcode-block" id="Engine.export"><a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.engine.html#otx.engine.Engine.export">[docs]</a>    <span class="k">def</span> <span class="nf">export</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Engine.export">
+<a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.html#otx.engine.Engine.export">[docs]</a>
+    <span class="k">def</span> <span class="nf">export</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">checkpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">checkpoint</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">export_format</span><span class="p">:</span> <span class="n">OTXExportFormatType</span> <span class="o">=</span> <span class="n">OTXExportFormatType</span><span class="o">.</span><span class="n">OPENVINO</span><span class="p">,</span>
         <span class="n">export_precision</span><span class="p">:</span> <span class="n">OTXPrecisionType</span> <span class="o">=</span> <span class="n">OTXPrecisionType</span><span class="o">.</span><span class="n">FP32</span><span class="p">,</span>
         <span class="n">explain</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -668,7 +744,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Export the trained model to OpenVINO Intermediate Representation (IR) or ONNX formats.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            checkpoint (str | Path | None, optional): Checkpoint to export. Defaults to None.</span>
+<span class="sd">            checkpoint (PathLike | None, optional): Checkpoint to export. Defaults to None.</span>
 <span class="sd">            export_config (ExportConfig | None, optional): Config that allows to set export</span>
 <span class="sd">            format and precision. Defaults to None.</span>
 <span class="sd">            explain (bool): Whether to get &quot;saliency_map&quot; and &quot;feature_vector&quot; or not.</span>
@@ -698,27 +774,35 @@
 <span class="sd">                    --checkpoint &lt;CKPT_PATH, str&gt; --export_precision FP16 --export_format ONNX</span>
 <span class="sd">                ```</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">ckpt_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span> <span class="k">if</span> <span class="n">checkpoint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint</span>
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="k">if</span> <span class="n">checkpoint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpoint</span>
 
-        <span class="k">if</span> <span class="n">ckpt_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">checkpoint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;To make export, checkpoint must be specified.&quot;</span>
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">is_ir_ckpt</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;.xml&quot;</span><span class="p">]</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
-        <span class="n">lit_module</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_lightning_module</span><span class="p">(</span>
-            <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
-            <span class="n">optimizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">,</span>
-            <span class="n">scheduler</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scheduler</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">loaded_checkpoint</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">ckpt_path</span><span class="p">)</span>
-        <span class="n">lit_module</span><span class="o">.</span><span class="n">label_info</span> <span class="o">=</span> <span class="n">loaded_checkpoint</span><span class="p">[</span><span class="s2">&quot;state_dict&quot;</span><span class="p">][</span><span class="s2">&quot;label_info&quot;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">label_info</span> <span class="o">=</span> <span class="n">lit_module</span><span class="o">.</span><span class="n">label_info</span>
+        <span class="k">if</span> <span class="n">is_ir_ckpt</span> <span class="ow">and</span> <span class="n">export_format</span> <span class="o">!=</span> <span class="n">OTXExportFormatType</span><span class="o">.</span><span class="n">EXPORTABLE_CODE</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;Export format is automatically changed to EXPORTABLE_CODE, &quot;</span>
+                <span class="s2">&quot;since openvino IR model is passed as a checkpoint.&quot;</span>
+            <span class="p">)</span>
+            <span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">export_format</span> <span class="o">=</span> <span class="n">OTXExportFormatType</span><span class="o">.</span><span class="n">EXPORTABLE_CODE</span>
 
-        <span class="n">lit_module</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">loaded_checkpoint</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_ir_ckpt</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">OVModel</span><span class="p">):</span>
+            <span class="c1"># create OVModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_ov_model</span><span class="p">(</span>
+                <span class="n">model_name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">),</span>
+                <span class="n">label_info</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_ir_ckpt</span><span class="p">:</span>
+            <span class="n">model_cls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="vm">__class__</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model_cls</span><span class="o">.</span><span class="n">load_from_checkpoint</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="o">=</span><span class="n">checkpoint</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span> <span class="o">=</span> <span class="n">explain</span>
-
-        <span class="n">exported_model_path</span> <span class="o">=</span> <span class="n">lit_module</span><span class="o">.</span><span class="n">export</span><span class="p">(</span>
+        <span class="n">exported_model_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">export</span><span class="p">(</span>
             <span class="n">output_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work_dir</span><span class="p">),</span>
             <span class="n">base_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_EXPORTED_MODEL_BASE_NAME</span><span class="p">,</span>
             <span class="n">export_format</span><span class="o">=</span><span class="n">export_format</span><span class="p">,</span>
@@ -728,11 +812,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="n">exported_model_path</span></div>
 
-<div class="viewcode-block" id="Engine.optimize"><a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.engine.html#otx.engine.Engine.optimize">[docs]</a>    <span class="k">def</span> <span class="nf">optimize</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Engine.optimize">
+<a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.html#otx.engine.Engine.optimize">[docs]</a>
+    <span class="k">def</span> <span class="nf">optimize</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">checkpoint</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">datamodule</span><span class="p">:</span> <span class="n">TRAIN_DATALOADERS</span> <span class="o">|</span> <span class="n">OTXDataModule</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">max_data_subset_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">export_demo_package</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Applies NNCF.PTQ to the underlying models (now works only for OV models).</span>
 
@@ -745,6 +833,8 @@
 <span class="sd">            max_data_subset_size (int | None): The maximum size of the train subset from `datamodule` that would be</span>
 <span class="sd">            used for model optimization. If not set, NNCF.PTQ will select subset size according to it&#39;s</span>
 <span class="sd">            default settings.</span>
+<span class="sd">            export_demo_package (bool): Whether to export demo package with optimized models.</span>
+<span class="sd">            It outputs zip archive with stand-alone demo package.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Path: path to the optimized model.</span>
@@ -755,6 +845,7 @@
 <span class="sd">            ...     datamodule=OTXDataModule(),</span>
 <span class="sd">            ...     checkpoint=&lt;checkpoint/path&gt;,</span>
 <span class="sd">            ... )</span>
+
 <span class="sd">        CLI Usage:</span>
 <span class="sd">            To optimize a model, run</span>
 <span class="sd">                ```python</span>
@@ -774,7 +865,10 @@
 
         <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">OVModel</span><span class="p">):</span>
-            <span class="n">datamodule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_ov_datamodule</span><span class="p">()</span>
+            <span class="n">optimize_datamodule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">update_ov_subset_pipeline</span><span class="p">(</span>
+                <span class="n">datamodule</span><span class="o">=</span><span class="n">optimize_datamodule</span><span class="p">,</span>
+                <span class="n">subset</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
             <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_ov_model</span><span class="p">(</span>
                 <span class="n">model_name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">),</span>
                 <span class="n">label_info</span><span class="o">=</span><span class="n">optimize_datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="p">,</span>
@@ -784,13 +878,24 @@
         <span class="k">if</span> <span class="n">max_data_subset_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">ptq_config</span><span class="p">[</span><span class="s2">&quot;subset_size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_data_subset_size</span>
 
-        <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">optimize</span><span class="p">(</span>
-            <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work_dir</span><span class="p">),</span>
-            <span class="n">optimize_datamodule</span><span class="p">,</span>
-            <span class="n">ptq_config</span><span class="p">,</span>
-        <span class="p">)</span></div>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">export_demo_package</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">optimize</span><span class="p">(</span>
+                <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work_dir</span><span class="p">),</span>
+                <span class="n">optimize_datamodule</span><span class="p">,</span>
+                <span class="n">ptq_config</span><span class="p">,</span>
+            <span class="p">)</span>
 
-<div class="viewcode-block" id="Engine.explain"><a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.engine.html#otx.engine.Engine.explain">[docs]</a>    <span class="k">def</span> <span class="nf">explain</span><span class="p">(</span>
+        <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp_dir</span><span class="p">:</span>
+            <span class="n">tmp_model_path</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">optimize</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">tmp_dir</span><span class="p">),</span> <span class="n">optimize_datamodule</span><span class="p">,</span> <span class="n">ptq_config</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">export</span><span class="p">(</span>
+                <span class="n">checkpoint</span><span class="o">=</span><span class="n">tmp_model_path</span><span class="p">,</span>
+                <span class="n">export_format</span><span class="o">=</span><span class="n">OTXExportFormatType</span><span class="o">.</span><span class="n">EXPORTABLE_CODE</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Engine.explain">
+<a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.html#otx.engine.Engine.explain">[docs]</a>
+    <span class="k">def</span> <span class="nf">explain</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">checkpoint</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">datamodule</span><span class="p">:</span> <span class="n">EVAL_DATALOADERS</span> <span class="o">|</span> <span class="n">OTXDataModule</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -835,26 +940,29 @@
 
         <span class="n">is_ir_ckpt</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;.xml&quot;</span><span class="p">,</span> <span class="s2">&quot;.onnx&quot;</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">is_ir_ckpt</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">OVModel</span><span class="p">):</span>
-            <span class="n">datamodule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_ov_datamodule</span><span class="p">()</span>
+            <span class="n">datamodule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">update_ov_subset_pipeline</span><span class="p">(</span><span class="n">datamodule</span><span class="o">=</span><span class="n">datamodule</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
             <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_ov_model</span><span class="p">(</span><span class="n">model_name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">),</span> <span class="n">label_info</span><span class="o">=</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="p">)</span>
 
-        <span class="n">lit_module</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_lightning_module</span><span class="p">(</span>
-            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-            <span class="n">optimizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">,</span>
-            <span class="n">scheduler</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scheduler</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">lit_module</span><span class="o">.</span><span class="n">label_info</span> <span class="o">=</span> <span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span>
-
         <span class="k">if</span> <span class="n">checkpoint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_ir_ckpt</span><span class="p">:</span>
-            <span class="n">loaded_checkpoint</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
-            <span class="n">lit_module</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">loaded_checkpoint</span><span class="p">)</span>
+            <span class="n">model_cls</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="vm">__class__</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">model_cls</span><span class="o">.</span><span class="n">load_from_checkpoint</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="o">=</span><span class="n">checkpoint</span><span class="p">)</span>
 
-        <span class="n">lit_module</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">label_info</span><span class="o">.</span><span class="n">as_dict</span><span class="p">()</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="o">.</span><span class="n">as_dict</span><span class="p">():</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;To launch a explain pipeline, the label information should be same &quot;</span>
+                <span class="s2">&quot;between the training and testing datasets. &quot;</span>
+                <span class="s2">&quot;Please check whether you use the same dataset: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;model.label_info=</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">label_info</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;datamodule.label_info=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_build_trainer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="n">predict_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainer</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
-            <span class="n">model</span><span class="o">=</span><span class="n">lit_module</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
             <span class="n">datamodule</span><span class="o">=</span><span class="n">datamodule</span><span class="p">,</span>
         <span class="p">)</span>
 
@@ -869,10 +977,13 @@
                 <span class="n">datamodule</span><span class="p">,</span>
                 <span class="n">output_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work_dir</span><span class="p">),</span>
             <span class="p">)</span>
-        <span class="n">lit_module</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="n">predict_result</span></div>
 
-<div class="viewcode-block" id="Engine.from_config"><a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.engine.html#otx.engine.Engine.from_config">[docs]</a>    <span class="nd">@classmethod</span>
+
+<div class="viewcode-block" id="Engine.from_config">
+<a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.html#otx.engine.Engine.from_config">[docs]</a>
+    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_config</span><span class="p">(</span>
         <span class="bp">cls</span><span class="p">,</span>
         <span class="n">config_path</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
@@ -890,7 +1001,7 @@
 <span class="sd">                Defaults to None. If work_dir is None, use the work_dir from the configuration file.</span>
 <span class="sd">            kwargs: Arguments that can override the engine&#39;s arguments.</span>
 
-<span class="sd">        Returns:s</span>
+<span class="sd">        Returns:</span>
 <span class="sd">            Engine: An instance of the Engine class.</span>
 
 <span class="sd">        Example:</span>
@@ -929,16 +1040,31 @@
             <span class="p">)</span>
             <span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
+        <span class="k">if</span> <span class="p">(</span><span class="n">datamodule</span> <span class="o">:=</span> <span class="n">instantiated_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">))</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Cannot instantiate datamodule from config.&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datamodule</span><span class="p">,</span> <span class="n">OTXDataModule</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">datamodule</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">model</span> <span class="o">:=</span> <span class="n">instantiated_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">))</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Cannot instantiate model from config.&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">OTXModel</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+
+        <span class="n">model</span><span class="o">.</span><span class="n">label_info</span> <span class="o">=</span> <span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span>
+
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
             <span class="n">work_dir</span><span class="o">=</span><span class="n">instantiated_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;work_dir&quot;</span><span class="p">,</span> <span class="n">work_dir</span><span class="p">),</span>
-            <span class="n">datamodule</span><span class="o">=</span><span class="n">instantiated_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">),</span>
-            <span class="n">model</span><span class="o">=</span><span class="n">instantiated_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">),</span>
-            <span class="n">optimizer</span><span class="o">=</span><span class="n">instantiated_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;optimizer&quot;</span><span class="p">),</span>
-            <span class="n">scheduler</span><span class="o">=</span><span class="n">instantiated_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scheduler&quot;</span><span class="p">),</span>
+            <span class="n">datamodule</span><span class="o">=</span><span class="n">datamodule</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
             <span class="o">**</span><span class="n">engine_kwargs</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Engine.from_model_name"><a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.engine.html#otx.engine.Engine.from_model_name">[docs]</a>    <span class="nd">@classmethod</span>
+
+<div class="viewcode-block" id="Engine.from_model_name">
+<a class="viewcode-back" href="../../../guide/reference/_autosummary/otx.engine.html#otx.engine.Engine.from_model_name">[docs]</a>
+    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_model_name</span><span class="p">(</span>
         <span class="bp">cls</span><span class="p">,</span>
         <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -968,17 +1094,17 @@
 <span class="sd">            ...     data_root=&lt;dataset/path&gt;,</span>
 <span class="sd">            ... )</span>
 
-<span class="sd">            If you want to override configuration from default config</span>
-<span class="sd">            &gt;&gt;&gt; overriding = {</span>
-<span class="sd">            ...     &quot;data.config.train_subset.batch_size&quot;: 2,</span>
-<span class="sd">            ...     &quot;data.config.test_subset.subset_name&quot;: &quot;TESTING&quot;,</span>
-<span class="sd">            ... }</span>
-<span class="sd">            &gt;&gt;&gt; engine = Engine(</span>
-<span class="sd">            ...     model_name=&quot;atss_mobilenetv2&quot;,</span>
-<span class="sd">            ...     task=&quot;DETECTION&quot;,</span>
-<span class="sd">            ...     data_root=&lt;dataset/path&gt;,</span>
-<span class="sd">            ...     **overriding,</span>
-<span class="sd">            ... )</span>
+<span class="sd">            If you want to override configuration from default config:</span>
+<span class="sd">                &gt;&gt;&gt; overriding = {</span>
+<span class="sd">                ...     &quot;data.config.train_subset.batch_size&quot;: 2,</span>
+<span class="sd">                ...     &quot;data.config.test_subset.subset_name&quot;: &quot;TESTING&quot;,</span>
+<span class="sd">                ... }</span>
+<span class="sd">                &gt;&gt;&gt; engine = Engine(</span>
+<span class="sd">                ...     model_name=&quot;atss_mobilenetv2&quot;,</span>
+<span class="sd">                ...     task=&quot;DETECTION&quot;,</span>
+<span class="sd">                ...     data_root=&lt;dataset/path&gt;,</span>
+<span class="sd">                ...     **overriding,</span>
+<span class="sd">                ... )</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">default_config</span> <span class="o">=</span> <span class="n">DEFAULT_CONFIG_PER_TASK</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
         <span class="n">model_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">default_config</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
@@ -1000,6 +1126,7 @@
             <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
         <span class="p">)</span></div>
 
+
     <span class="c1"># ------------------------------------------------------------------------ #</span>
     <span class="c1"># Property and setter functions provided by Engine.</span>
     <span class="c1"># ------------------------------------------------------------------------ #</span>
@@ -1013,6 +1140,7 @@
     <span class="k">def</span> <span class="nf">work_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">work_dir</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_work_dir</span> <span class="o">=</span> <span class="n">work_dir</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">default_root_dir</span><span class="o">=</span><span class="n">work_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">is_trainer_args_identical</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">device</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DeviceConfig</span><span class="p">:</span>
@@ -1021,8 +1149,11 @@
 
     <span class="nd">@device</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">device</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">DeviceType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">is_xpu_available</span><span class="p">()</span> <span class="ow">and</span> <span class="n">device</span> <span class="o">==</span> <span class="n">DeviceType</span><span class="o">.</span><span class="n">auto</span><span class="p">:</span>
+            <span class="n">device</span> <span class="o">=</span> <span class="n">DeviceType</span><span class="o">.</span><span class="n">xpu</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_device</span> <span class="o">=</span> <span class="n">DeviceConfig</span><span class="p">(</span><span class="n">accelerator</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">accelerator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="o">.</span><span class="n">accelerator</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="o">.</span><span class="n">devices</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">is_trainer_args_identical</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">trainer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Trainer</span><span class="p">:</span>
@@ -1042,8 +1173,18 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Instantiate the trainer based on the model parameters.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">requires_update</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="c1"># set up xpu device</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="o">.</span><span class="n">accelerator</span> <span class="o">==</span> <span class="n">DeviceType</span><span class="o">.</span><span class="n">xpu</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">strategy</span><span class="o">=</span><span class="s2">&quot;xpu_single&quot;</span><span class="p">)</span>
+                <span class="c1"># add plugin for Automatic Mixed Precision on XPU</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;precision&quot;</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span> <span class="o">==</span> <span class="mi">16</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">plugins</span><span class="o">=</span><span class="p">[</span><span class="n">MixedPrecisionXPUPlugin</span><span class="p">()])</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="s2">&quot;precision&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
             <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">args</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span> <span class="o">=</span> <span class="n">Trainer</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">is_trainer_args_identical</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span><span class="o">.</span><span class="n">task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">task</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">work_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span><span class="o">.</span><span class="n">default_root_dir</span>
 
     <span class="nd">@property</span>
@@ -1090,58 +1231,11 @@
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datamodule</span>
 
-    <span class="k">def</span> <span class="nf">_build_lightning_module</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">model</span><span class="p">:</span> <span class="n">OTXModel</span><span class="p">,</span>
-        <span class="n">optimizer</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">OptimizerCallable</span><span class="p">]</span> <span class="o">|</span> <span class="n">OptimizerCallable</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">scheduler</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">LRSchedulerCallable</span><span class="p">]</span> <span class="o">|</span> <span class="n">LRSchedulerCallable</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">metric</span><span class="p">:</span> <span class="n">Metric</span> <span class="o">|</span> <span class="n">MetricCallable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OTXLitModule</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds a LightningModule for engine workflow.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            model (OTXModel): The OTXModel instance.</span>
-<span class="sd">            optimizer (list[OptimizerCallable] | OptimizerCallable | None): The optimizer callable.</span>
-<span class="sd">            scheduler (list[LRSchedulerCallable] | LRSchedulerCallable | None): The learning rate scheduler callable.</span>
-<span class="sd">            metric (Metric | MetricCallable | None): The metric for the validation and test.</span>
-<span class="sd">                                            It could be None at export, predict, etc.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            OTXLitModule | OTXModel: The built LightningModule instance.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">task</span> <span class="ow">in</span> <span class="p">(</span>
-            <span class="n">OTXTaskType</span><span class="o">.</span><span class="n">ANOMALY_CLASSIFICATION</span><span class="p">,</span>
-            <span class="n">OTXTaskType</span><span class="o">.</span><span class="n">ANOMALY_DETECTION</span><span class="p">,</span>
-            <span class="n">OTXTaskType</span><span class="o">.</span><span class="n">ANOMALY_SEGMENTATION</span><span class="p">,</span>
-        <span class="p">):</span>
-            <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_anomaly_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="n">scheduler</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">class_module</span><span class="p">,</span> <span class="n">class_name</span> <span class="o">=</span> <span class="n">LITMODULE_PER_TASK</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">task</span><span class="p">]</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="n">module</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="n">class_module</span><span class="p">,</span> <span class="n">fromlist</span><span class="o">=</span><span class="p">[</span><span class="n">class_name</span><span class="p">])</span>
-            <span class="n">lightning_module</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">class_name</span><span class="p">)</span>
-            <span class="n">lightning_kwargs</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;otx_model&quot;</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span>
-                <span class="s2">&quot;optimizer&quot;</span><span class="p">:</span> <span class="n">optimizer</span><span class="p">,</span>
-                <span class="s2">&quot;scheduler&quot;</span><span class="p">:</span> <span class="n">scheduler</span><span class="p">,</span>
-                <span class="s2">&quot;torch_compile&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-            <span class="p">}</span>
-            <span class="k">if</span> <span class="n">metric</span><span class="p">:</span>
-                <span class="n">lightning_kwargs</span><span class="p">[</span><span class="s2">&quot;metric&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metric</span>
-
-            <span class="n">model</span> <span class="o">=</span> <span class="n">lightning_module</span><span class="p">(</span><span class="o">**</span><span class="n">lightning_kwargs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">model</span>
-
-    <span class="k">def</span> <span class="nf">_get_anomaly_model</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">model</span><span class="p">:</span> <span class="n">OTXModel</span><span class="p">,</span>
-        <span class="n">optimizer</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">OptimizerCallable</span><span class="p">]</span> <span class="o">|</span> <span class="n">OptimizerCallable</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">scheduler</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">LRSchedulerCallable</span><span class="p">]</span> <span class="o">|</span> <span class="n">LRSchedulerCallable</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OTXModel</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_get_anomaly_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">OTXModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OTXModel</span><span class="p">:</span>
         <span class="c1"># [TODO](ashwinvaidya17): Need to revisit how task, optimizer, and scheduler are assigned to the model</span>
         <span class="n">model</span><span class="o">.</span><span class="n">task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">task</span>
-        <span class="n">model</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimizer</span>
-        <span class="n">model</span><span class="o">.</span><span class="n">scheduler</span> <span class="o">=</span> <span class="n">scheduler</span>
         <span class="k">return</span> <span class="n">model</span></div>
+
 </pre></div>
 
             </article>
@@ -1218,7 +1312,7 @@
   <div class="footer-item">
     
 <p class="sphinx-version">
-Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.3.0.<br>
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.2.6.<br>
 </p>
 
   </div>

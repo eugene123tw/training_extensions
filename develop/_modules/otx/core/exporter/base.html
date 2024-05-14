@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../../../../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>otx.core.exporter.base &#8212; OpenVINO™ Training Extensions 2.0.0 documentation</title>
+    <title>otx.core.exporter.base &#8212; OpenVINO™ Training Extensions 2.0.0rc0 documentation</title>
   
   
   
@@ -25,26 +24,23 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
-    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/tabs.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css?v=0a3b3ea7" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=d626d52b" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
-    <script src="../../../../_static/jquery.js"></script>
-    <script src="../../../../_static/underscore.js"></script>
-    <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../../../../_static/doctools.js"></script>
-    <script src="../../../../_static/sphinx_highlight.js"></script>
-    <script src="../../../../_static/clipboard.min.js"></script>
-    <script src="../../../../_static/copybutton.js"></script>
-    <script src="../../../../_static/tabs.js"></script>
-    <script src="../../../../_static/design-tabs.js"></script>
+    <script src="../../../../_static/documentation_options.js?v=4fff8b0c"></script>
+    <script src="../../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/tabs.js?v=3030b3cb"></script>
+    <script src="../../../../_static/design-tabs.js?v=36754332"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/otx/core/exporter/base';</script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
@@ -247,6 +243,7 @@
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span> <span class="k">as</span> <span class="nn">log</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">tempfile</span>
 <span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span>
@@ -254,20 +251,27 @@
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
 <span class="kn">from</span> <span class="nn">zipfile</span> <span class="kn">import</span> <span class="n">ZipFile</span>
 
+<span class="kn">from</span> <span class="nn">model_api.models</span> <span class="kn">import</span> <span class="n">Model</span>
+
 <span class="kn">from</span> <span class="nn">otx.core.exporter.exportable_code</span> <span class="kn">import</span> <span class="n">demo</span>
-<span class="kn">from</span> <span class="nn">otx.core.types.export</span> <span class="kn">import</span> <span class="n">OTXExportFormatType</span>
+<span class="kn">from</span> <span class="nn">otx.core.types.export</span> <span class="kn">import</span> <span class="n">OTXExportFormatType</span><span class="p">,</span> <span class="n">TaskLevelExportParameters</span>
 <span class="kn">from</span> <span class="nn">otx.core.types.precision</span> <span class="kn">import</span> <span class="n">OTXPrecisionType</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">onnx</span>
     <span class="kn">import</span> <span class="nn">openvino</span>
-    <span class="kn">import</span> <span class="nn">torch</span>
+
+    <span class="kn">from</span> <span class="nn">otx.core.model.base</span> <span class="kn">import</span> <span class="n">OTXModel</span>
 
 
-<div class="viewcode-block" id="OTXModelExporter"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.exporter.base.html#otx.core.exporter.base.OTXModelExporter">[docs]</a><span class="k">class</span> <span class="nc">OTXModelExporter</span><span class="p">:</span>
+<div class="viewcode-block" id="OTXModelExporter">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.exporter.base.html#otx.core.exporter.base.OTXModelExporter">[docs]</a>
+<span class="k">class</span> <span class="nc">OTXModelExporter</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for the model exporters used in OTX.</span>
 
 <span class="sd">    Args:</span>
+<span class="sd">        task_level_export_parameters (TaskLevelExportParameters): Collection of export parameters</span>
+<span class="sd">            which can be defined at a task level.</span>
 <span class="sd">        input_size (tuple[int, ...]): Input shape.</span>
 <span class="sd">        mean (tuple[float, float, float], optional): Mean values of 3 channels. Defaults to (0.0, 0.0, 0.0).</span>
 <span class="sd">        std (tuple[float, float, float], optional): Std values of 3 channels. Defaults to (1.0, 1.0, 1.0).</span>
@@ -277,20 +281,20 @@
 <span class="sd">            &quot;fit_to_window_letterbox&quot; resizes images and pads images to fit the size. Defaults to &quot;standard&quot;.</span>
 <span class="sd">        pad_value (int, optional): Padding value. Defaults to 0.</span>
 <span class="sd">        swap_rgb (bool, optional): Whether to convert the image from BGR to RGB Defaults to False.</span>
-<span class="sd">        metadata (dict[tuple[str, str],str] | None, optional): metadata to embed to the exported model.</span>
 <span class="sd">        output_names (list[str] | None, optional): Names for model&#39;s outputs, which would be</span>
-<span class="sd">        embedded into resulting model.</span>
+<span class="sd">        embedded into resulting model. Note, that order of the output names should be the same,</span>
+<span class="sd">        as in the target model.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
+        <span class="n">task_level_export_parameters</span><span class="p">:</span> <span class="n">TaskLevelExportParameters</span><span class="p">,</span>
         <span class="n">input_size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
         <span class="n">mean</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
         <span class="n">std</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
         <span class="n">resize_mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;crop&quot;</span><span class="p">,</span> <span class="s2">&quot;standard&quot;</span><span class="p">,</span> <span class="s2">&quot;fit_to_window&quot;</span><span class="p">,</span> <span class="s2">&quot;fit_to_window_letterbox&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;standard&quot;</span><span class="p">,</span>
         <span class="n">pad_value</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
         <span class="n">swap_rgb</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">output_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">input_size</span> <span class="o">=</span> <span class="n">input_size</span>
@@ -299,12 +303,22 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">resize_mode</span> <span class="o">=</span> <span class="n">resize_mode</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pad_value</span> <span class="o">=</span> <span class="n">pad_value</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">swap_rgb</span> <span class="o">=</span> <span class="n">swap_rgb</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">task_level_export_parameters</span> <span class="o">=</span> <span class="n">task_level_export_parameters</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">output_names</span> <span class="o">=</span> <span class="n">output_names</span>
 
-<div class="viewcode-block" id="OTXModelExporter.export"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.exporter.base.html#otx.core.exporter.base.OTXModelExporter.export">[docs]</a>    <span class="k">def</span> <span class="nf">export</span><span class="p">(</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Collection of metadata to be stored in OpenVINO Intermediate Representation or ONNX.</span>
+
+<span class="sd">        This metadata is mainly used to support ModelAPI.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">task_level_export_parameters</span><span class="o">.</span><span class="n">to_metadata</span><span class="p">()</span>
+
+<div class="viewcode-block" id="OTXModelExporter.export">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.exporter.base.html#otx.core.exporter.base.OTXModelExporter.export">[docs]</a>
+    <span class="k">def</span> <span class="nf">export</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">model</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">OTXModel</span><span class="p">,</span>
         <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">base_model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;exported_model&quot;</span><span class="p">,</span>
         <span class="n">export_format</span><span class="p">:</span> <span class="n">OTXExportFormatType</span> <span class="o">=</span> <span class="n">OTXExportFormatType</span><span class="o">.</span><span class="n">OPENVINO</span><span class="p">,</span>
@@ -313,7 +327,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Exports input model to the specified deployable format, such as OpenVINO IR or ONNX.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            model (torch.nn.Module): pytorch model top export</span>
+<span class="sd">            model (OTXModel): OTXModel to be exported</span>
 <span class="sd">            output_dir (Path): path to the directory to store export artifacts</span>
 <span class="sd">            base_model_name (str, optional): exported model name</span>
 <span class="sd">            format (OTXExportFormatType): final format of the exported model</span>
@@ -327,15 +341,23 @@
         <span class="k">if</span> <span class="n">export_format</span> <span class="o">==</span> <span class="n">OTXExportFormatType</span><span class="o">.</span><span class="n">ONNX</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_onnx</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">base_model_name</span><span class="p">,</span> <span class="n">precision</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">export_format</span> <span class="o">==</span> <span class="n">OTXExportFormatType</span><span class="o">.</span><span class="n">EXPORTABLE_CODE</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_exportable_code</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">base_model_name</span><span class="p">,</span> <span class="n">precision</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_exportable_code</span><span class="p">(</span>
+                <span class="n">model</span><span class="p">,</span>
+                <span class="n">output_dir</span><span class="p">,</span>
+                <span class="n">base_model_name</span><span class="p">,</span>
+                <span class="n">precision</span><span class="p">,</span>
+            <span class="p">)</span>
 
         <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Unsupported export format: </span><span class="si">{</span><span class="n">export_format</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="OTXModelExporter.to_openvino"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.exporter.base.html#otx.core.exporter.base.OTXModelExporter.to_openvino">[docs]</a>    <span class="nd">@abstractmethod</span>
+
+<div class="viewcode-block" id="OTXModelExporter.to_openvino">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.exporter.base.html#otx.core.exporter.base.OTXModelExporter.to_openvino">[docs]</a>
+    <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">to_openvino</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">model</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">OTXModel</span><span class="p">,</span>
         <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">base_model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;exported_model&quot;</span><span class="p">,</span>
         <span class="n">precision</span><span class="p">:</span> <span class="n">OTXPrecisionType</span> <span class="o">=</span> <span class="n">OTXPrecisionType</span><span class="o">.</span><span class="n">FP32</span><span class="p">,</span>
@@ -343,7 +365,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Export to OpenVINO Intermediate Representation format.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            model (torch.nn.Module): pytorch model top export</span>
+<span class="sd">            model (OTXModel): OTXModel to be exported</span>
 <span class="sd">            output_dir (Path): path to the directory to store export artifacts</span>
 <span class="sd">            base_model_name (str, optional): exported model name</span>
 <span class="sd">            precision (OTXExportPrecisionType, optional): precision of the exported model&#39;s weights</span>
@@ -352,10 +374,13 @@
 <span class="sd">            Path: path to the exported model.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
-<div class="viewcode-block" id="OTXModelExporter.to_onnx"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.exporter.base.html#otx.core.exporter.base.OTXModelExporter.to_onnx">[docs]</a>    <span class="nd">@abstractmethod</span>
+
+<div class="viewcode-block" id="OTXModelExporter.to_onnx">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.exporter.base.html#otx.core.exporter.base.OTXModelExporter.to_onnx">[docs]</a>
+    <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">to_onnx</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">model</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">OTXModel</span><span class="p">,</span>
         <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">base_model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;exported_model&quot;</span><span class="p">,</span>
         <span class="n">precision</span><span class="p">:</span> <span class="n">OTXPrecisionType</span> <span class="o">=</span> <span class="n">OTXPrecisionType</span><span class="o">.</span><span class="n">FP32</span><span class="p">,</span>
@@ -366,7 +391,7 @@
 <span class="sd">        Converts the given torch model to ONNX format and saves it to the specified output directory.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            model (torch.nn.Module): The input PyTorch model to be converted.</span>
+<span class="sd">            model (OTXModel): The input PyTorch model to be converted.</span>
 <span class="sd">            output_dir (Path): The directory where the ONNX model will be saved.</span>
 <span class="sd">            base_model_name (str, optional): The name of the exported ONNX model. Defaults to &quot;exported_model&quot;.</span>
 <span class="sd">            precision (OTXPrecisionType, optional): The precision type for the exported model.</span>
@@ -377,9 +402,12 @@
 <span class="sd">            Path: The file path where the ONNX model is saved.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
-<div class="viewcode-block" id="OTXModelExporter.to_exportable_code"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.exporter.base.html#otx.core.exporter.base.OTXModelExporter.to_exportable_code">[docs]</a>    <span class="k">def</span> <span class="nf">to_exportable_code</span><span class="p">(</span>
+
+<div class="viewcode-block" id="OTXModelExporter.to_exportable_code">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.exporter.base.html#otx.core.exporter.base.OTXModelExporter.to_exportable_code">[docs]</a>
+    <span class="k">def</span> <span class="nf">to_exportable_code</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">model</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">OTXModel</span><span class="p">,</span>
         <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">base_model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;exported_model&quot;</span><span class="p">,</span>
         <span class="n">precision</span><span class="p">:</span> <span class="n">OTXPrecisionType</span> <span class="o">=</span> <span class="n">OTXPrecisionType</span><span class="o">.</span><span class="n">FP32</span><span class="p">,</span>
@@ -387,7 +415,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Export to zip folder final OV IR model with runable demo.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            model (torch.nn.Module): pytorch model top export</span>
+<span class="sd">            model (OTXModel): OTXModel to be exported</span>
 <span class="sd">            output_dir (Path): path to the directory to store export artifacts</span>
 <span class="sd">            base_model_name (str, optional): exported model name</span>
 <span class="sd">            precision (OTXExportPrecisionType, optional): precision of the exported model&#39;s weights</span>
@@ -395,39 +423,57 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Path: path to the exported model.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">work_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">demo</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
+        <span class="n">work_demo_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">demo</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
         <span class="n">parameters</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;type_of_model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="s2">&quot;task_type&quot;</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-            <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;converter_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="s2">&quot;model_type&quot;</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-            <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;model_parameters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;labels&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="s2">&quot;labels&quot;</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-                <span class="s2">&quot;labels_ids&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="s2">&quot;label_ids&quot;</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-            <span class="p">}</span>
-
         <span class="n">output_zip_path</span> <span class="o">=</span> <span class="n">output_dir</span> <span class="o">/</span> <span class="s2">&quot;exportable_code.zip&quot;</span>
         <span class="n">Path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">is_ir_model</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Model</span><span class="p">)</span>
+
         <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">temp_dir</span><span class="p">,</span> <span class="n">ZipFile</span><span class="p">(</span><span class="n">output_zip_path</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">arch</span><span class="p">:</span>
             <span class="c1"># model files</span>
-            <span class="n">path_to_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_openvino</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">),</span> <span class="n">base_model_name</span><span class="p">,</span> <span class="n">precision</span><span class="p">)</span>
+            <span class="n">path_to_model</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">to_openvino</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">),</span> <span class="n">base_model_name</span><span class="p">,</span> <span class="n">precision</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">is_ir_model</span>
+                <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">inference_adapter</span><span class="o">.</span><span class="n">model_path</span><span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">path_to_model</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;File </span><span class="si">{</span><span class="n">path_to_model</span><span class="si">}</span><span class="s2"> does not exist. Check the model path.&quot;</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">is_ir_model</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;type_of_model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="s2">&quot;task_type&quot;</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;converter_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="s2">&quot;model_type&quot;</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;model_parameters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;labels&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="s2">&quot;labels&quot;</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;labels_ids&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="s2">&quot;label_ids&quot;</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                <span class="p">}</span>
+            <span class="k">elif</span> <span class="n">is_ir_model</span><span class="p">:</span>
+                <span class="n">model_info</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_model</span><span class="p">()</span><span class="o">.</span><span class="n">rt_info</span><span class="p">[</span><span class="s2">&quot;model_info&quot;</span><span class="p">]</span>
+                <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;type_of_model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model_info</span><span class="p">[</span><span class="s2">&quot;task_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">if</span> <span class="s2">&quot;task_type&quot;</span> <span class="ow">in</span> <span class="n">model_info</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+                <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;converter_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model_info</span><span class="p">[</span><span class="s2">&quot;model_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">if</span> <span class="s2">&quot;model_type&quot;</span> <span class="ow">in</span> <span class="n">model_info</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+                <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;model_parameters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;labels&quot;</span><span class="p">:</span> <span class="n">model_info</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">if</span> <span class="s2">&quot;labels&quot;</span> <span class="ow">in</span> <span class="n">model_info</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;labels_ids&quot;</span><span class="p">:</span> <span class="n">model_info</span><span class="p">[</span><span class="s2">&quot;label_ids&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="k">if</span> <span class="s2">&quot;label_ids&quot;</span> <span class="ow">in</span> <span class="n">model_info</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="p">}</span>
+
             <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path_to_model</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;model.xml&quot;</span><span class="p">)</span>
             <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">path_to_model</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bin&quot;</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;model.bin&quot;</span><span class="p">)</span>
-
             <span class="n">arch</span><span class="o">.</span><span class="n">writestr</span><span class="p">(</span>
                 <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;config.json&quot;</span><span class="p">),</span>
                 <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="c1"># python files</span>
             <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
-                <span class="n">work_dir</span> <span class="o">/</span> <span class="s2">&quot;requirements.txt&quot;</span><span class="p">,</span>
+                <span class="n">work_demo_dir</span> <span class="o">/</span> <span class="s2">&quot;requirements.txt&quot;</span><span class="p">,</span>
                 <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;python&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;requirements.txt&quot;</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">work_dir</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">/</span> <span class="s2">&quot;LICENSE&quot;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;python&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;LICENSE&quot;</span><span class="p">)</span>
-            <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">work_dir</span> <span class="o">/</span> <span class="s2">&quot;demo.py&quot;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;python&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;demo.py&quot;</span><span class="p">)</span>
-            <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">work_dir</span> <span class="o">/</span> <span class="s2">&quot;README.md&quot;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;README.md&quot;</span><span class="p">)</span>
-            <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">work_dir</span> <span class="o">/</span> <span class="s2">&quot;setup.py&quot;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;python&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;setup.py&quot;</span><span class="p">)</span>
+            <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">work_demo_dir</span> <span class="o">/</span> <span class="s2">&quot;demo.py&quot;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;python&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;demo.py&quot;</span><span class="p">)</span>
+            <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">work_demo_dir</span> <span class="o">/</span> <span class="s2">&quot;setup.py&quot;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;python&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;setup.py&quot;</span><span class="p">)</span>
+            <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">work_demo_dir</span> <span class="o">/</span> <span class="s2">&quot;README.md&quot;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;README.md&quot;</span><span class="p">)</span>
+            <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">work_demo_dir</span> <span class="o">/</span> <span class="s2">&quot;LICENSE&quot;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;LICENSE&quot;</span><span class="p">)</span>
             <span class="c1"># write demo_package</span>
-            <span class="n">demo_package</span> <span class="o">=</span> <span class="n">work_dir</span> <span class="o">/</span> <span class="s2">&quot;demo_package&quot;</span>
+            <span class="n">demo_package</span> <span class="o">=</span> <span class="n">work_demo_dir</span> <span class="o">/</span> <span class="s2">&quot;demo_package&quot;</span>
             <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">demo_package</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">root</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;__pycache__&quot;</span><span class="p">):</span>
                     <span class="k">continue</span>
@@ -436,6 +482,7 @@
                     <span class="n">archive_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">demo_package</span><span class="p">)</span>
                     <span class="n">arch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;python&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;demo_package&quot;</span> <span class="o">/</span> <span class="n">archive_path</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">output_zip_path</span></div>
+
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">_embed_onnx_metadata</span><span class="p">(</span><span class="n">onnx_model</span><span class="p">:</span> <span class="n">onnx</span><span class="o">.</span><span class="n">ModelProto</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">onnx</span><span class="o">.</span><span class="n">ModelProto</span><span class="p">:</span>
@@ -482,15 +529,44 @@
         <span class="k">return</span> <span class="n">extra_data</span>
 
     <span class="k">def</span> <span class="nf">_postprocess_openvino_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exported_model</span><span class="p">:</span> <span class="n">openvino</span><span class="o">.</span><span class="n">Model</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">openvino</span><span class="o">.</span><span class="n">Model</span><span class="p">:</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_names</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_names</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">):</span>
-                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;The number of outputs in the exported model doesn&#39;t match with exporter parameters&quot;</span>
-                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_names</span><span class="p">):</span>
-                <span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">set_names</span><span class="p">({</span><span class="n">name</span><span class="p">})</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_names</span><span class="p">())</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_names</span><span class="p">())</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="c1"># workaround for OVC&#39;s bug: single output doesn&#39;t have a name in OV model</span>
             <span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">set_names</span><span class="p">({</span><span class="s2">&quot;output1&quot;</span><span class="p">})</span>
+
+        <span class="c1"># name assignment process is similar to torch onnx export</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_names</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_names</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_names</span><span class="p">):</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="s2">&quot;Number of model outputs is greater than the number&quot;</span>
+                        <span class="s2">&quot; of output names to assign. Please check output_names&quot;</span>
+                        <span class="s2">&quot; argument of the exporter&#39;s constructor.&quot;</span>
+                    <span class="p">)</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_names</span><span class="p">):</span>
+                    <span class="n">traced_names</span> <span class="o">=</span> <span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_names</span><span class="p">()</span>
+                    <span class="n">name_found</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">for</span> <span class="n">traced_name</span> <span class="ow">in</span> <span class="n">traced_names</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">traced_name</span><span class="p">:</span>
+                            <span class="n">name_found</span> <span class="o">=</span> <span class="kc">True</span>
+                            <span class="k">break</span>
+                    <span class="n">name_found</span> <span class="o">=</span> <span class="n">name_found</span> <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">traced_names</span><span class="p">))</span>
+
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">name_found</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is not matched with the converted model&#39;s traced output names: </span><span class="si">{</span><span class="n">traced_names</span><span class="si">}</span><span class="s2">.&quot;</span>
+                            <span class="s2">&quot; Please check output_names argument of the exporter&#39;s constructor.&quot;</span>
+                        <span class="p">)</span>
+                        <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+                    <span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">set_names</span><span class="p">({</span><span class="n">name</span><span class="p">})</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s2">&quot;Model has less outputs than the number of output names provided: &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">exported_model</span><span class="o">.</span><span class="n">outputs</span><span class="p">)</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_names</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">export_metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extend_model_metadata</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
@@ -514,6 +590,7 @@
             <span class="n">onnx_model</span> <span class="o">=</span> <span class="n">float16</span><span class="o">.</span><span class="n">convert_float_to_float16</span><span class="p">(</span><span class="n">onnx_model</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">onnx_model</span></div>
+
 </pre></div>
 
             </article>
@@ -590,7 +667,7 @@
   <div class="footer-item">
     
 <p class="sphinx-version">
-Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.3.0.<br>
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.2.6.<br>
 </p>
 
   </div>

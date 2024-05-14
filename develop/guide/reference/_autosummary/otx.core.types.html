@@ -1,12 +1,11 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../../../">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>otx.core.types &#8212; OpenVINO™ Training Extensions 2.0.0 documentation</title>
+    <title>otx.core.types &#8212; OpenVINO™ Training Extensions 2.0.0rc0 documentation</title>
   
   
   
@@ -26,30 +25,27 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/tabs.css" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css?v=0a3b3ea7" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=d626d52b" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-    <script src="../../../_static/jquery.js"></script>
-    <script src="../../../_static/underscore.js"></script>
-    <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../../../_static/doctools.js"></script>
-    <script src="../../../_static/sphinx_highlight.js"></script>
-    <script src="../../../_static/clipboard.min.js"></script>
-    <script src="../../../_static/copybutton.js"></script>
-    <script src="../../../_static/design-tabs.js"></script>
+    <script src="../../../_static/documentation_options.js?v=4fff8b0c"></script>
+    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=36754332"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'guide/reference/_autosummary/otx.core.types';</script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="otx.core.types.device" href="otx.core.types.device.html" />
-    <link rel="prev" title="otx.core.model.module.visual_prompting" href="otx.core.model.module.visual_prompting.html" />
+    <link rel="next" title="otx.core.utils" href="otx.core.utils.html" />
+    <link rel="prev" title="otx.core.schedulers" href="otx.core.schedulers.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="docsearch:language" content="en">
   </head>
@@ -225,14 +221,14 @@
     <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../get_started/introduction.html">Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../get_started/installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../get_started/cli_commands.html">OpenVINO™ Training Extensions CLI Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../get_started/api_tutorial.html">OpenVINO™ Training Extensions API Quick-Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../get_started/installation.html"><svg aria-hidden="true" class="sd-octicon sd-octicon-package" height="1.0em" version="1.1" viewbox="0 0 16 16" width="1.0em"><path d="M8.878.392a1.75 1.75 0 00-1.756 0l-5.25 3.045A1.75 1.75 0 001 4.951v6.098c0 .624.332 1.2.872 1.514l5.25 3.045a1.75 1.75 0 001.756 0l5.25-3.045c.54-.313.872-.89.872-1.514V4.951c0-.624-.332-1.2-.872-1.514L8.878.392zM7.875 1.69a.25.25 0 01.25 0l4.63 2.685L8 7.133 3.245 4.375l4.63-2.685zM2.5 5.677v5.372c0 .09.047.171.125.216l4.625 2.683V8.432L2.5 5.677zm6.25 8.271l4.625-2.683a.25.25 0 00.125-.216V5.677L8.75 8.432v5.516z" fill-rule="evenodd"></path></svg> Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../get_started/cli_commands.html"><svg aria-hidden="true" class="sd-octicon sd-octicon-terminal" height="1.0em" version="1.1" viewbox="0 0 16 16" width="1.0em"><path d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0114.25 15H1.75A1.75 1.75 0 010 13.25V2.75zm1.75-.25a.25.25 0 00-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 00.25-.25V2.75a.25.25 0 00-.25-.25H1.75zM7.25 8a.75.75 0 01-.22.53l-2.25 2.25a.75.75 0 11-1.06-1.06L5.44 8 3.72 6.28a.75.75 0 111.06-1.06l2.25 2.25c.141.14.22.331.22.53zm1.5 1.5a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3z" fill-rule="evenodd"></path></svg> CLI Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../get_started/api_tutorial.html"><svg aria-hidden="true" class="sd-octicon sd-octicon-code-square" height="1.0em" version="1.1" viewbox="0 0 16 16" width="1.0em"><path d="M1.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h12.5a.25.25 0 00.25-.25V1.75a.25.25 0 00-.25-.25H1.75zM0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0114.25 16H1.75A1.75 1.75 0 010 14.25V1.75zm9.22 3.72a.75.75 0 000 1.06L10.69 8 9.22 9.47a.75.75 0 101.06 1.06l2-2a.75.75 0 000-1.06l-2-2a.75.75 0 00-1.06 0zM6.78 6.53a.75.75 0 00-1.06-1.06l-2 2a.75.75 0 000 1.06l2 2a.75.75 0 101.06-1.06L5.31 8l1.47-1.47z" fill-rule="evenodd"></path></svg> API Quick-Guide</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/base/index.html">Base Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../../tutorials/base/how_to_train/index.html">How to train, validate, export and optimize the model</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-2"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../tutorials/base/how_to_train/index.html">Training to deployment tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-2"><i class="fa-solid fa-chevron-down"></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../tutorials/base/how_to_train/classification.html">Classification  model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../tutorials/base/how_to_train/detection.html">Object Detection model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../tutorials/base/how_to_train/instance_segmentation.html">Instance Segmentation model</a></li>
@@ -240,9 +236,11 @@
 <li class="toctree-l3"><a class="reference internal" href="../../tutorials/base/how_to_train/anomaly_detection.html">Anomaly Detection Tutorial</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../tutorials/base/how_to_train/action_classification.html">Action Classification model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../tutorials/base/how_to_train/action_detection.html">Action Detection model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/base/how_to_train/visual_prompting.html">Visual Prompting model</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/base/explain.html">How to explain the model behavior</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/base/explain.html">XAI Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/base/export.html">Deploy &amp; Demo</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/advanced/index.html">Advanced Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-3"><i class="fa-solid fa-chevron-down"></i></label><ul>
@@ -289,8 +287,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../../explanation/additional_features/xai.html">Explainable AI (XAI)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../explanation/additional_features/fast_data_loading.html">Fast Data Loading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../explanation/additional_features/tiling.html">Improve Small Object Detection with Image Tiling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../explanation/additional_features/class_incremental_sampler.html">Class-Incremental Sampler</a></li>
+
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../../explanation/product_design.html">Product Design</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
 <ul class="current nav bd-sidenav">
@@ -298,18 +299,13 @@
 <li class="toctree-l2 current active has-children"><a class="reference internal" href="otx.html">otx</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-12"><i class="fa-solid fa-chevron-down"></i></label><ul class="current">
 <li class="toctree-l3 has-children"><a class="reference internal" href="otx.algo.html">otx.algo</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-13"><i class="fa-solid fa-chevron-down"></i></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="otx.algo.action_classification.html">otx.algo.action_classification</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.algo.action_detection.html">otx.algo.action_detection</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.algo.anomaly.html">otx.algo.anomaly</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.algo.callbacks.html">otx.algo.callbacks</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.algo.classification.html">otx.algo.classification</a></li>
 <li class="toctree-l4"><a class="reference internal" href="otx.algo.detection.html">otx.algo.detection</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.algo.hooks.html">otx.algo.hooks</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.algo.instance_segmentation.html">otx.algo.instance_segmentation</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.algo.samplers.html">otx.algo.samplers</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.algo.schedulers.html">otx.algo.schedulers</a></li>
 <li class="toctree-l4"><a class="reference internal" href="otx.algo.segmentation.html">otx.algo.segmentation</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.algo.utils.html">otx.algo.utils</a></li>
 <li class="toctree-l4"><a class="reference internal" href="otx.algo.visual_prompting.html">otx.algo.visual_prompting</a></li>
+<li class="toctree-l4"><a class="reference internal" href="otx.algo.strategies.html">otx.algo.strategies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="otx.algo.accelerators.html">otx.algo.accelerators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="otx.algo.plugins.html">otx.algo.plugins</a></li>
+<li class="toctree-l4"><a class="reference internal" href="otx.algo.instance_segmentation.html">otx.algo.instance_segmentation</a></li>
 </ul>
 </li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="otx.cli.html">otx.cli</a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-14"><i class="fa-solid fa-chevron-down"></i></label><ul>
@@ -324,39 +320,21 @@
 <li class="toctree-l4"><a class="reference internal" href="otx.core.exporter.html">otx.core.exporter</a></li>
 <li class="toctree-l4"><a class="reference internal" href="otx.core.metrics.html">otx.core.metrics</a></li>
 <li class="toctree-l4"><a class="reference internal" href="otx.core.model.html">otx.core.model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="otx.core.optimizer.html">otx.core.optimizer</a></li>
+<li class="toctree-l4"><a class="reference internal" href="otx.core.schedulers.html">otx.core.schedulers</a></li>
 <li class="toctree-l4 current active"><a class="current reference internal" href="#">otx.core.types</a></li>
 <li class="toctree-l4"><a class="reference internal" href="otx.core.utils.html">otx.core.utils</a></li>
 </ul>
 </li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="otx.data.html">otx.data</a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-16"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="otx.data.anomaly.html">otx.data.anomaly</a></li>
-</ul>
-</li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="otx.engine.html">otx.engine</a><input class="toctree-checkbox" id="toctree-checkbox-17" name="toctree-checkbox-17" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-17"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="otx.engine.engine.html">otx.engine.engine</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.engine.hpo.html">otx.engine.hpo</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.engine.utils.html">otx.engine.utils</a></li>
-</ul>
-</li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="otx.hpo.html">otx.hpo</a><input class="toctree-checkbox" id="toctree-checkbox-18" name="toctree-checkbox-18" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-18"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="otx.hpo.hpo_base.html">otx.hpo.hpo_base</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.hpo.hpo_runner.html">otx.hpo.hpo_runner</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.hpo.hyperband.html">otx.hpo.hyperband</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.hpo.resource_manager.html">otx.hpo.resource_manager</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.hpo.search_space.html">otx.hpo.search_space</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.hpo.utils.html">otx.hpo.utils</a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="otx.engine.html">otx.engine</a></li>
+<li class="toctree-l3"><a class="reference internal" href="otx.hpo.html">otx.hpo</a></li>
 <li class="toctree-l3"><a class="reference internal" href="otx.recipe.html">otx.recipe</a></li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="otx.tools.html">otx.tools</a><input class="toctree-checkbox" id="toctree-checkbox-19" name="toctree-checkbox-19" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-19"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="otx.tools.html">otx.tools</a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-16"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="otx.tools.converter.html">otx.tools.converter</a></li>
 <li class="toctree-l4"><a class="reference internal" href="otx.tools.translate_mmrecipe.html">otx.tools.translate_mmrecipe</a></li>
 </ul>
 </li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="otx.utils.html">otx.utils</a><input class="toctree-checkbox" id="toctree-checkbox-20" name="toctree-checkbox-20" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-20"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="otx.utils.signal.html">otx.utils.signal</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.utils.utils.html">otx.utils.utils</a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="otx.utils.html">otx.utils</a></li>
 </ul>
 </li>
 </ul>
@@ -364,7 +342,7 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Release Notes</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../release_notes/index.html">Releases</a><input class="toctree-checkbox" id="toctree-checkbox-21" name="toctree-checkbox-21" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-21"><i class="fa-solid fa-chevron-down"></i></label><ul class="simple">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../release_notes/index.html">Releases</a><input class="toctree-checkbox" id="toctree-checkbox-17" name="toctree-checkbox-17" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-17"><i class="fa-solid fa-chevron-down"></i></label><ul class="simple">
 </ul>
 </li>
 </ul>
@@ -399,34 +377,238 @@
             <article class="bd-article" role="main">
               
   <section id="module-otx.core.types">
-<span id="otx-core-types"></span><h1>otx.core.types<a class="headerlink" href="#module-otx.core.types" title="Permalink to this heading">#</a></h1>
+<span id="otx-core-types"></span><h1>otx.core.types<a class="headerlink" href="#module-otx.core.types" title="Link to this heading">#</a></h1>
 <p>Module reserved for definitions used in OTX.</p>
-<p class="rubric">Modules</p>
+<p class="rubric">Classes</p>
 <table class="autosummary longtable table autosummary">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="otx.core.types.device.html#module-otx.core.types.device" title="otx.core.types.device"><code class="xref py py-obj docutils literal notranslate"><span class="pre">otx.core.types.device</span></code></a></p></td>
-<td><p>OTX Device type definition.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#otx.core.types.LabelInfo" title="otx.core.types.LabelInfo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LabelInfo</span></code></a>(label_names, label_groups)</p></td>
+<td><p>Object to represent label information.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="otx.core.types.explain.html#module-otx.core.types.explain" title="otx.core.types.explain"><code class="xref py py-obj docutils literal notranslate"><span class="pre">otx.core.types.explain</span></code></a></p></td>
-<td><p>OTX explain type definition.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#otx.core.types.HLabelInfo" title="otx.core.types.HLabelInfo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">HLabelInfo</span></code></a>(label_names, label_groups, ...)</p></td>
+<td><p>The label information represents the hierarchy.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="otx.core.types.export.html#module-otx.core.types.export" title="otx.core.types.export"><code class="xref py py-obj docutils literal notranslate"><span class="pre">otx.core.types.export</span></code></a></p></td>
-<td><p>OTX export-related types definition.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#otx.core.types.SegLabelInfo" title="otx.core.types.SegLabelInfo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SegLabelInfo</span></code></a>(label_names, label_groups[, ...])</p></td>
+<td><p>Meta information of Semantic Segmentation.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="otx.core.types.image.html#module-otx.core.types.image" title="otx.core.types.image"><code class="xref py py-obj docutils literal notranslate"><span class="pre">otx.core.types.image</span></code></a></p></td>
-<td><p>OTX image type definition.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#otx.core.types.NullLabelInfo" title="otx.core.types.NullLabelInfo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NullLabelInfo</span></code></a>()</p></td>
+<td><p>Represent no label information.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="otx.core.types.precision.html#module-otx.core.types.precision" title="otx.core.types.precision"><code class="xref py py-obj docutils literal notranslate"><span class="pre">otx.core.types.precision</span></code></a></p></td>
-<td><p>OTX precision type definition.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="otx.core.types.task.html#module-otx.core.types.task" title="otx.core.types.task"><code class="xref py py-obj docutils literal notranslate"><span class="pre">otx.core.types.task</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#otx.core.types.OTXTaskType" title="otx.core.types.OTXTaskType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OTXTaskType</span></code></a>(value)</p></td>
 <td><p>OTX task type definition.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="otx.core.types.transformer_libs.html#module-otx.core.types.transformer_libs" title="otx.core.types.transformer_libs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">otx.core.types.transformer_libs</span></code></a></p></td>
-<td><p>Transform library types used in OTX.</p></td>
 </tr>
 </tbody>
 </table>
+<dl class="py class">
+<dt class="sig sig-object py" id="otx.core.types.HLabelInfo">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.core.types.</span></span><span class="sig-name descname"><span class="pre">HLabelInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_groups</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_multiclass_heads</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_multilabel_classes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">head_idx_to_logits_range</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.12)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_single_label_classes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_to_group_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.12)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_groups</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_to_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_tree_edges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">empty_multiclass_head_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#HLabelInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.HLabelInfo" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#otx.core.types.LabelInfo" title="otx.core.types.label.LabelInfo"><code class="xref py py-class docutils literal notranslate"><span class="pre">LabelInfo</span></code></a></p>
+<p>The label information represents the hierarchy.</p>
+<p>All params should be kept since they’re also used at the Model API side.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_multiclass_heads</strong> – the number of the multiclass heads</p></li>
+<li><p><strong>num_multilabel_classes</strong> – the number of multilabel classes</p></li>
+<li><p><strong>head_to_logits_range</strong> – the logit range of each heads</p></li>
+<li><p><strong>num_single_label_classes</strong> – the number of single label classes</p></li>
+<li><p><strong>class_to_group_idx</strong> – represents the head index and label index</p></li>
+<li><p><strong>all_groups</strong> – represents information of all groups</p></li>
+<li><p><strong>label_to_idx</strong> – index of each label</p></li>
+<li><p><strong>empty_multiclass_head_indices</strong> – the index of head that doesn’t include any label
+due to the label removing</p></li>
+</ul>
+</dd>
+</dl>
+<p>i.e.
+Single-selection group information (Multiclass, Exclusive)
+{</p>
+<blockquote>
+<div><p>“Shape”: [“Rigid”, “Non-Rigid”],
+“Rigid”: [“Rectangle”, “Triangle”],
+“Non-Rigid”: [“Circle”]</p>
+</div></blockquote>
+<p>}</p>
+<p>Multi-selection group information (Multilabel)
+{</p>
+<blockquote>
+<div><p>“Animal”: [“Lion”, “Panda”]</p>
+</div></blockquote>
+<p>}</p>
+<p>In the case above, HlabelInfo will be generated as below.
+NOTE, If there was only one label in the multiclass group, it will be handeled as multilabel(Circle).</p>
+<blockquote>
+<div><p>num_multiclass_heads: 2  (Shape, Rigid)
+num_multilabel_classes: 3 (Circle, Lion, Panda)
+head_to_logits_range: {‘0’: (0, 2), ‘1’: (2, 4)} (Each multiclass head have 2 labels)
+num_single_label_classes: 4 (Rigid, Non-Rigid, Rectangle, Triangle)
+class_to_group_idx: {</p>
+<blockquote>
+<div><p>‘Non-Rigid’: (0, 0), ‘Rigid’: (0, 1),
+‘Rectangle’: (1, 0), ‘Triangle’: (1, 1),
+‘Circle’: (2, 0), ‘Lion’: (2,1), ‘Panda’: (2,2)</p>
+</div></blockquote>
+<p>} (head index, label index for each head)
+all_groups: [[‘Non-Rigid’, ‘Rigid’], [‘Rectangle’, ‘Triangle’], [‘Circle’], [‘Lion’], [‘Panda’]]
+label_to_idx: {</p>
+<blockquote>
+<div><p>‘Rigid’: 0, ‘Rectangle’: 1,
+‘Triangle’: 2, ‘Non-Rigid’: 3, ‘Circle’: 4
+‘Lion’: 5, ‘Panda’: 6</p>
+</div></blockquote>
+<p>}
+label_tree_edges: [</p>
+<blockquote>
+<div><p>[“Rectangle”, “Rigid”], [“Triangle”, “Rigid”], [“Circle”, “Non-Rigid”],</p>
+</div></blockquote>
+<p>] # NOTE, label_tree_edges format could be changed.
+empty_multiclass_head_indices: []</p>
+</div></blockquote>
+<p>All of the member variables should be considered for the Model API.
+<a class="github reference external" href="https://github.com/openvinotoolkit/training_extensions/blob/develop/src/otx/algorithms/classification/utils/cls_utils.py#L97">openvinotoolkit/training_extensions</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="otx.core.types.HLabelInfo.as_head_config_dict">
+<span class="sig-name descname"><span class="pre">as_head_config_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.12)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#HLabelInfo.as_head_config_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.HLabelInfo.as_head_config_dict" title="Link to this definition">#</a></dt>
+<dd><p>Return a dictionary including params needed to configure the HLabel MMPretrained head network.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="otx.core.types.HLabelInfo.from_dm_label_groups">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_dm_label_groups</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dm_label_categories</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">LabelCategories</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#otx.core.types.HLabelInfo" title="otx.core.types.HLabelInfo"><span class="pre">HLabelInfo</span></a></span></span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#HLabelInfo.from_dm_label_groups"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.HLabelInfo.from_dm_label_groups" title="Link to this definition">#</a></dt>
+<dd><p>Generate HLabelData from the Datumaro LabelCategories.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dm_label_categories</strong> (<em>LabelCategories</em>) – the label categories of datumaro.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="otx.core.types.HLabelInfo.from_json">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">serialized</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#otx.core.types.HLabelInfo" title="otx.core.types.label.HLabelInfo"><span class="pre">HLabelInfo</span></a></span></span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#HLabelInfo.from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.HLabelInfo.from_json" title="Link to this definition">#</a></dt>
+<dd><p>Reconstruct it from the JSON serialized string.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="otx.core.types.LabelInfo">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.core.types.</span></span><span class="sig-name descname"><span class="pre">LabelInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_groups</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#LabelInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.LabelInfo" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Object to represent label information.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="otx.core.types.LabelInfo.as_dict">
+<span class="sig-name descname"><span class="pre">as_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.12)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#LabelInfo.as_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.LabelInfo.as_dict" title="Link to this definition">#</a></dt>
+<dd><p>Return a dictionary including all params.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="otx.core.types.LabelInfo.from_dm_label_groups">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_dm_label_groups</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dm_label_categories</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">LabelCategories</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#otx.core.types.LabelInfo" title="otx.core.types.LabelInfo"><span class="pre">LabelInfo</span></a></span></span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#LabelInfo.from_dm_label_groups"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.LabelInfo.from_dm_label_groups" title="Link to this definition">#</a></dt>
+<dd><p>Create this object from the datumaro label groups.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dm_label_categories</strong> (<em>LabelCategories</em>) – The label category information from Datumaro.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>LabelInfo(</dt><dd><p>label_names=[“Heart_King”, “Heart_Queen”, “Spade_King”, “Spade_Jack”]
+label_groups=[[“Heart_King”, “Heart_Queen”], [“Spade_King”, “Spade_Jack”]]</p>
+</dd>
+</dl>
+<p>)</p>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="otx.core.types.LabelInfo.from_json">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">serialized</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#otx.core.types.LabelInfo" title="otx.core.types.label.LabelInfo"><span class="pre">LabelInfo</span></a></span></span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#LabelInfo.from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.LabelInfo.from_json" title="Link to this definition">#</a></dt>
+<dd><p>Reconstruct it from the JSON serialized string.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="otx.core.types.LabelInfo.from_num_classes">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_num_classes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_classes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#otx.core.types.LabelInfo" title="otx.core.types.label.LabelInfo"><span class="pre">LabelInfo</span></a></span></span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#LabelInfo.from_num_classes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.LabelInfo.from_num_classes" title="Link to this definition">#</a></dt>
+<dd><p>Create this object from the number of classes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>num_classes</strong> – Number of classes</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>LabelInfo(</dt><dd><p>label_names=[“label_0”, …],
+label_groups=[[“label_0”, …]]</p>
+</dd>
+</dl>
+<p>)</p>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="otx.core.types.LabelInfo.to_json">
+<span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#LabelInfo.to_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.LabelInfo.to_json" title="Link to this definition">#</a></dt>
+<dd><p>Return JSON serialized string.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="otx.core.types.LabelInfo.num_classes">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_classes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></em><a class="headerlink" href="#otx.core.types.LabelInfo.num_classes" title="Link to this definition">#</a></dt>
+<dd><p>Return number of labels.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="otx.core.types.NullLabelInfo">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.core.types.</span></span><span class="sig-name descname"><span class="pre">NullLabelInfo</span></span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#NullLabelInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.NullLabelInfo" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#otx.core.types.LabelInfo" title="otx.core.types.label.LabelInfo"><code class="xref py py-class docutils literal notranslate"><span class="pre">LabelInfo</span></code></a></p>
+<p>Represent no label information. It is used for Visual Prompting tasks.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="otx.core.types.NullLabelInfo.from_json">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#otx.core.types.LabelInfo" title="otx.core.types.label.LabelInfo"><span class="pre">LabelInfo</span></a></span></span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#NullLabelInfo.from_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.NullLabelInfo.from_json" title="Link to this definition">#</a></dt>
+<dd><p>Reconstruct it from the JSON serialized string.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="otx.core.types.OTXTaskType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.core.types.</span></span><span class="sig-name descname"><span class="pre">OTXTaskType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/otx/core/types/task.html#OTXTaskType"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.OTXTaskType" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/enum.html#enum.Enum" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></a></p>
+<p>OTX task type definition.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="otx.core.types.SegLabelInfo">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.core.types.</span></span><span class="sig-name descname"><span class="pre">SegLabelInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_groups</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">255</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#SegLabelInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.SegLabelInfo" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#otx.core.types.LabelInfo" title="otx.core.types.label.LabelInfo"><code class="xref py py-class docutils literal notranslate"><span class="pre">LabelInfo</span></code></a></p>
+<p>Meta information of Semantic Segmentation.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="otx.core.types.SegLabelInfo.from_num_classes">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_num_classes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_classes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#otx.core.types.LabelInfo" title="otx.core.types.label.LabelInfo"><span class="pre">LabelInfo</span></a></span></span><a class="reference internal" href="../../../_modules/otx/core/types/label.html#SegLabelInfo.from_num_classes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.types.SegLabelInfo.from_num_classes" title="Link to this definition">#</a></dt>
+<dd><p>Create this object from the number of classes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>num_classes</strong> – Number of classes</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>LabelInfo(</dt><dd><p>label_names=[“Background”, “label_0”, …, “label_{num_classes - 1}”]
+label_groups=[[“Background”, “label_0”, …, “label_{num_classes - 1}”]]</p>
+</dd>
+</dl>
+<p>)</p>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 
 
@@ -437,17 +619,17 @@
             <footer class="bd-footer-article">
                 <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-  <a class='left-prev' id="prev-link" href="otx.core.model.module.visual_prompting.html" title="previous page">
+  <a class='left-prev' id="prev-link" href="otx.core.schedulers.html" title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
           <p class="prev-next-subtitle">previous</p>
-          <p class="prev-next-title">otx.core.model.module.visual_prompting</p>
+          <p class="prev-next-title">otx.core.schedulers</p>
       </div>
   </a>
-  <a class='right-next' id="next-link" href="otx.core.types.device.html" title="next page">
+  <a class='right-next' id="next-link" href="otx.core.utils.html" title="next page">
   <div class="prev-next-info">
       <p class="prev-next-subtitle">next</p>
-      <p class="prev-next-title">otx.core.types.device</p>
+      <p class="prev-next-title">otx.core.utils</p>
   </div>
   <i class="fa-solid fa-angle-right"></i>
   </a>
@@ -460,6 +642,170 @@
           
             <div class="bd-sidebar-secondary bd-toc">
               
+<div class="toc-item">
+  
+<div class="tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+</div>
+<nav id="bd-toc-nav" class="page-toc">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#otx.core.types.HLabelInfo">
+   <code class="docutils literal notranslate">
+    <span class="pre">
+     HLabelInfo
+    </span>
+   </code>
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.types.HLabelInfo.as_head_config_dict">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       HLabelInfo.as_head_config_dict()
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.types.HLabelInfo.from_dm_label_groups">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       HLabelInfo.from_dm_label_groups()
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.types.HLabelInfo.from_json">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       HLabelInfo.from_json()
+      </span>
+     </code>
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#otx.core.types.LabelInfo">
+   <code class="docutils literal notranslate">
+    <span class="pre">
+     LabelInfo
+    </span>
+   </code>
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.types.LabelInfo.as_dict">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       LabelInfo.as_dict()
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.types.LabelInfo.from_dm_label_groups">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       LabelInfo.from_dm_label_groups()
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.types.LabelInfo.from_json">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       LabelInfo.from_json()
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.types.LabelInfo.from_num_classes">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       LabelInfo.from_num_classes()
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.types.LabelInfo.to_json">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       LabelInfo.to_json()
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.types.LabelInfo.num_classes">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       LabelInfo.num_classes
+      </span>
+     </code>
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#otx.core.types.NullLabelInfo">
+   <code class="docutils literal notranslate">
+    <span class="pre">
+     NullLabelInfo
+    </span>
+   </code>
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.types.NullLabelInfo.from_json">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       NullLabelInfo.from_json()
+      </span>
+     </code>
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#otx.core.types.OTXTaskType">
+   <code class="docutils literal notranslate">
+    <span class="pre">
+     OTXTaskType
+    </span>
+   </code>
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#otx.core.types.SegLabelInfo">
+   <code class="docutils literal notranslate">
+    <span class="pre">
+     SegLabelInfo
+    </span>
+   </code>
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.types.SegLabelInfo.from_num_classes">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       SegLabelInfo.from_num_classes()
+      </span>
+     </code>
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+</nav>
+</div>
+
 <div class="toc-item">
   
 <div id="searchbox"></div>
@@ -524,7 +870,7 @@
   <div class="footer-item">
     
 <p class="sphinx-version">
-Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.3.0.<br>
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.2.6.<br>
 </p>
 
   </div>

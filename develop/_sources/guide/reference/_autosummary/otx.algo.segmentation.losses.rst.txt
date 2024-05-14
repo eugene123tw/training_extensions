@@ -9,23 +9,27 @@ otx.algo.segmentation.losses
 
    
    
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      create_criterion
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      CrossEntropyLossWithIgnore
+   
    
 
    
    
    
 
-   
-   
-   
 
-
-
-.. rubric:: Modules
-
-.. autosummary::
-   :toctree:
-   :recursive:
-
-   otx.algo.segmentation.losses.cross_entropy_loss_with_ignore
 

@@ -9,23 +9,30 @@ otx.algo.detection.losses
 
    
    
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      accuracy
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      CrossEntropyLoss
+      CrossSigmoidFocalLoss
+      L1Loss
+      IoULoss
+   
    
 
    
    
    
 
-   
-   
-   
 
-
-
-.. rubric:: Modules
-
-.. autosummary::
-   :toctree:
-   :recursive:
-
-   otx.algo.detection.losses.cross_focal_loss
 

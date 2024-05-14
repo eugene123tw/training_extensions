@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../../../../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>otx.algo.visual_prompting.zero_shot_segment_anything &#8212; OpenVINO™ Training Extensions 2.0.0 documentation</title>
+    <title>otx.algo.visual_prompting.zero_shot_segment_anything &#8212; OpenVINO™ Training Extensions 2.0.0rc0 documentation</title>
   
   
   
@@ -25,26 +24,23 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
-    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/tabs.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/tabs.css?v=a5c4661c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css?v=0a3b3ea7" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=d626d52b" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
-    <script src="../../../../_static/jquery.js"></script>
-    <script src="../../../../_static/underscore.js"></script>
-    <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-    <script src="../../../../_static/doctools.js"></script>
-    <script src="../../../../_static/sphinx_highlight.js"></script>
-    <script src="../../../../_static/clipboard.min.js"></script>
-    <script src="../../../../_static/copybutton.js"></script>
-    <script src="../../../../_static/tabs.js"></script>
-    <script src="../../../../_static/design-tabs.js"></script>
+    <script src="../../../../_static/documentation_options.js?v=4fff8b0c"></script>
+    <script src="../../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/tabs.js?v=3030b3cb"></script>
+    <script src="../../../../_static/design-tabs.js?v=36754332"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/otx/algo/visual_prompting/zero_shot_segment_anything';</script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
@@ -247,7 +243,7 @@
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span> <span class="nn">logging</span> <span class="k">as</span> <span class="nn">log</span>
-<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
 <span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">product</span>
@@ -260,24 +256,28 @@
 <span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">LongTensor</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">nn</span>
 <span class="kn">from</span> <span class="nn">torch.nn</span> <span class="kn">import</span> <span class="n">functional</span> <span class="k">as</span> <span class="n">F</span>  <span class="c1"># noqa: N812</span>
 <span class="kn">from</span> <span class="nn">torchvision</span> <span class="kn">import</span> <span class="n">tv_tensors</span>
-<span class="kn">from</span> <span class="nn">torchvision.tv_tensors</span> <span class="kn">import</span> <span class="n">BoundingBoxes</span><span class="p">,</span> <span class="n">Image</span>
+<span class="kn">from</span> <span class="nn">torchvision.tv_tensors</span> <span class="kn">import</span> <span class="n">BoundingBoxes</span><span class="p">,</span> <span class="n">Image</span><span class="p">,</span> <span class="n">Mask</span><span class="p">,</span> <span class="n">TVTensor</span>
 
-<span class="kn">from</span> <span class="nn">otx.algo.visual_prompting.segment_anything</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">DEFAULT_CONFIG_SEGMENT_ANYTHING</span><span class="p">,</span>
-    <span class="n">SegmentAnything</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">otx.algo.visual_prompting.segment_anything</span> <span class="kn">import</span> <span class="n">DEFAULT_CONFIG_SEGMENT_ANYTHING</span><span class="p">,</span> <span class="n">SegmentAnything</span>
 <span class="kn">from</span> <span class="nn">otx.core.data.entity.base</span> <span class="kn">import</span> <span class="n">OTXBatchLossEntity</span><span class="p">,</span> <span class="n">Points</span>
 <span class="kn">from</span> <span class="nn">otx.core.data.entity.visual_prompting</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">ZeroShotVisualPromptingBatchDataEntity</span><span class="p">,</span>
     <span class="n">ZeroShotVisualPromptingBatchPredEntity</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">otx.core.model.entity.visual_prompting</span> <span class="kn">import</span> <span class="n">OTXVisualPromptingModel</span>
+<span class="kn">from</span> <span class="nn">otx.core.metrics.visual_prompting</span> <span class="kn">import</span> <span class="n">VisualPromptingMetricCallable</span>
+<span class="kn">from</span> <span class="nn">otx.core.model.base</span> <span class="kn">import</span> <span class="n">DefaultOptimizerCallable</span><span class="p">,</span> <span class="n">DefaultSchedulerCallable</span>
+<span class="kn">from</span> <span class="nn">otx.core.model.visual_prompting</span> <span class="kn">import</span> <span class="n">OTXZeroShotVisualPromptingModel</span>
+<span class="kn">from</span> <span class="nn">otx.core.schedulers</span> <span class="kn">import</span> <span class="n">LRSchedulerListCallable</span>
+<span class="kn">from</span> <span class="nn">otx.core.types.label</span> <span class="kn">import</span> <span class="n">LabelInfoTypes</span><span class="p">,</span> <span class="n">NullLabelInfo</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+    <span class="kn">from</span> <span class="nn">lightning.pytorch.cli</span> <span class="kn">import</span> <span class="n">LRSchedulerCallable</span><span class="p">,</span> <span class="n">OptimizerCallable</span>
+
+    <span class="kn">from</span> <span class="nn">otx.core.metrics</span> <span class="kn">import</span> <span class="n">MetricCallable</span>
 
 
-<div class="viewcode-block" id="PromptGetter"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.PromptGetter">[docs]</a><span class="k">class</span> <span class="nc">PromptGetter</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">PromptGetter</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Prompt getter for zero-shot learning.&quot;&quot;&quot;</span>
 
     <span class="n">default_threshold_reference</span> <span class="o">=</span> <span class="mf">0.3</span>
@@ -290,12 +290,12 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">zero_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
-<div class="viewcode-block" id="PromptGetter.set_default_thresholds"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.PromptGetter.set_default_thresholds">[docs]</a>    <span class="k">def</span> <span class="nf">set_default_thresholds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">default_threshold_reference</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">default_threshold_target</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">set_default_thresholds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">default_threshold_reference</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">default_threshold_target</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Set default thresholds.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">default_threshold_reference</span> <span class="o">=</span> <span class="n">default_threshold_reference</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">default_threshold_target</span> <span class="o">=</span> <span class="n">default_threshold_target</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">default_threshold_target</span> <span class="o">=</span> <span class="n">default_threshold_target</span>
 
-<div class="viewcode-block" id="PromptGetter.get_prompt_candidates"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.PromptGetter.get_prompt_candidates">[docs]</a>    <span class="k">def</span> <span class="nf">get_prompt_candidates</span><span class="p">(</span>
+    <span class="k">def</span> <span class="nf">get_prompt_candidates</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">image_embeddings</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
         <span class="n">reference_feats</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
@@ -319,9 +319,9 @@
             <span class="n">total_points_scores</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">points_scores</span>
             <span class="n">total_bg_coords</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">bg_coords</span>
 
-        <span class="k">return</span> <span class="n">total_points_scores</span><span class="p">,</span> <span class="n">total_bg_coords</span></div>
+        <span class="k">return</span> <span class="n">total_points_scores</span><span class="p">,</span> <span class="n">total_bg_coords</span>
 
-<div class="viewcode-block" id="PromptGetter.forward"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.PromptGetter.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">image_embeddings</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
         <span class="n">reference_feat</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
@@ -347,7 +347,7 @@
             <span class="n">num_bg_points</span><span class="o">=</span><span class="n">num_bg_points</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">points_scores</span><span class="p">,</span> <span class="n">bg_coords</span></div>
+        <span class="k">return</span> <span class="n">points_scores</span><span class="p">,</span> <span class="n">bg_coords</span>
 
     <span class="k">def</span> <span class="nf">_point_selection</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -398,10 +398,12 @@
         <span class="n">sorted_points_scores_indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">points_scores</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">descending</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
         <span class="n">points_scores</span> <span class="o">=</span> <span class="n">points_scores</span><span class="p">[</span><span class="n">sorted_points_scores_indices</span><span class="p">]</span>
 
-        <span class="k">return</span> <span class="n">points_scores</span><span class="p">,</span> <span class="n">bg_coords</span></div>
+        <span class="k">return</span> <span class="n">points_scores</span><span class="p">,</span> <span class="n">bg_coords</span>
 
 
-<div class="viewcode-block" id="ZeroShotSegmentAnything"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.ZeroShotSegmentAnything">[docs]</a><span class="k">class</span> <span class="nc">ZeroShotSegmentAnything</span><span class="p">(</span><span class="n">SegmentAnything</span><span class="p">):</span>
+<div class="viewcode-block" id="ZeroShotSegmentAnything">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.ZeroShotSegmentAnything">[docs]</a>
+<span class="k">class</span> <span class="nc">ZeroShotSegmentAnything</span><span class="p">(</span><span class="n">SegmentAnything</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Zero-shot learning module using Segment Anything.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
@@ -442,7 +444,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">point_labels_box</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">has_mask_inputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">]]),</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])]</span>
 
-<div class="viewcode-block" id="ZeroShotSegmentAnything.set_default_config"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.ZeroShotSegmentAnything.set_default_config">[docs]</a>    <span class="k">def</span> <span class="nf">set_default_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<div class="viewcode-block" id="ZeroShotSegmentAnything.set_default_config">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.ZeroShotSegmentAnything.set_default_config">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_default_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Set default config when using independently.&quot;&quot;&quot;</span>
         <span class="n">backbone</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;backbone&quot;</span><span class="p">,</span> <span class="s2">&quot;tiny_vit&quot;</span><span class="p">)</span>
         <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
@@ -456,18 +460,24 @@
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">kwargs</span></div>
 
-<div class="viewcode-block" id="ZeroShotSegmentAnything.expand_reference_info"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.ZeroShotSegmentAnything.expand_reference_info">[docs]</a>    <span class="k">def</span> <span class="nf">expand_reference_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reference_feats</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">new_largest_label</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+
+<div class="viewcode-block" id="ZeroShotSegmentAnything.expand_reference_info">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.ZeroShotSegmentAnything.expand_reference_info">[docs]</a>
+    <span class="k">def</span> <span class="nf">expand_reference_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reference_feats</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">new_largest_label</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Expand reference info dimensions if newly given processed prompts have more lables.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">new_largest_label</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">cur_largest_label</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_feats</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">diff</span> <span class="o">=</span> <span class="n">new_largest_label</span> <span class="o">-</span> <span class="n">cur_largest_label</span>
             <span class="n">reference_feats</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">reference_feats</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">diff</span><span class="p">),</span> <span class="n">value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">reference_feats</span></div>
 
-<div class="viewcode-block" id="ZeroShotSegmentAnything.learn"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.ZeroShotSegmentAnything.learn">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ZeroShotSegmentAnything.learn">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.ZeroShotSegmentAnything.learn">[docs]</a>
+    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">learn</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">images</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">tv_tensors</span><span class="o">.</span><span class="n">Image</span><span class="p">],</span>
-        <span class="n">processed_prompts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">tv_tensors</span><span class="o">.</span><span class="n">TVTensor</span><span class="p">]]],</span>
+        <span class="n">images</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Image</span><span class="p">],</span>
+        <span class="n">processed_prompts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">TVTensor</span><span class="p">]]],</span>
         <span class="n">reference_feats</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
         <span class="n">used_indices</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
         <span class="n">ori_shapes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
@@ -480,8 +490,8 @@
 <span class="sd">        Currently, single batch is only supported.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            images (list[tv_tensors.Image]): List of given images for reference features.</span>
-<span class="sd">            processed_prompts (dict[int, list[tv_tensors.TVTensor]]): The class-wise prompts</span>
+<span class="sd">            images (list[Image]): List of given images for reference features.</span>
+<span class="sd">            processed_prompts (dict[int, list[TVTensor]]): The class-wise prompts</span>
 <span class="sd">                processed at OTXZeroShotSegmentAnything._gather_prompts_with_labels.</span>
 <span class="sd">            reference_feats (Tensor): Reference features for target prediction.</span>
 <span class="sd">            used_indices (Tensor): To check which indices of reference features are validate.</span>
@@ -492,7 +502,7 @@
         <span class="n">largest_label</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">sum</span><span class="p">([[</span><span class="nb">int</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">prompt</span><span class="p">]</span> <span class="k">for</span> <span class="n">prompt</span> <span class="ow">in</span> <span class="n">processed_prompts</span><span class="p">],</span> <span class="p">[]))</span>
         <span class="n">reference_feats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">expand_reference_info</span><span class="p">(</span><span class="n">reference_feats</span><span class="p">,</span> <span class="n">largest_label</span><span class="p">)</span>
         <span class="n">new_used_indices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c1"># TODO (sungchul): consider how to handle multiple reference features, currently replace it # noqa: TD003</span>
+        <span class="c1"># TODO (sungchul): consider how to handle multiple reference features, currently replace it</span>
 
         <span class="n">reference_masks</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">image</span><span class="p">,</span> <span class="n">prompts</span><span class="p">,</span> <span class="n">ori_shape</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">processed_prompts</span><span class="p">,</span> <span class="n">ori_shapes</span><span class="p">):</span>
@@ -501,15 +511,13 @@
 
             <span class="n">ref_masks</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">largest_label</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">ori_shape</span><span class="p">))</span>
             <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">input_prompts</span> <span class="ow">in</span> <span class="n">prompts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="c1"># TODO (sungchul): how to skip background class # noqa: TD003</span>
-                <span class="c1"># TODO (sungchul): ensemble multi reference features (current : use merged masks) # noqa: TD003</span>
+                <span class="c1"># TODO (sungchul): how to skip background class</span>
+                <span class="c1"># TODO (sungchul): ensemble multi reference features (current : use merged masks)</span>
                 <span class="n">ref_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="o">*</span><span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">ori_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">image</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">input_prompt</span> <span class="ow">in</span> <span class="n">input_prompts</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_prompt</span><span class="p">,</span> <span class="n">tv_tensors</span><span class="o">.</span><span class="n">Mask</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_prompt</span><span class="p">,</span> <span class="n">Mask</span><span class="p">):</span>
                         <span class="c1"># directly use annotation information as a mask</span>
-                        <span class="n">ref_mask</span><span class="p">[</span>
-                            <span class="n">input_prompt</span> <span class="o">==</span> <span class="mi">1</span>
-                        <span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1"># TODO (sungchul): check if the mask is bool or int # noqa: TD003</span>
+                        <span class="n">ref_mask</span><span class="p">[</span><span class="n">input_prompt</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1"># TODO (sungchul): check if the mask is bool or int</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_prompt</span><span class="p">,</span> <span class="n">BoundingBoxes</span><span class="p">):</span>
                             <span class="n">point_coords</span> <span class="o">=</span> <span class="n">input_prompt</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
@@ -520,8 +528,8 @@
                         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span>
                             <span class="n">input_prompt</span><span class="p">,</span>
                             <span class="n">dmPolygon</span><span class="p">,</span>
-                        <span class="p">):</span>  <span class="c1"># TODO (sungchul): add other polygon types # noqa: TD003</span>
-                            <span class="c1"># TODO (sungchul): convert polygon to mask # noqa: TD003</span>
+                        <span class="p">):</span>  <span class="c1"># TODO (sungchul): add other polygon types</span>
+                            <span class="c1"># TODO (sungchul): convert polygon to mask</span>
                             <span class="k">continue</span>
                         <span class="k">else</span><span class="p">:</span>
                             <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Current input prompt (</span><span class="si">{</span><span class="n">input_prompt</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">) is not supported.&quot;</span><span class="p">)</span>
@@ -556,10 +564,13 @@
         <span class="n">used_indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">used_indices</span><span class="p">,</span> <span class="o">*</span><span class="n">new_used_indices</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
         <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;reference_feats&quot;</span><span class="p">:</span> <span class="n">reference_feats</span><span class="p">,</span> <span class="s2">&quot;used_indices&quot;</span><span class="p">:</span> <span class="n">used_indices</span><span class="p">},</span> <span class="n">reference_masks</span></div>
 
-<div class="viewcode-block" id="ZeroShotSegmentAnything.infer"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.ZeroShotSegmentAnything.infer">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ZeroShotSegmentAnything.infer">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.ZeroShotSegmentAnything.infer">[docs]</a>
+    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">infer</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">images</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">tv_tensors</span><span class="o">.</span><span class="n">Image</span><span class="p">],</span>
+        <span class="n">images</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Image</span><span class="p">],</span>
         <span class="n">reference_feats</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
         <span class="n">used_indices</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
         <span class="n">ori_shapes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
@@ -572,7 +583,7 @@
 <span class="sd">        Get target results by using reference features and target images&#39; features.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            images (list[tv_tensors.Image]): Given images for target results.</span>
+<span class="sd">            images (list[Image]): Given images for target results.</span>
 <span class="sd">            reference_feats (Tensor): Reference features for target prediction.</span>
 <span class="sd">            used_indices (Tensor): To check which indices of reference features are validate.</span>
 <span class="sd">            ori_shapes (list[Tensor]): Original image size.</span>
@@ -637,6 +648,7 @@
             <span class="n">total_results</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">predicted_masks</span><span class="p">,</span> <span class="n">used_points</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">total_results</span></div>
 
+
     <span class="k">def</span> <span class="nf">_inspect_overlapping_areas</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">predicted_masks</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]],</span>
@@ -693,53 +705,73 @@
         <span class="n">masks</span><span class="p">:</span> <span class="n">Tensor</span>
         <span class="n">logits</span><span class="p">:</span> <span class="n">Tensor</span>
         <span class="n">scores</span><span class="p">:</span> <span class="n">Tensor</span>
-        <span class="n">num_iter</span> <span class="o">=</span> <span class="mi">3</span> <span class="k">if</span> <span class="n">is_cascade</span> <span class="k">else</span> <span class="mi">1</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_iter</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="c1"># First-step prediction</span>
-                <span class="n">mask_input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
-                    <span class="mi">1</span><span class="p">,</span>
-                    <span class="mi">1</span><span class="p">,</span>
-                    <span class="o">*</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="mi">4</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">image_embeddings</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:]),</span>
-                    <span class="n">device</span><span class="o">=</span><span class="n">image_embeddings</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+
+        <span class="c1"># First-step prediction</span>
+        <span class="n">mask_input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+            <span class="mi">1</span><span class="p">,</span>
+            <span class="mi">1</span><span class="p">,</span>
+            <span class="o">*</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="mi">4</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">image_embeddings</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:]),</span>
+            <span class="n">device</span><span class="o">=</span><span class="n">image_embeddings</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">has_mask_input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_mask_inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">mask_input</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">high_res_masks</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="p">(</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">image_embeddings</span><span class="o">=</span><span class="n">image_embeddings</span><span class="p">,</span>
+            <span class="n">point_coords</span><span class="o">=</span><span class="n">point_coords</span><span class="p">,</span>
+            <span class="n">point_labels</span><span class="o">=</span><span class="n">point_labels</span><span class="p">,</span>
+            <span class="n">mask_input</span><span class="o">=</span><span class="n">mask_input</span><span class="p">,</span>
+            <span class="n">has_mask_input</span><span class="o">=</span><span class="n">has_mask_input</span><span class="p">,</span>
+            <span class="n">ori_shape</span><span class="o">=</span><span class="n">ori_shape</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">masks</span> <span class="o">=</span> <span class="n">high_res_masks</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">mask_threshold</span>
+
+        <span class="k">if</span> <span class="n">is_cascade</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="c1"># Cascaded Post-refinement-1</span>
+                    <span class="n">mask_input</span><span class="p">,</span> <span class="n">best_masks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decide_cascade_results</span><span class="p">(</span>
+                        <span class="n">masks</span><span class="p">,</span>
+                        <span class="n">logits</span><span class="p">,</span>
+                        <span class="n">scores</span><span class="p">,</span>
+                        <span class="n">is_single</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="n">best_masks</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">best_masks</span>
+
+                    <span class="n">has_mask_input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_mask_inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">mask_input</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Cascaded Post-refinement-2</span>
+                    <span class="n">mask_input</span><span class="p">,</span> <span class="n">best_masks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decide_cascade_results</span><span class="p">(</span><span class="n">masks</span><span class="p">,</span> <span class="n">logits</span><span class="p">,</span> <span class="n">scores</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">best_masks</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">best_masks</span>
+
+                    <span class="n">has_mask_input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_mask_inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">mask_input</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+                    <span class="n">coords</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">best_masks</span><span class="p">)</span>
+                    <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">coords</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+                    <span class="n">box_coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_coords</span><span class="p">(</span>
+                        <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+                            <span class="p">[[[</span><span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">y</span><span class="o">.</span><span class="n">min</span><span class="p">()],</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">y</span><span class="o">.</span><span class="n">max</span><span class="p">()]]],</span>
+                            <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+                            <span class="n">device</span><span class="o">=</span><span class="n">coords</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                        <span class="p">),</span>
+                        <span class="n">ori_shape</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">image_size</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">point_coords</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">point_coords</span><span class="p">,</span> <span class="n">box_coords</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">point_labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">point_labels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_labels_box</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">point_labels</span><span class="o">.</span><span class="n">device</span><span class="p">)),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+                <span class="n">high_res_masks</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="p">(</span>
+                    <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+                    <span class="n">image_embeddings</span><span class="o">=</span><span class="n">image_embeddings</span><span class="p">,</span>
+                    <span class="n">point_coords</span><span class="o">=</span><span class="n">point_coords</span><span class="p">,</span>
+                    <span class="n">point_labels</span><span class="o">=</span><span class="n">point_labels</span><span class="p">,</span>
+                    <span class="n">mask_input</span><span class="o">=</span><span class="n">mask_input</span><span class="p">,</span>
+                    <span class="n">has_mask_input</span><span class="o">=</span><span class="n">has_mask_input</span><span class="p">,</span>
+                    <span class="n">ori_shape</span><span class="o">=</span><span class="n">ori_shape</span><span class="p">,</span>
                 <span class="p">)</span>
-                <span class="n">has_mask_input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_mask_inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">mask_input</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">masks</span> <span class="o">=</span> <span class="n">high_res_masks</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">mask_threshold</span>
 
-            <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="c1"># Cascaded Post-refinement-1</span>
-                <span class="n">mask_input</span><span class="p">,</span> <span class="n">best_masks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decide_cascade_results</span><span class="p">(</span><span class="n">masks</span><span class="p">,</span> <span class="n">logits</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">is_single</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># noqa: F821</span>
-                <span class="k">if</span> <span class="n">best_masks</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="n">best_masks</span>
-
-                <span class="n">has_mask_input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_mask_inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">mask_input</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-
-            <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="c1"># Cascaded Post-refinement-2</span>
-                <span class="n">mask_input</span><span class="p">,</span> <span class="n">best_masks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decide_cascade_results</span><span class="p">(</span><span class="n">masks</span><span class="p">,</span> <span class="n">logits</span><span class="p">,</span> <span class="n">scores</span><span class="p">)</span>  <span class="c1"># noqa: F821</span>
-                <span class="k">if</span> <span class="n">best_masks</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="n">best_masks</span>
-
-                <span class="n">has_mask_input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_mask_inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">mask_input</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-                <span class="n">coords</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">best_masks</span><span class="p">)</span>
-                <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">coords</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
-                <span class="n">box_coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_coords</span><span class="p">(</span>
-                    <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[[</span><span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">y</span><span class="o">.</span><span class="n">min</span><span class="p">()],</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">y</span><span class="o">.</span><span class="n">max</span><span class="p">()]]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">coords</span><span class="o">.</span><span class="n">device</span><span class="p">),</span>
-                    <span class="n">ori_shape</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">image_size</span><span class="p">,</span>
-                <span class="p">)</span>
-                <span class="n">point_coords</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">point_coords</span><span class="p">,</span> <span class="n">box_coords</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-                <span class="n">point_labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">point_labels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">point_labels_box</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">point_labels</span><span class="o">.</span><span class="n">device</span><span class="p">)),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-
-            <span class="n">high_res_masks</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="p">(</span>
-                <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
-                <span class="n">image_embeddings</span><span class="o">=</span><span class="n">image_embeddings</span><span class="p">,</span>
-                <span class="n">point_coords</span><span class="o">=</span><span class="n">point_coords</span><span class="p">,</span>
-                <span class="n">point_labels</span><span class="o">=</span><span class="n">point_labels</span><span class="p">,</span>
-                <span class="n">mask_input</span><span class="o">=</span><span class="n">mask_input</span><span class="p">,</span>
-                <span class="n">has_mask_input</span><span class="o">=</span><span class="n">has_mask_input</span><span class="p">,</span>
-                <span class="n">ori_shape</span><span class="o">=</span><span class="n">ori_shape</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="n">masks</span> <span class="o">=</span> <span class="n">high_res_masks</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">mask_threshold</span>
         <span class="n">_</span><span class="p">,</span> <span class="n">best_masks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decide_cascade_results</span><span class="p">(</span><span class="n">masks</span><span class="p">,</span> <span class="n">logits</span><span class="p">,</span> <span class="n">scores</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">best_masks</span>
 
@@ -799,7 +831,9 @@
         <span class="n">masked_feat</span> <span class="o">=</span> <span class="n">masked_feat</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">masked_feat</span> <span class="o">/</span> <span class="n">masked_feat</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<div class="viewcode-block" id="ZeroShotSegmentAnything.pad_to_square"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.ZeroShotSegmentAnything.pad_to_square">[docs]</a>    <span class="k">def</span> <span class="nf">pad_to_square</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="ZeroShotSegmentAnything.pad_to_square">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.ZeroShotSegmentAnything.pad_to_square">[docs]</a>
+    <span class="k">def</span> <span class="nf">pad_to_square</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Pad to a square input.</span>
 
 <span class="sd">        Args:</span>
@@ -812,6 +846,7 @@
         <span class="n">padh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_size</span> <span class="o">-</span> <span class="n">h</span>
         <span class="n">padw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_size</span> <span class="o">-</span> <span class="n">w</span>
         <span class="k">return</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">padw</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">padh</span><span class="p">))</span></div>
+
 
     <span class="k">def</span> <span class="nf">_decide_cascade_results</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -841,24 +876,59 @@
         <span class="k">return</span> <span class="n">logits</span><span class="p">[:,</span> <span class="p">[</span><span class="n">best_idx</span><span class="p">]],</span> <span class="n">masks</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">best_idx</span><span class="p">]</span></div>
 
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything">[docs]</a><span class="k">class</span> <span class="nc">OTXZeroShotSegmentAnything</span><span class="p">(</span><span class="n">OTXVisualPromptingModel</span><span class="p">):</span>
+
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything">[docs]</a>
+<span class="k">class</span> <span class="nc">OTXZeroShotSegmentAnything</span><span class="p">(</span><span class="n">OTXZeroShotVisualPromptingModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Zero-Shot Visual Prompting model.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">backbone</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;tiny_vit&quot;</span><span class="p">,</span> <span class="s2">&quot;vit_b&quot;</span><span class="p">],</span>
-        <span class="n">num_classes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-        <span class="n">root_reference_info</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;vpm_zsl_reference_infos&quot;</span><span class="p">,</span>
+        <span class="n">label_info</span><span class="p">:</span> <span class="n">LabelInfoTypes</span> <span class="o">=</span> <span class="n">NullLabelInfo</span><span class="p">(),</span>
+        <span class="n">optimizer</span><span class="p">:</span> <span class="n">OptimizerCallable</span> <span class="o">=</span> <span class="n">DefaultOptimizerCallable</span><span class="p">,</span>
+        <span class="n">scheduler</span><span class="p">:</span> <span class="n">LRSchedulerCallable</span> <span class="o">|</span> <span class="n">LRSchedulerListCallable</span> <span class="o">=</span> <span class="n">DefaultSchedulerCallable</span><span class="p">,</span>
+        <span class="n">metric</span><span class="p">:</span> <span class="n">MetricCallable</span> <span class="o">=</span> <span class="n">VisualPromptingMetricCallable</span><span class="p">,</span>
+        <span class="n">torch_compile</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">reference_info_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;reference_infos&quot;</span><span class="p">,</span>
+        <span class="n">infer_reference_info_root</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;../.latest/train&quot;</span><span class="p">,</span>
         <span class="n">save_outputs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">pixel_mean</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="p">[</span><span class="mf">123.675</span><span class="p">,</span> <span class="mf">116.28</span><span class="p">,</span> <span class="mf">103.53</span><span class="p">],</span>  <span class="c1"># noqa: B006</span>
         <span class="n">pixel_std</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="p">[</span><span class="mf">58.395</span><span class="p">,</span> <span class="mf">57.12</span><span class="p">,</span> <span class="mf">57.375</span><span class="p">],</span>  <span class="c1"># noqa: B006</span>
-        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;backbone&quot;</span><span class="p">:</span> <span class="n">backbone</span><span class="p">,</span> <span class="o">**</span><span class="n">DEFAULT_CONFIG_SEGMENT_ANYTHING</span><span class="p">[</span><span class="n">backbone</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">num_classes</span><span class="o">=</span><span class="n">num_classes</span><span class="p">)</span>
+        <span class="n">freeze_image_encoder</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">freeze_prompt_encoder</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">freeze_mask_decoder</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">default_threshold_reference</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
+        <span class="n">default_threshold_target</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.65</span><span class="p">,</span>
+        <span class="n">use_stability_score</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">return_single_mask</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">return_extra_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">stability_score_offset</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;backbone&quot;</span><span class="p">:</span> <span class="n">backbone</span><span class="p">,</span>
+            <span class="s2">&quot;freeze_image_encoder&quot;</span><span class="p">:</span> <span class="n">freeze_image_encoder</span><span class="p">,</span>
+            <span class="s2">&quot;freeze_prompt_encoder&quot;</span><span class="p">:</span> <span class="n">freeze_prompt_encoder</span><span class="p">,</span>
+            <span class="s2">&quot;freeze_mask_decoder&quot;</span><span class="p">:</span> <span class="n">freeze_mask_decoder</span><span class="p">,</span>
+            <span class="s2">&quot;default_threshold_reference&quot;</span><span class="p">:</span> <span class="n">default_threshold_reference</span><span class="p">,</span>
+            <span class="s2">&quot;default_threshold_target&quot;</span><span class="p">:</span> <span class="n">default_threshold_target</span><span class="p">,</span>
+            <span class="s2">&quot;use_stability_score&quot;</span><span class="p">:</span> <span class="n">use_stability_score</span><span class="p">,</span>
+            <span class="s2">&quot;return_single_mask&quot;</span><span class="p">:</span> <span class="n">return_single_mask</span><span class="p">,</span>
+            <span class="s2">&quot;return_extra_metrics&quot;</span><span class="p">:</span> <span class="n">return_extra_metrics</span><span class="p">,</span>
+            <span class="s2">&quot;stability_score_offset&quot;</span><span class="p">:</span> <span class="n">stability_score_offset</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">DEFAULT_CONFIG_SEGMENT_ANYTHING</span><span class="p">[</span><span class="n">backbone</span><span class="p">],</span>
+        <span class="p">}</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">label_info</span><span class="o">=</span><span class="n">label_info</span><span class="p">,</span>
+            <span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span>
+            <span class="n">scheduler</span><span class="o">=</span><span class="n">scheduler</span><span class="p">,</span>
+            <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
+            <span class="n">torch_compile</span><span class="o">=</span><span class="n">torch_compile</span><span class="p">,</span>
+        <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">save_outputs</span> <span class="o">=</span> <span class="n">save_outputs</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">root_reference_info</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root_reference_info</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reference_info_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">reference_info_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">infer_reference_info_root</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">infer_reference_info_root</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s2">&quot;pixel_mean&quot;</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">pixel_mean</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="kc">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s2">&quot;pixel_std&quot;</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">pixel_std</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="kc">False</span><span class="p">)</span>
@@ -869,7 +939,9 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a PyTorch model for this class.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">ZeroShotSegmentAnything</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.forward"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>  <span class="c1"># type: ignore[override]</span>
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.forward">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.forward">[docs]</a>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>  <span class="c1"># type: ignore[override]</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">inputs</span><span class="p">:</span> <span class="n">ZeroShotVisualPromptingBatchDataEntity</span><span class="p">,</span>  <span class="c1"># type: ignore[override]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ZeroShotVisualPromptingBatchPredEntity</span> <span class="o">|</span> <span class="n">OTXBatchLossEntity</span><span class="p">:</span>
@@ -877,7 +949,10 @@
         <span class="n">forward_fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">learn</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">training</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">infer</span>
         <span class="k">return</span> <span class="n">forward_fn</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>  <span class="c1"># type: ignore[operator]</span></div>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.learn"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.learn">[docs]</a>    <span class="k">def</span> <span class="nf">learn</span><span class="p">(</span>
+
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.learn">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.learn">[docs]</a>
+    <span class="k">def</span> <span class="nf">learn</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">inputs</span><span class="p">:</span> <span class="n">ZeroShotVisualPromptingBatchDataEntity</span><span class="p">,</span>
         <span class="n">reference_feats</span><span class="p">:</span> <span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -896,7 +971,10 @@
         <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_customize_outputs</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">inputs</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.infer"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.infer">[docs]</a>    <span class="k">def</span> <span class="nf">infer</span><span class="p">(</span>
+
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.infer">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.infer">[docs]</a>
+    <span class="k">def</span> <span class="nf">infer</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">inputs</span><span class="p">:</span> <span class="n">ZeroShotVisualPromptingBatchDataEntity</span><span class="p">,</span>
         <span class="n">reference_feats</span><span class="p">:</span> <span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -910,6 +988,7 @@
             <span class="n">is_cascade</span><span class="o">=</span><span class="n">is_cascade</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_customize_outputs</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">inputs</span><span class="p">)</span></div>
+
 
     <span class="k">def</span> <span class="nf">_customize_inputs</span><span class="p">(</span>  <span class="c1"># type: ignore[override]</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -944,7 +1023,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">used_indices</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;used_indices&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">outputs</span>
 
-        <span class="n">masks</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">tv_tensors</span><span class="o">.</span><span class="n">Mask</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">masks</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">prompts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Points</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">scores</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">labels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">LongTensor</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -952,7 +1031,7 @@
             <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">predicted_mask</span> <span class="ow">in</span> <span class="n">predicted_masks</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">predicted_mask</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="k">continue</span>
-                <span class="n">masks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tv_tensors</span><span class="o">.</span><span class="n">Mask</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">predicted_mask</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+                <span class="n">masks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Mask</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">predicted_mask</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
                 <span class="n">prompts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                     <span class="n">Points</span><span class="p">(</span>
                         <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">p</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">used_points</span><span class="p">[</span><span class="n">label</span><span class="p">]],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
@@ -976,11 +1055,11 @@
 
     <span class="k">def</span> <span class="nf">_gather_prompts_with_labels</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">prompts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">tv_tensors</span><span class="o">.</span><span class="n">TVTensor</span><span class="p">]],</span>
+        <span class="n">prompts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">TVTensor</span><span class="p">]],</span>
         <span class="n">labels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">tv_tensors</span><span class="o">.</span><span class="n">TVTensor</span><span class="p">]]]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">TVTensor</span><span class="p">]]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Gather prompts according to labels.&quot;&quot;&quot;</span>
-        <span class="n">total_processed_prompts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">tv_tensors</span><span class="o">.</span><span class="n">TVTensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">total_processed_prompts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">TVTensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">prompt</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">prompts</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
             <span class="n">processed_prompts</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">_prompt</span><span class="p">,</span> <span class="n">_label</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>  <span class="c1"># type: ignore[arg-type]</span>
@@ -989,13 +1068,18 @@
             <span class="n">total_processed_prompts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sorted_processed_prompts</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">total_processed_prompts</span>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.apply_image"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.apply_image">[docs]</a>    <span class="k">def</span> <span class="nf">apply_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="n">tv_tensors</span><span class="o">.</span><span class="n">Image</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">target_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">tv_tensors</span><span class="o">.</span><span class="n">Image</span><span class="p">:</span>
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.apply_image">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.apply_image">[docs]</a>
+    <span class="k">def</span> <span class="nf">apply_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="n">Image</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">target_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Preprocess image to be used in the model.&quot;&quot;&quot;</span>
         <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
         <span class="n">target_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_preprocess_shape</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">target_length</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">tvt_v2</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">tvt_v2</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">to_image</span><span class="p">(</span><span class="n">image</span><span class="p">),</span> <span class="n">target_size</span><span class="p">,</span> <span class="n">antialias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.apply_coords"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.apply_coords">[docs]</a>    <span class="k">def</span> <span class="nf">apply_coords</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coords</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">ori_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">target_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.apply_coords">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.apply_coords">[docs]</a>
+    <span class="k">def</span> <span class="nf">apply_coords</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coords</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">ori_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">target_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Preprocess points to be used in the model.&quot;&quot;&quot;</span>
         <span class="n">old_h</span><span class="p">,</span> <span class="n">old_w</span> <span class="o">=</span> <span class="n">ori_shape</span>
         <span class="n">new_h</span><span class="p">,</span> <span class="n">new_w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_preprocess_shape</span><span class="p">(</span><span class="n">ori_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ori_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">target_length</span><span class="p">)</span>
@@ -1004,11 +1088,17 @@
         <span class="n">coords</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">coords</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">new_h</span> <span class="o">/</span> <span class="n">old_h</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">coords</span></div>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.apply_points"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.apply_points">[docs]</a>    <span class="k">def</span> <span class="nf">apply_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">:</span> <span class="n">Points</span><span class="p">,</span> <span class="n">ori_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">target_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Points</span><span class="p">:</span>
+
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.apply_points">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.apply_points">[docs]</a>
+    <span class="k">def</span> <span class="nf">apply_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">:</span> <span class="n">Points</span><span class="p">,</span> <span class="n">ori_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">target_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Points</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Preprocess points to be used in the model.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">Points</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">apply_coords</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">ori_shape</span><span class="p">,</span> <span class="n">target_length</span><span class="p">),</span> <span class="n">canvas_size</span><span class="o">=</span><span class="p">(</span><span class="n">target_length</span><span class="p">,</span> <span class="n">target_length</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.apply_boxes"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.apply_boxes">[docs]</a>    <span class="k">def</span> <span class="nf">apply_boxes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boxes</span><span class="p">:</span> <span class="n">BoundingBoxes</span><span class="p">,</span> <span class="n">ori_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">target_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BoundingBoxes</span><span class="p">:</span>
+
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.apply_boxes">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.apply_boxes">[docs]</a>
+    <span class="k">def</span> <span class="nf">apply_boxes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boxes</span><span class="p">:</span> <span class="n">BoundingBoxes</span><span class="p">,</span> <span class="n">ori_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">target_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BoundingBoxes</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Preprocess boxes to be used in the model.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">BoundingBoxes</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">apply_coords</span><span class="p">(</span><span class="n">boxes</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">ori_shape</span><span class="p">,</span> <span class="n">target_length</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
@@ -1016,7 +1106,10 @@
             <span class="n">canvas_size</span><span class="o">=</span><span class="p">(</span><span class="n">target_length</span><span class="p">,</span> <span class="n">target_length</span><span class="p">),</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.apply_prompts"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.apply_prompts">[docs]</a>    <span class="k">def</span> <span class="nf">apply_prompts</span><span class="p">(</span>
+
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.apply_prompts">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.apply_prompts">[docs]</a>
+    <span class="k">def</span> <span class="nf">apply_prompts</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">prompts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Points</span> <span class="o">|</span> <span class="n">BoundingBoxes</span><span class="p">],</span>
         <span class="n">ori_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
@@ -1034,7 +1127,10 @@
                 <span class="n">transformed_prompts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">prompt</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">transformed_prompts</span></div>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.get_preprocess_shape"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.get_preprocess_shape">[docs]</a>    <span class="k">def</span> <span class="nf">get_preprocess_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">oldh</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">oldw</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">target_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.get_preprocess_shape">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.get_preprocess_shape">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_preprocess_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">oldh</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">oldw</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">target_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get preprocess shape.&quot;&quot;&quot;</span>
         <span class="n">scale</span> <span class="o">=</span> <span class="n">target_length</span> <span class="o">*</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">oldh</span><span class="p">,</span> <span class="n">oldw</span><span class="p">)</span>
         <span class="n">newh</span><span class="p">,</span> <span class="n">neww</span> <span class="o">=</span> <span class="n">oldh</span> <span class="o">*</span> <span class="n">scale</span><span class="p">,</span> <span class="n">oldw</span> <span class="o">*</span> <span class="n">scale</span>
@@ -1042,7 +1138,10 @@
         <span class="n">newh</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">newh</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">newh</span><span class="p">,</span> <span class="n">neww</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.preprocess"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.preprocess">[docs]</a>    <span class="k">def</span> <span class="nf">preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Image</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="p">:</span>
+
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.preprocess">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.preprocess">[docs]</a>
+    <span class="k">def</span> <span class="nf">preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Image</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Normalize pixel values and pad to a square input.&quot;&quot;&quot;</span>
         <span class="c1"># Normalize colors</span>
         <span class="n">x</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixel_mean</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixel_std</span>
@@ -1051,46 +1150,81 @@
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">pad_to_square</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">Image</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.transforms"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.transforms">[docs]</a>    <span class="k">def</span> <span class="nf">transforms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entity</span><span class="p">:</span> <span class="n">ZeroShotVisualPromptingBatchDataEntity</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ZeroShotVisualPromptingBatchDataEntity</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Transforms for ZeroShotVisualPromptingBatchDataEntity.&quot;&quot;&quot;</span>
-        <span class="n">entity</span><span class="o">.</span><span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">preprocess</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">apply_image</span><span class="p">(</span><span class="n">image</span><span class="p">))</span> <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">entity</span><span class="o">.</span><span class="n">images</span><span class="p">]</span>
-        <span class="n">entity</span><span class="o">.</span><span class="n">prompts</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">apply_prompts</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">ori_shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">image_size</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">prompt</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">entity</span><span class="o">.</span><span class="n">prompts</span><span class="p">,</span> <span class="n">entity</span><span class="o">.</span><span class="n">imgs_info</span><span class="p">)</span>
-        <span class="p">]</span>
-        <span class="k">return</span> <span class="n">entity</span></div>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.initialize_reference_info"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.initialize_reference_info">[docs]</a>    <span class="k">def</span> <span class="nf">initialize_reference_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.transforms">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.transforms">[docs]</a>
+    <span class="k">def</span> <span class="nf">transforms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entity</span><span class="p">:</span> <span class="n">ZeroShotVisualPromptingBatchDataEntity</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ZeroShotVisualPromptingBatchDataEntity</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Transforms for ZeroShotVisualPromptingBatchDataEntity.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">entity</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span>
+            <span class="n">images</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">preprocess</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">apply_image</span><span class="p">(</span><span class="n">image</span><span class="p">))</span> <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">entity</span><span class="o">.</span><span class="n">images</span><span class="p">],</span>
+            <span class="n">prompts</span><span class="o">=</span><span class="p">[</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">apply_prompts</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">ori_shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">image_size</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">prompt</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">entity</span><span class="o">.</span><span class="n">prompts</span><span class="p">,</span> <span class="n">entity</span><span class="o">.</span><span class="n">imgs_info</span><span class="p">)</span>
+            <span class="p">],</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.initialize_reference_info">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.initialize_reference_info">[docs]</a>
+    <span class="k">def</span> <span class="nf">initialize_reference_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize reference information.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s2">&quot;reference_feats&quot;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">),</span> <span class="kc">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s2">&quot;used_indices&quot;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span> <span class="kc">False</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">_find_latest_reference_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">root</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Find latest reference info to be used.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">(</span><span class="n">root</span><span class="p">):</span>
-            <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">stamps</span> <span class="o">:=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">root</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">stamps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">return</span> <span class="kc">None</span>
 
-<div class="viewcode-block" id="OTXZeroShotSegmentAnything.load_latest_reference_info"><a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.zero_shot_segment_anything.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.load_latest_reference_info">[docs]</a>    <span class="k">def</span> <span class="nf">load_latest_reference_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.save_reference_info">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.save_reference_info">[docs]</a>
+    <span class="k">def</span> <span class="nf">save_reference_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">default_root_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save reference info.&quot;&quot;&quot;</span>
+        <span class="n">reference_info</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;reference_feats&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">reference_feats</span><span class="p">,</span>
+            <span class="s2">&quot;used_indices&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">used_indices</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="c1"># save reference info</span>
+        <span class="n">path_reference_info</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">default_root_dir</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">reference_info_dir</span> <span class="o">/</span> <span class="s2">&quot;reference_info.pt&quot;</span>
+        <span class="n">path_reference_info</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># TODO (sungchul): ticket no. 139210</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">reference_info</span><span class="p">,</span> <span class="n">path_reference_info</span><span class="p">)</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">reference_info</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+            <span class="n">path_reference_info</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.pickle&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;wb&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved reference info at </span><span class="si">{</span><span class="n">path_reference_info</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OTXZeroShotSegmentAnything.load_reference_info">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.algo.visual_prompting.html#otx.algo.visual_prompting.OTXZeroShotSegmentAnything.load_reference_info">[docs]</a>
+    <span class="k">def</span> <span class="nf">load_reference_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">default_root_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Load latest reference info to be used.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">latest_stamp</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_latest_reference_info</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root_reference_info</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">latest_reference_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_reference_info</span> <span class="o">/</span> <span class="n">latest_stamp</span> <span class="o">/</span> <span class="s2">&quot;reference_info.pt&quot;</span>
-            <span class="n">reference_info</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">latest_reference_info</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span>
-                <span class="s2">&quot;reference_feats&quot;</span><span class="p">,</span>
-                <span class="n">reference_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;reference_feats&quot;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span>
-                <span class="kc">False</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span>
-                <span class="s2">&quot;used_indices&quot;</span><span class="p">,</span>
-                <span class="n">reference_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;used_indices&quot;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span>
-                <span class="kc">False</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;reference info saved at </span><span class="si">{</span><span class="n">latest_reference_info</span><span class="si">}</span><span class="s2"> was successfully loaded.&quot;</span><span class="p">)</span>
-            <span class="k">return</span> <span class="kc">True</span>
-        <span class="k">return</span> <span class="kc">False</span></div></div>
+        <span class="n">_infer_reference_info_root</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">infer_reference_info_root</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">infer_reference_info_root</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">infer_reference_info_root</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span>
+            <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="n">default_root_dir</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">infer_reference_info_root</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">path_reference_info</span> <span class="o">:=</span> <span class="n">_infer_reference_info_root</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">reference_info_dir</span> <span class="o">/</span> <span class="s2">&quot;reference_info.pt&quot;</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="n">reference_info</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path_reference_info</span><span class="p">)</span>
+            <span class="n">retval</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;reference info saved at </span><span class="si">{</span><span class="n">path_reference_info</span><span class="si">}</span><span class="s2"> was successfully loaded.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">reference_info</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">retval</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span>
+            <span class="s2">&quot;reference_feats&quot;</span><span class="p">,</span>
+            <span class="n">reference_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;reference_feats&quot;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span>
+            <span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span>
+            <span class="s2">&quot;used_indices&quot;</span><span class="p">,</span>
+            <span class="n">reference_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;used_indices&quot;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span>
+            <span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">retval</span></div>
+</div>
+
 </pre></div>
 
             </article>
@@ -1167,7 +1301,7 @@
   <div class="footer-item">
     
 <p class="sphinx-version">
-Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.3.0.<br>
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.2.6.<br>
 </p>
 
   </div>
