@@ -27,7 +27,7 @@
     <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/tabs.css?v=a5c4661c" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css?v=0a3b3ea7" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=87e54e7c" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=d626d52b" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
@@ -40,7 +40,7 @@
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../../../_static/tabs.js?v=3030b3cb"></script>
-    <script src="../../../../_static/design-tabs.js?v=36754332"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/otx/algo/plugins/xpu_precision';</script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
@@ -298,9 +298,7 @@
             <span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">LBFGS</span><span class="p">):</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Native AMP and the LBFGS optimizer are not compatible.&quot;</span>
-            <span class="k">raise</span> <span class="n">MisconfigurationException</span><span class="p">(</span>
-                <span class="n">msg</span><span class="p">,</span>
-            <span class="p">)</span>
+            <span class="k">raise</span> <span class="n">MisconfigurationException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="n">closure_result</span> <span class="o">=</span> <span class="n">closure</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">_optimizer_handles_unscaling</span><span class="p">(</span><span class="n">optimizer</span><span class="p">):</span>
@@ -332,9 +330,7 @@
         <span class="k">if</span> <span class="n">clip_val</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">_optimizer_handles_unscaling</span><span class="p">(</span><span class="n">optimizer</span><span class="p">):</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;The current optimizer, </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span><span class="o">.</span><span class="vm">__qualname__</span><span class="si">}</span><span class="s2">, does not allow for gradient clipping&quot;</span>
             <span class="s2">&quot; because it performs unscaling of gradients internally. HINT: Are you using a &#39;fused&#39; optimizer?&quot;</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-                <span class="n">msg</span><span class="p">,</span>
-            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">clip_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">clip_val</span><span class="o">=</span><span class="n">clip_val</span><span class="p">,</span> <span class="n">gradient_clip_algorithm</span><span class="o">=</span><span class="n">gradient_clip_algorithm</span><span class="p">)</span></div>
 
 
