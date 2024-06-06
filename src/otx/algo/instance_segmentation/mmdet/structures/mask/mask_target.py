@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import ml_dtypes
 import numpy as np
 import torch
 from datumaro.components.annotation import Polygon
@@ -71,11 +72,19 @@ def mask_target_single(
     mask_size = _pair(cfg["mask_size"])
     num_pos = pos_proposals.size(0)
     if num_pos > 0:
-        proposals_np = pos_proposals.cpu().numpy()
+        if pos_proposals.dtype == torch.bfloat16:
+            proposals_np = pos_proposals.float().cpu().numpy().astype(ml_dtypes.bfloat16)
+        else:
+            proposals_np = pos_proposals.cpu().numpy()
+
+        if pos_assigned_gt_inds.dtype == torch.bfloat16:
+            pos_assigned_gt_inds = pos_assigned_gt_inds.float().cpu().numpy().astype(ml_dtypes.bfloat16)
+        else:
+            pos_assigned_gt_inds = pos_assigned_gt_inds.cpu().numpy()
+
         maxh, maxw = meta_info["img_shape"]
         proposals_np[:, [0, 2]] = np.clip(proposals_np[:, [0, 2]], 0, maxw)
         proposals_np[:, [1, 3]] = np.clip(proposals_np[:, [1, 3]], 0, maxh)
-        pos_assigned_gt_inds = pos_assigned_gt_inds.cpu().numpy()
 
         mask_targets = crop_and_resize(
             gt_masks,
