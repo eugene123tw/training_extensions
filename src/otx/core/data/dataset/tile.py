@@ -6,24 +6,23 @@
 from __future__ import annotations
 
 import logging as log
-import operator
-from copy import deepcopy
+import time
+from functools import wraps
 from itertools import product
 from typing import TYPE_CHECKING, Callable
 
 import numpy as np
-import shapely.geometry as sg
 import torch
 from datumaro import Bbox, DatasetItem, Image, Polygon
 from datumaro import Dataset as DmDataset
-from datumaro.components.annotation import AnnotationType
+from datumaro.components.media import BboxIntCoords, Image, RoIImage
 from datumaro.plugins.tiling import Tile
-from datumaro.plugins.tiling.tile import _apply_offset
 from datumaro.plugins.tiling.util import (
     clip_x1y1x2y2,
     cxcywh_to_x1y1x2y2,
     x1y1x2y2_to_cxcywh,
     x1y1x2y2_to_xywh,
+    xywh_to_x1y1x2y2,
 )
 from torchvision import tv_tensors
 
@@ -54,6 +53,18 @@ if TYPE_CHECKING:
 # This is a workaround so we could apply the same transforms to tiles as the original dataset.
 
 
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time.perf_counter()
+        result = f(*args, **kw)
+        te = time.perf_counter()
+        print("func:%r took: %2.4f sec" % (f.__name__, te - ts))
+        return result
+
+    return wrap
+
+
 class OTXTileTransform(Tile):
     """OTX tile transform.
 
@@ -74,7 +85,6 @@ class OTXTileTransform(Tile):
         extractor: DmDataset,
         tile_size: tuple[int, int],
         overlap: tuple[float, float],
-        threshold_drop_ann: float,
         with_full_img: bool,
     ) -> None:
         # NOTE: clip overlap to [0, 0.9]
@@ -83,49 +93,77 @@ class OTXTileTransform(Tile):
             extractor,
             (0, 0),
             overlap=overlap,
-            threshold_drop_ann=threshold_drop_ann,
+            threshold_drop_ann=1.0,
         )
         self._tile_size = tile_size
-        self._tile_ann_func_map[AnnotationType.polygon] = OTXTileTransform._tile_polygon
         self.with_full_img = with_full_img
 
-    @staticmethod
-    def _tile_polygon(
-        ann: Polygon,
-        roi_box: sg.Polygon,
-        threshold_drop_ann: float = 0.8,
-        *args,  # noqa: ARG004
-        **kwargs,  # noqa: ARG004
-    ) -> Polygon | None:
-        polygon = sg.Polygon(ann.get_points())
+    def shift_polygon(self, polygon: np.ndarray, offset: tuple[int, int]) -> np.ndarray:
+        polygon[0::2] += offset[0]
+        polygon[1::2] += offset[1]
+        return polygon
 
-        # NOTE: polygon may be invalid, e.g. self-intersecting
-        if not roi_box.intersects(polygon) or not polygon.is_valid:
-            return None
+    def tile_boxes_overlap(self, tile_box: np.ndarray, boxes: np.ndarray) -> np.ndarray:
+        """Compute overlapping ratio over boxes.
 
-        # NOTE: intersection may return a GeometryCollection or MultiPolygon
-        inter = polygon.intersection(roi_box)
-        if isinstance(inter, (sg.GeometryCollection, sg.MultiPolygon)):
-            shapes = [(geom, geom.area) for geom in list(inter.geoms) if geom.is_valid]
-            if not shapes:
-                return None
+        Args:
+            tile_box (np.ndarray): box in shape (1, 4).
+            boxes (np.ndarray): boxes in shape (N, 4).
 
-            inter, _ = max(shapes, key=operator.itemgetter(1))
+        Returns:
+            np.ndarray: matched indices.
+        """
+        x1, y1, x2, y2 = tile_box
+        return (boxes[:, 0] > x1) & (boxes[:, 1] > y1) & (boxes[:, 2] < x2) & (boxes[:, 3] < y2)
 
-            if not isinstance(inter, sg.Polygon) and not inter.is_valid:
-                return None
+    def transform_item(self, item: DatasetItem):
+        items = []
+        rois = self._extract_rois(item.media)
 
-        prop_area = inter.area / polygon.area
+        gt_bboxes = []
+        gt_polygons = []
+        gt_labels = []
+        for ann in item.annotations:
+            if isinstance(ann, Bbox):
+                gt_bboxes.append(ann.points)
+                gt_labels.append(ann.label)
+            elif isinstance(ann, Polygon):
+                gt_polygons.append(np.array(ann.points))
+        gt_labels = np.array(gt_labels, dtype=np.int64)
+        gt_bboxes = np.array(gt_bboxes, dtype=np.float32)
 
-        if prop_area < threshold_drop_ann:
-            return None
+        for idx, roi in enumerate(rois):
+            roi_box = np.array(xywh_to_x1y1x2y2(*roi), dtype=np.float32)
+            keep = self.tile_boxes_overlap(roi_box, gt_bboxes)
 
-        inter = _apply_offset(inter, roi_box)
+            if any(keep):
+                tiled_labels = gt_labels[keep]
+                tiled_bboxes = gt_bboxes[keep]
+                tiled_polygons = [gt_polygon for gt_polygon, keep in zip(gt_polygons, keep) if keep]
 
-        return ann.wrap(
-            points=[p for xy in inter.exterior.coords for p in xy],
-            attributes=deepcopy(ann.attributes),
-        )
+                tiled_bboxes[:, 0] -= roi_box[0]
+                tiled_bboxes[:, 1] -= roi_box[1]
+                tiled_bboxes[:, 2] -= roi_box[0]
+                tiled_bboxes[:, 3] -= roi_box[1]
+                tiled_polygons = [self.shift_polygon(polygon, (-roi_box[0], -roi_box[1])) for polygon in tiled_polygons]
+
+                annos = []
+                for tile_box, tile_label, tile_polygon in zip(tiled_bboxes, tiled_labels, tiled_polygons):
+                    x1, y1, w, h = x1y1x2y2_to_xywh(*tile_box)
+                    bbox = Bbox(x=x1, y=y1, w=w, h=h, label=tile_label)
+                    polygon = Polygon(points=tile_polygon, label=tile_label)
+                    annos.extend([bbox, polygon])
+
+                items += [
+                    self.wrap_item(
+                        item,
+                        id=item.id + f"_tile_{idx}",
+                        media=RoIImage.from_image(item.media, roi),
+                        attributes=self._get_tiled_attributes(item, idx, roi),
+                        annotations=annos,
+                    ),
+                ]
+        return items
 
     def _extract_rois(self, image: Image) -> list[BboxIntCoords]:
         """Extracts Tile ROIs from the given image.
@@ -252,7 +290,6 @@ class OTXTileDataset(OTXDataset):
             OTXTileTransform,
             tile_size=self.tile_config.tile_size,
             overlap=(self.tile_config.overlap, self.tile_config.overlap),
-            threshold_drop_ann=0.5,
             with_full_img=self.tile_config.with_full_img,
         )
 
@@ -288,13 +325,9 @@ class OTXTileTrainDataset(OTXTileDataset):
             OTXTileTransform,
             tile_size=tile_config.tile_size,
             overlap=(tile_config.overlap, tile_config.overlap),
-            threshold_drop_ann=0.5,
             with_full_img=tile_config.with_full_img,
         )
-        dm_dataset = dm_dataset.filter("/item/annotation", filter_annotations=True, remove_empty=True)
-        # Include original dataset for training
-        dm_dataset.update(dataset.dm_subset)
-        dataset.dm_subset = dm_dataset
+        dataset.dm_subset = dm_dataset.filter("/item/annotation", filter_annotations=True, remove_empty=True)
         super().__init__(dataset, tile_config)
 
 
