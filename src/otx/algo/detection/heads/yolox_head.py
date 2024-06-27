@@ -466,6 +466,9 @@ class YOLOXHead(BaseDenseHead):
             results.bboxes /= results.bboxes.new_tensor(img_meta["scale_factor"][::-1]).repeat((1, 2))  # type: ignore[attr-defined, index]
 
         if with_nms and results.bboxes.numel() > 0:  # type: ignore[attr-defined]
+            if results.bboxes.dtype == torch.bfloat16:
+                results.bboxes = results.bboxes.float()
+                results.scores = results.scores.float()
             det_bboxes, keep_idxs = batched_nms(results.bboxes, results.scores, results.labels, cfg.nms)  # type: ignore[attr-defined]
             results = results[keep_idxs]
             # some nms would reweight the score, such as softnms
