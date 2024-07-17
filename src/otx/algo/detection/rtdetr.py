@@ -99,7 +99,7 @@ class RTDETR(nn.Module):
         for sc, bb, ll in zip(scores, boxes, labels):
             scores_list.append(sc)
             boxes_list.append(
-                torchvision.tv_tensors.BoundingBoxes(bb, format="xyxy", canvas_size=original_size.tolist())
+                torchvision.tv_tensors.BoundingBoxes(bb, format="xyxy", canvas_size=original_size.tolist()),
             )
             labels_list.append(ll.long())
 
@@ -131,7 +131,9 @@ class OTX_RTDETR(ExplainableOTXDetModel):
         }
 
     def _customize_outputs(
-        self, outputs: list[InstanceData] | dict, inputs: DetBatchDataEntity
+        self,
+        outputs: list[InstanceData] | dict,
+        inputs: DetBatchDataEntity,
     ) -> DetBatchPredEntity | OTXBatchLossEntity:
         if self.training:
             if not isinstance(outputs, dict):
@@ -274,7 +276,12 @@ class OTX_RTDETR_18(OTX_RTDETR):
 
     def _build_model(self, num_classes: int) -> nn.Module:
         backbone = PResNet(
-            depth=18, pretrained=True, freeze_at=-1, return_idx=[1, 2, 3], num_stages=4, freeze_norm=False
+            depth=18,
+            pretrained=True,
+            freeze_at=-1,
+            return_idx=[1, 2, 3],
+            num_stages=4,
+            freeze_norm=False,
         )
         encoder = HybridEncoder(
             in_channels=[128, 256, 512],
@@ -365,7 +372,12 @@ class OTX_RTDETR_101(OTX_RTDETR):
 
     def _build_model(self, num_classes: int) -> nn.Module:
         backbone = PResNet(
-            depth=101, return_idx=[1, 2, 3], num_stages=4, freeze_norm=True, pretrained=True, freeze_at=0
+            depth=101,
+            return_idx=[1, 2, 3],
+            num_stages=4,
+            freeze_norm=True,
+            pretrained=True,
+            freeze_at=0,
         )
 
         encoder = HybridEncoder(

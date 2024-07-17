@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from otx.algo.detection.utils import get_activation
+from otx.algo.detection.utils.utils import get_activation
 
 __all__ = ["PResNet"]
 
@@ -62,14 +62,27 @@ class FrozenBatchNorm2d(nn.Module):
         self.num_features = n
 
     def _load_from_state_dict(
-        self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
     ):
         num_batches_tracked_key = prefix + "num_batches_tracked"
         if num_batches_tracked_key in state_dict:
             del state_dict[num_batches_tracked_key]
 
         super(FrozenBatchNorm2d, self)._load_from_state_dict(
-            state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
+            state_dict,
+            prefix,
+            local_metadata,
+            strict,
+            missing_keys,
+            unexpected_keys,
+            error_msgs,
         )
 
     def forward(self, x):
@@ -102,8 +115,8 @@ class BasicBlock(nn.Module):
                         [
                             ("pool", nn.AvgPool2d(2, 2, 0, ceil_mode=True)),
                             ("conv", ConvNormLayer(ch_in, ch_out, 1, 1)),
-                        ]
-                    )
+                        ],
+                    ),
                 )
             else:
                 self.short = ConvNormLayer(ch_in, ch_out, 1, stride)
@@ -151,8 +164,8 @@ class BottleNeck(nn.Module):
                         [
                             ("pool", nn.AvgPool2d(2, 2, 0, ceil_mode=True)),
                             ("conv", ConvNormLayer(ch_in, ch_out * self.expansion, 1, 1)),
-                        ]
-                    )
+                        ],
+                    ),
                 )
             else:
                 self.short = ConvNormLayer(ch_in, ch_out * self.expansion, 1, stride)
@@ -228,7 +241,7 @@ class PResNet(nn.Module):
             conv_def = [[3, ch_in, 7, 2, "conv1_1"]]
 
         self.conv1 = nn.Sequential(
-            OrderedDict([(_name, ConvNormLayer(c_in, c_out, k, s, act=act)) for c_in, c_out, k, s, _name in conv_def])
+            OrderedDict([(_name, ConvNormLayer(c_in, c_out, k, s, act=act)) for c_in, c_out, k, s, _name in conv_def]),
         )
 
         ch_out_list = [64, 128, 256, 512]

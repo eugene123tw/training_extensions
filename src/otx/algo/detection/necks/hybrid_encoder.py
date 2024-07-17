@@ -88,7 +88,7 @@ class CSPRepLayer(nn.Module):
         self.conv1 = ConvNormLayer(in_channels, hidden_channels, 1, 1, bias=bias, act=act)
         self.conv2 = ConvNormLayer(in_channels, hidden_channels, 1, 1, bias=bias, act=act)
         self.bottlenecks = nn.Sequential(
-            *[RepVggBlock(hidden_channels, hidden_channels, act=act) for _ in range(num_blocks)]
+            *[RepVggBlock(hidden_channels, hidden_channels, act=act) for _ in range(num_blocks)],
         )
         if hidden_channels != out_channels:
             self.conv3 = ConvNormLayer(hidden_channels, out_channels, 1, 1, bias=bias, act=act)
@@ -205,11 +205,15 @@ class HybridEncoder(nn.Module):
 
         # encoder transformer
         encoder_layer = TransformerEncoderLayer(
-            hidden_dim, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout, activation=enc_act
+            hidden_dim,
+            nhead=nhead,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout,
+            activation=enc_act,
         )
 
         self.encoder = nn.ModuleList(
-            [TransformerEncoder(copy.deepcopy(encoder_layer), num_encoder_layers) for _ in range(len(use_encoder_idx))]
+            [TransformerEncoder(copy.deepcopy(encoder_layer), num_encoder_layers) for _ in range(len(use_encoder_idx))],
         )
 
         # top-down fpn
@@ -274,7 +278,7 @@ class HybridEncoder(nn.Module):
                 src_flatten = proj_feats[enc_ind].flatten(2).permute(0, 2, 1)
                 if self.training or self.eval_spatial_size is None:
                     pos_embed = self.build_2d_sincos_position_embedding(w, h, self.hidden_dim, self.pe_temperature).to(
-                        src_flatten.device
+                        src_flatten.device,
                     )
                 else:
                     pos_embed = getattr(self, f"pos_embed{enc_ind}", None).to(src_flatten.device)
@@ -301,4 +305,4 @@ class HybridEncoder(nn.Module):
             out = self.pan_blocks[idx](torch.concat([downsample_feat, feat_high], dim=1))
             outs.append(out)
 
-        return outs
+        return outs, proj_feats[-1]

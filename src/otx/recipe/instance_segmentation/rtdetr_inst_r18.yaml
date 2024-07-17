@@ -34,8 +34,8 @@ overrides:
   gradient_clip_val: 35.0
   data:
     train_subset:
-      batch_size: 4
-      num_workers: 8
+      batch_size: 2
+      num_workers: 2
       transforms:
         - class_path: otx.core.data.transform_libs.torchvision.Resize
           init_args:
@@ -43,8 +43,8 @@ overrides:
             transform_bbox: true
             transform_mask: true
             scale:
-              - 1024
-              - 1024
+              - 640
+              - 640
         - class_path: otx.core.data.transform_libs.torchvision.Pad
           init_args:
             pad_to_square: true
@@ -54,13 +54,15 @@ overrides:
           init_args:
             prob: 0.5
             is_numpy_to_tvtensor: true
+        - class_path: torchvision.transforms.v2.ToImage
         - class_path: torchvision.transforms.v2.ToDtype
           init_args:
             dtype: ${as_torch_dtype:torch.float32}
-        - class_path: torchvision.transforms.v2.Normalize
+            scale: True
+        - class_path: otx.core.data.transform_libs.torchvision.ConvertBox
           init_args:
-            mean: [123.675, 116.28, 103.53]
-            std: [58.395, 57.12, 57.375]
+            out_fmt: "cxcywh"
+            normalize: True
     val_subset:
       batch_size: 1
       num_workers: 4
@@ -69,20 +71,18 @@ overrides:
           init_args:
             keep_ratio: true
             scale:
-              - 1024
-              - 1024
+              - 640
+              - 640
         - class_path: otx.core.data.transform_libs.torchvision.Pad
           init_args:
             pad_to_square: true
             size_divisor: 32
             is_numpy_to_tvtensor: true
+        - class_path: torchvision.transforms.v2.ToImage
         - class_path: torchvision.transforms.v2.ToDtype
           init_args:
             dtype: ${as_torch_dtype:torch.float32}
-        - class_path: torchvision.transforms.v2.Normalize
-          init_args:
-            mean: [123.675, 116.28, 103.53]
-            std: [58.395, 57.12, 57.375]
+            scale: True
     test_subset:
       batch_size: 1
       num_workers: 4
@@ -91,17 +91,15 @@ overrides:
           init_args:
             keep_ratio: true
             scale:
-              - 1024
-              - 1024
+              - 640
+              - 640
         - class_path: otx.core.data.transform_libs.torchvision.Pad
           init_args:
             pad_to_square: true
             size_divisor: 32
             is_numpy_to_tvtensor: true
+        - class_path: torchvision.transforms.v2.ToImage
         - class_path: torchvision.transforms.v2.ToDtype
           init_args:
             dtype: ${as_torch_dtype:torch.float32}
-        - class_path: torchvision.transforms.v2.Normalize
-          init_args:
-            mean: [123.675, 116.28, 103.53]
-            std: [58.395, 57.12, 57.375]
+            scale: True

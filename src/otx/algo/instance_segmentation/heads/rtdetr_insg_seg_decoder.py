@@ -1,24 +1,19 @@
 """by lyuwenyu
 """
 
-import copy
-import math
-from collections import OrderedDict
 
 import torch
-import torch.nn.functional as F
 from torch import nn
-from torch.nn import init
-from otx.algo.detection.heads import RTDETRTransformer
+
+from otx.algo.detection.heads.rtdetr_decoder import RTDETRTransformer, get_contrastive_denoising_training_group
 
 
 def _expand(tensor, length: int):
     return tensor.unsqueeze(1).repeat(1, int(length), 1, 1, 1).flatten(0, 1)
 
+
 class DetrMaskHeadSmallConv(nn.Module):
-    """
-    Simple convolutional head, using group norm. Upsampling is done using a FPN approach
-    """
+    """Simple convolutional head, using group norm. Upsampling is done using a FPN approach"""
 
     def __init__(self, dim, fpn_dims, context_dim):
         super().__init__()
@@ -26,28 +21,32 @@ class DetrMaskHeadSmallConv(nn.Module):
         if dim % 8 != 0:
             raise ValueError(
                 "The hidden_size + number of attention heads must be divisible by 8 as the number of groups in"
-                " GroupNorm is set to 8"
+                " GroupNorm is set to 8",
             )
 
-        inter_dims = [dim, context_dim // 2, context_dim // 4, context_dim // 8, context_dim // 16, context_dim // 64]
+        inter_dims = [
+            dim,
+            context_dim // 2,
+            context_dim // 4,
+            context_dim // 8,
+            context_dim // 16,
+            context_dim // 64,
+        ]
 
         self.lay1 = nn.Conv2d(dim, dim, 3, padding=1)
         self.gn1 = nn.GroupNorm(8, dim)
+
         self.lay2 = nn.Conv2d(dim, inter_dims[1], 3, padding=1)
         self.gn2 = nn.GroupNorm(min(8, inter_dims[1]), inter_dims[1])
+
         self.lay3 = nn.Conv2d(inter_dims[1], inter_dims[2], 3, padding=1)
         self.gn3 = nn.GroupNorm(min(8, inter_dims[2]), inter_dims[2])
-        self.lay4 = nn.Conv2d(inter_dims[2], inter_dims[3], 3, padding=1)
-        self.gn4 = nn.GroupNorm(min(8, inter_dims[3]), inter_dims[3])
-        self.lay5 = nn.Conv2d(inter_dims[3], inter_dims[4], 3, padding=1)
-        self.gn5 = nn.GroupNorm(min(8, inter_dims[4]), inter_dims[4])
-        self.out_lay = nn.Conv2d(inter_dims[4], 1, 3, padding=1)
+
+        self.out_lay = nn.Conv2d(inter_dims[2], 1, 3, padding=1)
 
         self.dim = dim
 
         self.adapter1 = nn.Conv2d(fpn_dims[0], inter_dims[1], 1)
-        self.adapter2 = nn.Conv2d(fpn_dims[1], inter_dims[2], 1)
-        self.adapter3 = nn.Conv2d(fpn_dims[2], inter_dims[3], 1)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -75,22 +74,6 @@ class DetrMaskHeadSmallConv(nn.Module):
         x = self.gn3(x)
         x = nn.functional.relu(x)
 
-        cur_fpn = self.adapter2(fpns[1])
-        if cur_fpn.size(0) != x.size(0):
-            cur_fpn = _expand(cur_fpn, x.size(0) // cur_fpn.size(0))
-        x = cur_fpn + nn.functional.interpolate(x, size=cur_fpn.shape[-2:], mode="nearest")
-        x = self.lay4(x)
-        x = self.gn4(x)
-        x = nn.functional.relu(x)
-
-        cur_fpn = self.adapter3(fpns[2])
-        if cur_fpn.size(0) != x.size(0):
-            cur_fpn = _expand(cur_fpn, x.size(0) // cur_fpn.size(0))
-        x = cur_fpn + nn.functional.interpolate(x, size=cur_fpn.shape[-2:], mode="nearest")
-        x = self.lay5(x)
-        x = self.gn5(x)
-        x = nn.functional.relu(x)
-
         x = self.out_lay(x)
         return x
 
@@ -99,7 +82,12 @@ class DetrMHAttentionMap(nn.Module):
     """This is a 2D attention module, which only returns the attention softmax (no multiplication by value)"""
 
     def __init__(
-        self, query_dim, hidden_dim, num_heads, dropout=0.0, bias=True, std=None
+        self,
+        query_dim,
+        hidden_dim,
+        num_heads,
+        dropout=0.0,
+        bias=True,
     ):
         super().__init__()
         self.num_heads = num_heads
@@ -112,22 +100,17 @@ class DetrMHAttentionMap(nn.Module):
         self.normalize_fact = float(hidden_dim / self.num_heads) ** -0.5
 
     def forward(self, q, k, mask: torch.Tensor | None = None):
-        """_summary_
-
-        Args:
-            q (_type_): object queries tensor of shape (batch_size, num_queries, hidden_dim)
-            k (_type_): key (feature map) tensor of shape (batch_size, hidden_dim, height/32, width/32)
-            mask (torch.Tensor | None, optional): _description_. Defaults to None.
-
-        Returns:
-            _type_: _description_
-        """
         q = self.q_linear(q)
         k = nn.functional.conv2d(
-            k, self.k_linear.weight.unsqueeze(-1).unsqueeze(-1), self.k_linear.bias
+            k,
+            self.k_linear.weight.unsqueeze(-1).unsqueeze(-1),
+            self.k_linear.bias,
         )
         queries_per_head = q.view(
-            q.shape[0], q.shape[1], self.num_heads, self.hidden_dim // self.num_heads
+            q.shape[0],
+            q.shape[1],
+            self.num_heads,
+            self.hidden_dim // self.num_heads,
         )
         keys_per_head = k.view(
             k.shape[0],
@@ -137,12 +120,15 @@ class DetrMHAttentionMap(nn.Module):
             k.shape[-1],
         )
         weights = torch.einsum(
-            "bqnc,bnchw->bqnhw", queries_per_head * self.normalize_fact, keys_per_head
+            "bqnc,bnchw->bqnhw",
+            queries_per_head * self.normalize_fact,
+            keys_per_head,
         )
 
         if mask is not None:
             weights.masked_fill_(
-                mask.unsqueeze(1).unsqueeze(1), torch.finfo(weights.dtype).min
+                mask.unsqueeze(1).unsqueeze(1),
+                torch.finfo(weights.dtype).min,
             )
         weights = nn.functional.softmax(weights.flatten(2), dim=-1).view(weights.size())
         weights = self.dropout(weights)
@@ -156,6 +142,7 @@ class RTDETRInstSegTransformer(RTDETRTransformer):
         hidden_dim=256,
         num_queries=300,
         position_embed_type="sine",
+        backbone_feat_channels=[512, 1024, 2048],
         feat_channels=[512, 1024, 2048],
         feat_strides=[8, 16, 32],
         num_levels=3,
@@ -199,12 +186,14 @@ class RTDETRInstSegTransformer(RTDETRTransformer):
         )
 
         self.bbox_attention = DetrMHAttentionMap(
-            self.hidden_dim, self.hidden_dim, self.nhead
+            self.hidden_dim,
+            self.hidden_dim,
+            self.nhead,
         )
 
         self.mask_head = DetrMaskHeadSmallConv(
             self.hidden_dim + self.nhead,
-            feat_channels[::-1][-3:],
+            backbone_feat_channels[::-1][-3:],
             self.hidden_dim,
         )
 
@@ -251,13 +240,12 @@ class RTDETRInstSegTransformer(RTDETRTransformer):
             dn_out_logits, out_logits = torch.split(out_logits, dn_meta["dn_num_split"], dim=2)
             dn_out_sequence, sequence_output = torch.split(sequence_output, dn_meta["dn_num_split"], dim=1)
 
-
         # mask head
         batch_size, num_pred, _ = sequence_output.size()
 
         # get last memory
         f_h, f_w = spatial_shapes[-1]
-        last_memory = output_memory[:, level_start_index[-1]:, :].permute(0, 2, 1).view(-1, self.hidden_dim, f_h, f_w)
+        last_memory = output_memory[:, level_start_index[-1] :, :].permute(0, 2, 1).view(-1, self.hidden_dim, f_h, f_w)
 
         # bbox_mask is of shape (batch_size, num_queries, number_of_attention_heads in bbox_attention, height/32, width/32)
         bbox_mask = self.bbox_attention(sequence_output, last_memory)
@@ -266,11 +254,14 @@ class RTDETRInstSegTransformer(RTDETRTransformer):
         seg_masks = self.mask_head(
             last_proj_feat,
             bbox_mask,
-            [feats[2], feats[1], feats[0]],
+            [feats[2]],
         )
 
         pred_masks = seg_masks.view(
-            batch_size, num_pred, seg_masks.shape[-2], seg_masks.shape[-1]
+            batch_size,
+            num_pred,
+            seg_masks.shape[-2],
+            seg_masks.shape[-1],
         )
 
         out = {"pred_logits": out_logits[-1], "pred_boxes": out_bboxes[-1], "pred_masks": pred_masks}

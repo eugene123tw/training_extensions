@@ -3,14 +3,120 @@ import torch.nn.functional as F
 import torchvision
 from torch import nn
 
-from otx.algo.detection.utils import (
-    HungarianMatcher,
+from otx.algo.detection.utils.matchers.hungarian_matcher import HungarianMatcher
+from otx.algo.detection.utils.utils import (
     box_cxcywh_to_xyxy,
     box_iou,
     generalized_box_iou,
     get_world_size,
     is_dist_available_and_initialized,
 )
+from otx.core.utils.mask_util import polygon_to_bitmap
+
+
+def _max_by_axis(the_list):
+    # type: (List[List[int]]) -> List[int]
+    maxes = the_list[0]
+    for sublist in the_list[1:]:
+        for index, item in enumerate(sublist):
+            maxes[index] = max(maxes[index], item)
+    return maxes
+
+
+class NestedTensor:
+    def __init__(self, tensors, mask: torch.Tensor):
+        self.tensors = tensors
+        self.mask = mask
+
+    def to(self, device):
+        cast_tensor = self.tensors.to(device)
+        mask = self.mask
+        if mask is not None:
+            cast_mask = mask.to(device)
+        else:
+            cast_mask = None
+        return NestedTensor(cast_tensor, cast_mask)
+
+    def decompose(self):
+        return self.tensors, self.mask
+
+    def __repr__(self):
+        return str(self.tensors)
+
+
+def nested_tensor_from_tensor_list(tensor_list: list[torch.Tensor]):
+    if tensor_list[0].ndim == 3:
+        max_size = _max_by_axis([list(img.shape) for img in tensor_list])
+        batch_shape = [len(tensor_list)] + max_size
+        batch_size, num_channels, height, width = batch_shape
+        dtype = tensor_list[0].dtype
+        device = tensor_list[0].device
+        tensor = torch.zeros(batch_shape, dtype=dtype, device=device)
+        mask = torch.ones((batch_size, height, width), dtype=torch.bool, device=device)
+        for img, pad_img, m in zip(tensor_list, tensor, mask):
+            pad_img[: img.shape[0], : img.shape[1], : img.shape[2]].copy_(img)
+            m[: img.shape[1], : img.shape[2]] = False
+    else:
+        raise ValueError("Only 3-dimensional tensors are supported")
+    return NestedTensor(tensor, mask)
+
+
+def dice_loss(inputs, targets, num_boxes):
+    """Compute the DICE loss, similar to generalized IOU for masks
+
+    Args:
+        inputs: A float tensor of arbitrary shape.
+                The predictions for each example.
+        targets: A float tensor with the same shape as inputs. Stores the binary
+                 classification label for each element in inputs (0 for the negative class and 1 for the positive
+                 class).
+    """
+    inputs = inputs.sigmoid()
+    inputs = inputs.flatten(1)
+    numerator = 2 * (inputs * targets).sum(1)
+    denominator = inputs.sum(-1) + targets.sum(-1)
+    loss = 1 - (numerator + 1) / (denominator + 1)
+    return loss.sum() / num_boxes
+
+
+def sigmoid_focal_loss(
+    inputs,
+    targets,
+    num_boxes,
+    alpha: float = 0.25,
+    gamma: float = 2,
+):
+    """Loss used in RetinaNet for dense detection: https://arxiv.org/abs/1708.02002.
+
+    Args:
+        inputs (`torch.FloatTensor` of arbitrary shape):
+            The predictions for each example.
+        targets (`torch.FloatTensor` with the same shape as `inputs`)
+            A tensor storing the binary classification label for each element in the `inputs` (0 for the negative class
+            and 1 for the positive class).
+        alpha (`float`, *optional*, defaults to `0.25`):
+            Optional weighting factor in the range (0,1) to balance positive vs. negative examples.
+        gamma (`int`, *optional*, defaults to `2`):
+            Exponent of the modulating factor (1 - p_t) to balance easy vs hard examples.
+
+    Returns:
+        Loss tensor
+    """
+    prob = inputs.sigmoid()
+    ce_loss = nn.functional.binary_cross_entropy_with_logits(
+        inputs,
+        targets,
+        reduction="none",
+    )
+    # add modulating factor
+    p_t = prob * targets + (1 - prob) * (1 - targets)
+    loss = ce_loss * ((1 - p_t) ** gamma)
+
+    if alpha >= 0:
+        alpha_t = alpha * targets + (1 - alpha) * (1 - targets)
+        loss = alpha_t * loss
+
+    return loss.mean(1).sum() / num_boxes
 
 
 class RTDetrCriterion(nn.Module):
@@ -33,7 +139,8 @@ class RTDetrCriterion(nn.Module):
         super().__init__()
         self.num_classes = num_classes
         self.matcher = HungarianMatcher(
-            weight_dict={"cost_class": 2, "cost_bbox": 5, "cost_giou": 2}, use_focal_loss=True
+            weight_dict={"cost_class": 2, "cost_bbox": 5, "cost_giou": 2},
+            use_focal_loss=True,
         )
         self.weight_dict = weight_dict
         self.losses = losses
@@ -148,6 +255,55 @@ class RTDetrCriterion(nn.Module):
         losses["loss_giou"] = loss_giou.sum() / num_boxes
         return losses
 
+    def loss_masks(self, outputs, targets, indices, num_boxes):
+        """Compute the losses related to the masks: the focal loss and the dice loss.
+        targets dicts must contain the key "masks" containing a tensor of dim [nb_target_boxes, h, w]
+        """
+        assert "pred_masks" in outputs
+
+        src_idx = self._get_src_permutation_idx(indices)
+        tgt_idx = self._get_tgt_permutation_idx(indices)
+        src_masks = outputs["pred_masks"]
+        src_masks = src_masks[src_idx]
+        img_size = targets[0]["img_size"]
+        # masks = [t["masks"] for t in targets]
+        batch_polygons = [t["polygons"] for t in targets]
+
+        masks = [
+            torch.tensor(polygon_to_bitmap(polygons, *img_size), dtype=src_masks.dtype, device=src_masks.device)
+            for polygons in batch_polygons
+        ]
+
+        # TODO use valid to mask invalid areas due to padding in loss
+        target_masks, valid = nested_tensor_from_tensor_list(masks).decompose()
+        target_masks = target_masks[tgt_idx]
+
+        # stride: 32
+
+        # upsample predictions to the target size
+        src_masks = nn.functional.interpolate(
+            src_masks[:, None],
+            # size=target_masks.shape[-2:],
+            scale_factor=8,
+            mode="bilinear",
+            align_corners=False,
+        )
+        src_masks = src_masks[:, 0].flatten(1)
+
+        target_masks = target_masks[
+            :,
+            self.mask_loss_stride // 2 :: self.mask_loss_stride,
+            self.mask_loss_stride // 2 :: self.mask_loss_stride,
+        ]
+
+        target_masks = target_masks.flatten(1)
+        target_masks = target_masks.view(src_masks.shape)
+        losses = {
+            "loss_mask": sigmoid_focal_loss(src_masks, target_masks, num_boxes),
+            "loss_dice": dice_loss(src_masks, target_masks, num_boxes),
+        }
+        return losses
+
     def _get_src_permutation_idx(self, indices):
         # permute predictions following indices
         batch_idx = torch.cat([torch.full_like(src, i) for i, (src, _) in enumerate(indices)])
@@ -165,6 +321,7 @@ class RTDetrCriterion(nn.Module):
             "labels": self.loss_labels,
             "cardinality": self.loss_cardinality,
             "boxes": self.loss_boxes,
+            "masks": self.loss_masks,
             "bce": self.loss_labels_bce,
             "focal": self.loss_labels_focal,
             "vfl": self.loss_labels_vfl,
@@ -255,7 +412,10 @@ class RTDetrCriterion(nn.Module):
                 dn_match_indices.append((dn_positive_idx[i], gt_idx))
             else:
                 dn_match_indices.append(
-                    (torch.zeros(0, dtype=torch.int64, device=device), torch.zeros(0, dtype=torch.int64, device=device))
+                    (
+                        torch.zeros(0, dtype=torch.int64, device=device),
+                        torch.zeros(0, dtype=torch.int64, device=device),
+                    ),
                 )
 
         return dn_match_indices

@@ -2,7 +2,6 @@
 """
 
 import copy
-import imp
 import re
 from typing import Any
 
@@ -11,62 +10,33 @@ import torch
 import torch.nn.functional as F
 import torchvision
 from torch import Tensor, nn
+from torchvision import tv_tensors
 
 from otx.algo.detection.backbones import PResNet
-from otx.algo.detection.necks import HybridEncoder
-from otx.algo.instance_segmentation.heads.rtdetr_insg_seg_decoder import RTDETRInstSegTransformer
-from otx.core.data.entity.instance_segmentation import InstanceSegBatchDataEntity, InstanceSegBatchPredEntity
-
 from otx.algo.detection.losses import RTDetrCriterion
+from otx.algo.detection.necks import HybridEncoder
+from otx.algo.detection.rtdetr import RTDETR
+from otx.algo.instance_segmentation.heads.rtdetr_insg_seg_decoder import RTDETRInstSegTransformer
 from otx.core.data.entity.base import OTXBatchLossEntity
+from otx.core.data.entity.instance_segmentation import InstanceSegBatchDataEntity, InstanceSegBatchPredEntity
 from otx.core.model.instance_segmentation import ExplainableOTXInstanceSegModel
 
 
-
-class RTDETR_INST(nn.Module):
-    def __init__(
-        self,
-        backbone: nn.Module,
-        encoder: nn.Module,
-        decoder: nn.Module,
-        num_classes: int,
-        criterion: nn.Module | None = None,
-        optimizer_configuration: list[dict] | None = None,
-        multi_scale: list[int] | None = None,
-        num_top_queries: int = 300,
-    ):
-        super().__init__()
-        self.backbone = backbone
-        self.decoder = decoder
-        self.encoder = encoder
-        self.multi_scale = (
-            multi_scale
-            if multi_scale is not None
-            else [480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800]
-        )
-        self.num_classes = num_classes
-        self.num_top_queries = num_top_queries
-        default_criterion = RTDetrCriterion(
-            weight_dict={"loss_vfl": 1.0, "loss_bbox": 5, "loss_giou": 2, "loss_mask": 1, "loss_dice": 1},
-            losses=["vfl", "boxes", "masks"],
-            num_classes=num_classes,
-            gamma=2.0,
-            alpha=0.75,
-        )
-        self.criterion = criterion if criterion is not None else default_criterion
-        self.optimizer_configuration = optimizer_configuration
-
+class RTDETR_INST(RTDETR):
     def _forward_features(self, images: Tensor, targets: dict[str, Any] | None = None):
         feats = self.backbone(images)
         encoded_feats, last_proj = self.encoder(feats)
         return self.decoder(encoded_feats, feats, last_proj, targets)
 
-    def forward(self, images: Tensor, targets: dict[str, Any] | None = None):
+    def forward(self, images: Tensor, targets: list[dict] | None = None):
         original_size = images.shape[-2:]
 
         if self.multi_scale and self.training:
             sz = int(np.random.choice(self.multi_scale))
             images = F.interpolate(images, size=[sz, sz])
+
+        for image, target in zip(images, targets):
+            target["img_size"] = image.shape[-2:]
 
         output = self._forward_features(images, targets)
         if self.training:
@@ -92,26 +62,32 @@ class RTDETR_INST(nn.Module):
         masks = masks.sigmoid()
         masks = masks[:, index[0]]
 
-        #FIXME: strange resizing of masks, hard code to (640, 640) for now
-        _mask_orig_target_sizes = torch.tensor([[640, 640]]).to(original_size)
-        resized_masks = torch.nn.functional.interpolate(
-            masks, size=_mask_orig_target_sizes[0].tolist(), mode="bilinear", align_corners=False
+        # FIXME: strange resizing of masks, hard code to (640, 640) for now
+        masks = torch.nn.functional.interpolate(
+            masks,
+            size=original_size[0].tolist(),
+            mode="bilinear",
+            align_corners=False,
         )
-        resized_masks = resized_masks > 0.5
-        resized_masks = resized_masks.detach().cpu().numpy()
+        masks = masks > 0.5
 
         if deploy_mode:
-            return {"bboxes": boxes, "labels": labels, "scores": scores, "masks": resized_masks}
+            return {"bboxes": boxes, "labels": labels, "scores": scores, "masks": masks}
 
         scores_list, boxes_list, labels_list, mask_list = [], [], [], []
 
-        for sc, bb, ll, mask in zip(scores, boxes, labels, resized_masks):
+        for sc, bb, ll, mask in zip(scores, boxes, labels, masks):
             scores_list.append(sc)
             boxes_list.append(
                 torchvision.tv_tensors.BoundingBoxes(bb, format="xyxy", canvas_size=original_size.tolist()),
             )
             labels_list.append(ll.long())
-            mask_list.append(mask)
+            mask_list.append(
+                tv_tensors.Mask(
+                    mask,
+                    dtype=torch.bool,
+                ),
+            )
 
         return scores_list, boxes_list, labels_list, mask_list
 
@@ -129,7 +105,10 @@ class OTX_RTDETR_INST(ExplainableOTXInstanceSegModel):
     ) -> dict[str, Any]:
         return {
             "images": entity.images,
-            "targets": [{"boxes": bb, "labels": ll} for bb, ll in zip(entity.bboxes, entity.labels)],
+            "targets": [
+                {"boxes": bb, "labels": ll, "masks": masks, "polygons": polygons}
+                for bb, ll, masks, polygons in zip(entity.bboxes, entity.labels, entity.masks, entity.polygons)
+            ],
         }
 
     def _customize_outputs(
@@ -164,6 +143,7 @@ class OTX_RTDETR_INST(ExplainableOTXInstanceSegModel):
             bboxes=bboxes,
             labels=labels,
             masks=masks,
+            polygons=[],
             saliency_map=saliency_map,
             feature_vector=feature_vector,
         )
@@ -263,6 +243,7 @@ class RTDetrInstResNet18(OTX_RTDETR_INST):
         decoder = RTDETRInstSegTransformer(
             num_classes=num_classes,
             num_decoder_layers=3,
+            backbone_feat_channels=[128, 256, 512],
             feat_channels=[256, 256, 256],
             feat_strides=[8, 16, 32],
             hidden_dim=256,
@@ -288,6 +269,5 @@ class RTDetrInstResNet18(OTX_RTDETR_INST):
             num_classes=num_classes,
             criterion=criterion,
             optimizer_configuration=optimizer_configuration,
+            multi_scale=[],
         )
-
-

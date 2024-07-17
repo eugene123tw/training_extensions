@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from torch import nn
 from torch.nn import init
 
-from otx.algo.detection.utils import (
+from otx.algo.detection.utils.utils import (
     bias_init_with_prob,
     box_cxcywh_to_xyxy,
     box_xyxy_to_cxcywh,
@@ -23,7 +23,13 @@ __all__ = ["RTDETRTransformer"]
 
 
 def get_contrastive_denoising_training_group(
-    targets, num_classes, num_queries, class_embed, num_denoising=100, label_noise_ratio=0.5, box_noise_scale=1.0
+    targets,
+    num_classes,
+    num_queries,
+    class_embed,
+    num_denoising=100,
+    label_noise_ratio=0.5,
+    box_noise_scale=1.0,
 ):
     """Cnd"""
     if num_denoising <= 0:
@@ -191,13 +197,25 @@ class MSDeformableAttention(nn.Module):
         value = value.reshape(bs, Len_v, self.num_heads, self.head_dim)
 
         sampling_offsets = self.sampling_offsets(query).reshape(
-            bs, Len_q, self.num_heads, self.num_levels, self.num_points, 2
+            bs,
+            Len_q,
+            self.num_heads,
+            self.num_levels,
+            self.num_points,
+            2,
         )
         attention_weights = self.attention_weights(query).reshape(
-            bs, Len_q, self.num_heads, self.num_levels * self.num_points
+            bs,
+            Len_q,
+            self.num_heads,
+            self.num_levels * self.num_points,
         )
         attention_weights = F.softmax(attention_weights, dim=-1).reshape(
-            bs, Len_q, self.num_heads, self.num_levels, self.num_points
+            bs,
+            Len_q,
+            self.num_heads,
+            self.num_levels,
+            self.num_points,
         )
 
         if reference_points.shape[-1] == 2:
@@ -221,7 +239,7 @@ class MSDeformableAttention(nn.Module):
             )
         else:
             raise ValueError(
-                f"Last dim of reference_points must be 2 or 4, but get {reference_points.shape[-1]} instead."
+                f"Last dim of reference_points must be 2 or 4, but get {reference_points.shape[-1]} instead.",
             )
 
         output = self.ms_deformable_attn_core(value, value_spatial_shapes, sampling_locations, attention_weights)
@@ -233,7 +251,14 @@ class MSDeformableAttention(nn.Module):
 
 class TransformerDecoderLayer(nn.Module):
     def __init__(
-        self, d_model=256, n_head=8, dim_feedforward=1024, dropout=0.0, activation="relu", n_levels=4, n_points=4
+        self,
+        d_model=256,
+        n_head=8,
+        dim_feedforward=1024,
+        dropout=0.0,
+        activation="relu",
+        n_levels=4,
+        n_points=4,
     ):
         super(TransformerDecoderLayer, self).__init__()
 
@@ -281,7 +306,11 @@ class TransformerDecoderLayer(nn.Module):
 
         # cross attention
         tgt2 = self.cross_attn(
-            self.with_pos_embed(tgt, query_pos_embed), reference_points, memory, memory_spatial_shapes, memory_mask
+            self.with_pos_embed(tgt, query_pos_embed),
+            reference_points,
+            memory,
+            memory_spatial_shapes,
+            memory_mask,
         )
         tgt = tgt + self.dropout2(tgt2)
         tgt = self.norm2(tgt)
@@ -352,7 +381,7 @@ class TransformerDecoder(nn.Module):
             ref_points = inter_ref_bbox
             ref_points_detach = inter_ref_bbox.detach() if self.training else inter_ref_bbox
 
-        return torch.stack(dec_out_bboxes), torch.stack(dec_out_logits)
+        return torch.stack(dec_out_bboxes), torch.stack(dec_out_logits), output
 
 
 class RTDETRTransformer(nn.Module):
@@ -406,7 +435,13 @@ class RTDETRTransformer(nn.Module):
 
         # Transformer module
         decoder_layer = TransformerDecoderLayer(
-            hidden_dim, nhead, dim_feedforward, dropout, activation, num_levels, num_decoder_points
+            hidden_dim,
+            nhead,
+            dim_feedforward,
+            dropout,
+            activation,
+            num_levels,
+            num_decoder_points,
         )
         self.decoder = TransformerDecoder(hidden_dim, decoder_layer, num_decoder_layers, eval_idx)
 
@@ -434,7 +469,7 @@ class RTDETRTransformer(nn.Module):
         # decoder head
         self.dec_score_head = nn.ModuleList([nn.Linear(hidden_dim, num_classes) for _ in range(num_decoder_layers)])
         self.dec_bbox_head = nn.ModuleList(
-            [MLP(hidden_dim, hidden_dim, 4, num_layers=3) for _ in range(num_decoder_layers)]
+            [MLP(hidden_dim, hidden_dim, 4, num_layers=3) for _ in range(num_decoder_layers)],
         )
 
         # init encoder output anchors and valid_mask
@@ -470,7 +505,7 @@ class RTDETRTransformer(nn.Module):
                         [
                             ("conv", nn.Conv2d(in_channels, self.hidden_dim, 1, bias=False)),
                             ("norm", nn.BatchNorm2d(self.hidden_dim)),
-                        ]
+                        ],
                     ),
                 ),
             )
@@ -484,7 +519,7 @@ class RTDETRTransformer(nn.Module):
                         [
                             ("conv", nn.Conv2d(in_channels, self.hidden_dim, 3, 2, padding=1, bias=False)),
                             ("norm", nn.BatchNorm2d(self.hidden_dim)),
-                        ]
+                        ],
                     ),
                 ),
             )
@@ -527,7 +562,9 @@ class RTDETRTransformer(nn.Module):
         anchors = []
         for lvl, (h, w) in enumerate(spatial_shapes):
             grid_y, grid_x = torch.meshgrid(
-                torch.arange(end=h, dtype=dtype), torch.arange(end=w, dtype=dtype), indexing="ij"
+                torch.arange(end=h, dtype=dtype),
+                torch.arange(end=w, dtype=dtype),
+                indexing="ij",
             )
             grid_xy = torch.stack([grid_x, grid_y], -1)
             valid_WH = torch.tensor([w, h]).to(dtype)
@@ -560,7 +597,8 @@ class RTDETRTransformer(nn.Module):
         _, topk_ind = torch.topk(enc_outputs_class.max(-1).values, self.num_queries, dim=1)
 
         reference_points_unact = enc_outputs_coord_unact.gather(
-            dim=1, index=topk_ind.unsqueeze(-1).repeat(1, 1, enc_outputs_coord_unact.shape[-1])
+            dim=1,
+            index=topk_ind.unsqueeze(-1).repeat(1, 1, enc_outputs_coord_unact.shape[-1]),
         )
 
         enc_topk_bboxes = F.sigmoid(reference_points_unact)
@@ -568,7 +606,8 @@ class RTDETRTransformer(nn.Module):
             reference_points_unact = torch.concat([denoising_bbox_unact, reference_points_unact], 1)
 
         enc_topk_logits = enc_outputs_class.gather(
-            dim=1, index=topk_ind.unsqueeze(-1).repeat(1, 1, enc_outputs_class.shape[-1])
+            dim=1,
+            index=topk_ind.unsqueeze(-1).repeat(1, 1, enc_outputs_class.shape[-1]),
         )
 
         # extract region features
@@ -581,7 +620,7 @@ class RTDETRTransformer(nn.Module):
         if denoising_class is not None:
             target = torch.concat([denoising_class, target], 1)
 
-        return target, reference_points_unact.detach(), enc_topk_bboxes, enc_topk_logits
+        return target, reference_points_unact.detach(), enc_topk_bboxes, enc_topk_logits, output_memory
 
     def forward(self, feats, targets=None):
         # input projection and embedding
@@ -601,8 +640,11 @@ class RTDETRTransformer(nn.Module):
         else:
             denoising_class, denoising_bbox_unact, attn_mask, dn_meta = None, None, None, None
 
-        target, init_ref_points_unact, enc_topk_bboxes, enc_topk_logits = self._get_decoder_input(
-            memory, spatial_shapes, denoising_class, denoising_bbox_unact
+        target, init_ref_points_unact, enc_topk_bboxes, enc_topk_logits, _ = self._get_decoder_input(
+            memory,
+            spatial_shapes,
+            denoising_class,
+            denoising_bbox_unact,
         )
 
         # decoder

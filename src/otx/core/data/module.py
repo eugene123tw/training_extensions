@@ -166,12 +166,14 @@ class OTXDataModule(LightningDataModule):
             mem_size=mem_size,
         )
 
+        self.file_names = {}
         label_infos: list[LabelInfo] = []
         for name, dm_subset in dataset.subsets().items():
             if name not in config_mapping:
                 log.warning(f"{name} is not available. Skip it")
                 continue
 
+            self.file_names[dm_subset.name] = [item.media.path for item in dm_subset]
             dataset = OTXDatasetFactory.create(
                 task=self.task,
                 dm_subset=dm_subset.as_dataset(),
