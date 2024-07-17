@@ -17,10 +17,10 @@ otx.core.config.data
 
    .. autosummary::
    
-      DataModuleConfig
       SamplerConfig
       SubsetConfig
       TileConfig
+      UnlabeledDataConfig
       VisualPromptingConfig
    
    

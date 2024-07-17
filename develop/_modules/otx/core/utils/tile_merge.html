@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>otx.core.utils.tile_merge &#8212; OpenVINO™ Training Extensions 2.0.0rc0 documentation</title>
+    <title>otx.core.utils.tile_merge &#8212; OpenVINO™ Training Extensions 2.2.0rc0 documentation</title>
   
   
   
@@ -28,13 +28,13 @@
     <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/tabs.css?v=a5c4661c" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=87e54e7c" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=d626d52b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=a41ae7c4" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script src="../../../../_static/documentation_options.js?v=4fff8b0c"></script>
+    <script src="../../../../_static/documentation_options.js?v=6e6ef3c1"></script>
     <script src="../../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -70,7 +70,7 @@
       
 <form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
   <i class="fa-solid fa-magnifying-glass"></i>
-  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search" aria-label="Search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
 </form>
     </div>
@@ -121,6 +121,15 @@
 </button>
         </div>
       
+      
+      <div class="navbar-end-item">
+        
+<form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search" aria-label="Search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+      </div>
       
       <div class="navbar-end-item">
         <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-toggle="tooltip">
@@ -181,6 +190,15 @@
     
     
     <div class="sidebar-header-items__end">
+      
+      <div class="navbar-end-item">
+        
+<form class="bd-search d-flex align-items-center" action="../../../../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search" aria-label="Search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+      </div>
       
       <div class="navbar-end-item">
         <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-toggle="tooltip">
@@ -282,6 +300,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">tile_size</span> <span class="o">=</span> <span class="n">tile_config</span><span class="o">.</span><span class="n">tile_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">iou_threshold</span> <span class="o">=</span> <span class="n">tile_config</span><span class="o">.</span><span class="n">iou_threshold</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">max_num_instances</span> <span class="o">=</span> <span class="n">tile_config</span><span class="o">.</span><span class="n">max_num_instances</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">with_full_img</span> <span class="o">=</span> <span class="n">tile_config</span><span class="o">.</span><span class="n">with_full_img</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">_merge_entities</span><span class="p">(</span>
@@ -456,8 +475,7 @@
         <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">explain_mode</span><span class="p">:</span>
-            <span class="c1"># Note: Skip the first feature vector as it is the full image value.</span>
-            <span class="n">det_pred_entity</span><span class="o">.</span><span class="n">feature_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">feature_vectors</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">det_pred_entity</span><span class="o">.</span><span class="n">feature_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">feature_vectors</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
             <span class="n">det_pred_entity</span><span class="o">.</span><span class="n">saliency_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_merge_saliency_maps</span><span class="p">(</span><span class="n">saliency_maps</span><span class="p">,</span> <span class="n">img_size</span><span class="p">,</span> <span class="n">tiles_coords</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">det_pred_entity</span>
@@ -499,7 +517,9 @@
         <span class="n">merged_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_classes</span><span class="p">,</span> <span class="n">image_map_h</span><span class="p">,</span> <span class="n">image_map_w</span><span class="p">))</span>
 
         <span class="c1"># Note: Skip the first saliency map as it is the full image value.</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">saliency_map</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">saliency_maps</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">saliency_maps</span><span class="p">,</span> <span class="n">start_idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">saliency_maps</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_full_img</span> <span class="k">else</span> <span class="p">(</span><span class="n">saliency_maps</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">saliency_map</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">saliency_maps</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">class_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_classes</span><span class="p">):</span>
                 <span class="n">cls_map</span> <span class="o">=</span> <span class="n">saliency_map</span><span class="p">[</span><span class="n">class_idx</span><span class="p">]</span>
 
@@ -525,10 +545,11 @@
                         <span class="n">merged_map</span><span class="p">[</span><span class="n">class_idx</span><span class="p">][</span><span class="n">y_1</span> <span class="o">+</span> <span class="n">hi</span><span class="p">,</span> <span class="n">x_1</span> <span class="o">+</span> <span class="n">wi</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_pixel</span>
 
         <span class="k">for</span> <span class="n">class_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_classes</span><span class="p">):</span>
-            <span class="n">image_map_cls</span> <span class="o">=</span> <span class="n">image_saliency_map</span><span class="p">[</span><span class="n">class_idx</span><span class="p">]</span>
-            <span class="n">image_map_cls</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">image_map_cls</span><span class="p">,</span> <span class="p">(</span><span class="n">image_map_w</span><span class="p">,</span> <span class="n">image_map_h</span><span class="p">))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_full_img</span><span class="p">:</span>
+                <span class="n">image_map_cls</span> <span class="o">=</span> <span class="n">image_saliency_map</span><span class="p">[</span><span class="n">class_idx</span><span class="p">]</span>
+                <span class="n">image_map_cls</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">image_map_cls</span><span class="p">,</span> <span class="p">(</span><span class="n">image_map_w</span><span class="p">,</span> <span class="n">image_map_h</span><span class="p">))</span>
+                <span class="n">merged_map</span><span class="p">[</span><span class="n">class_idx</span><span class="p">]</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">image_map_cls</span>
 
-            <span class="n">merged_map</span><span class="p">[</span><span class="n">class_idx</span><span class="p">]</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">image_map_cls</span>
             <span class="n">merged_map</span><span class="p">[</span><span class="n">class_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">_non_linear_normalization</span><span class="p">(</span><span class="n">merged_map</span><span class="p">[</span><span class="n">class_idx</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="n">merged_map</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span></div>
@@ -675,8 +696,7 @@
         <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">explain_mode</span><span class="p">:</span>
-            <span class="c1"># Note: Skip the first feature vector as it is the full image value.</span>
-            <span class="n">inst_seg_pred_entity</span><span class="o">.</span><span class="n">feature_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">feature_vectors</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">inst_seg_pred_entity</span><span class="o">.</span><span class="n">feature_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">feature_vectors</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
             <span class="n">inst_seg_pred_entity</span><span class="o">.</span><span class="n">saliency_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_saliency_maps_from_masks</span><span class="p">(</span>
                 <span class="n">labels</span><span class="p">,</span>
                 <span class="n">scores</span><span class="p">,</span>
