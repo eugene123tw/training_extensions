@@ -318,21 +318,22 @@ class OTXInstanceSegModel(OTXModel[InstanceSegBatchDataEntity, InstanceSegBatchP
         preds: InstanceSegBatchPredEntity,
     ):
         indices = [img_info.img_idx for img_info in inputs.imgs_info]
-        fnames = self.trainer.datamodule.file_names["test"]
+        fnames = self.trainer.datamodule.file_names["val"]
 
-        for image, pred_scores, pred_boxes, pred_masks, idx in zip(
-            inputs.images,
+        for pred_scores, pred_boxes, pred_masks, idx in zip(
             preds.scores,
             preds.bboxes,
             preds.masks,
             indices,
         ):
-            np_image = image.detach().cpu().numpy() * 255
-            np_image = np.transpose(np_image, (1, 2, 0)).astype(np.uint8)
-            np_image = np.ascontiguousarray(np_image)
+            np_image = cv2.imread(fnames[idx])
+            np_image = cv2.cvtColor(np_image, cv2.COLOR_BGR2RGB)
             for pred_box, pred_score, pred_mask in zip(pred_boxes, pred_scores, pred_masks):
-                pred_box = pred_box.cpu().numpy().astype(int)
-                cv2.rectangle(np_image, (pred_box[0], pred_box[1]), (pred_box[2], pred_box[3]), (0, 255, 0), 2)
+                if pred_score > 0.5:
+                    pred_mask = pred_mask.cpu().numpy()
+                    pred_box = pred_box.cpu().numpy().astype(int)
+                    cv2.rectangle(np_image, (pred_box[0], pred_box[1]), (pred_box[2], pred_box[3]), (0, 255, 0), 2)
+                    np_image[pred_mask == 1, 1] = 0
             plt.imshow(np_image)
 
     def _convert_pred_entity_to_compute_metric(
@@ -354,7 +355,7 @@ class OTXInstanceSegModel(OTXModel[InstanceSegBatchDataEntity, InstanceSegBatchP
         pred_info = []
         target_info = []
 
-        self.visualize(inputs, preds)
+        # self.visualize(inputs, preds)
 
         for bboxes, masks, scores, labels in zip(
             preds.bboxes,

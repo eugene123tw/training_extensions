@@ -284,18 +284,14 @@ class RTDetrCriterion(nn.Module):
         src_masks = nn.functional.interpolate(
             src_masks[:, None],
             # size=target_masks.shape[-2:],
-            scale_factor=8,
+            scale_factor=2,
             mode="bilinear",
             align_corners=False,
         )
         src_masks = src_masks[:, 0].flatten(1)
 
-        target_masks = target_masks[
-            :,
-            self.mask_loss_stride // 2 :: self.mask_loss_stride,
-            self.mask_loss_stride // 2 :: self.mask_loss_stride,
-        ]
-
+        # TODO: figure this out
+        target_masks = target_masks[:, 2 :: 4, 2 :: 4]
         target_masks = target_masks.flatten(1)
         target_masks = target_masks.view(src_masks.shape)
         losses = {

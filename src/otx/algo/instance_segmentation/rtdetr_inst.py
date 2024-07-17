@@ -1,7 +1,5 @@
-"""by lyuwenyu
-"""
-
 import copy
+import math
 import re
 from typing import Any
 
@@ -12,12 +10,13 @@ import torchvision
 from torch import Tensor, nn
 from torchvision import tv_tensors
 
+from otx.algo.common.utils.utils import filter_scores_and_topk
 from otx.algo.detection.backbones import PResNet
 from otx.algo.detection.losses import RTDetrCriterion
 from otx.algo.detection.necks import HybridEncoder
 from otx.algo.detection.rtdetr import RTDETR
 from otx.algo.instance_segmentation.heads.rtdetr_insg_seg_decoder import RTDETRInstSegTransformer
-from otx.core.data.entity.base import OTXBatchLossEntity
+from otx.core.data.entity.base import ImageInfo, OTXBatchLossEntity
 from otx.core.data.entity.instance_segmentation import InstanceSegBatchDataEntity, InstanceSegBatchPredEntity
 from otx.core.model.instance_segmentation import ExplainableOTXInstanceSegModel
 
@@ -28,9 +27,12 @@ class RTDETR_INST(RTDETR):
         encoded_feats, last_proj = self.encoder(feats)
         return self.decoder(encoded_feats, feats, last_proj, targets)
 
-    def forward(self, images: Tensor, targets: list[dict] | None = None):
-        original_size = images.shape[-2:]
-
+    def forward(
+        self,
+        images: Tensor,
+        imgs_info: list[ImageInfo],
+        targets: list[dict] | None = None,
+    ):
         if self.multi_scale and self.training:
             sz = int(np.random.choice(self.multi_scale))
             images = F.interpolate(images, size=[sz, sz])
@@ -41,55 +43,55 @@ class RTDETR_INST(RTDETR):
         output = self._forward_features(images, targets)
         if self.training:
             return self.criterion(output, targets)
-        return self.postprocess(output, original_size)
+        return self.postprocess(output, imgs_info)
 
-    def postprocess(self, outputs, original_size=None, deploy_mode=False):
-        logits, boxes, masks = outputs["pred_logits"], outputs["pred_boxes"], outputs["pred_masks"]
+    def postprocess(self, outputs: dict, imgs_info: list[ImageInfo], deploy_mode=False):
+        scores: list[Tensor] = []
+        bboxes: list[tv_tensors.BoundingBoxes] = []
+        labels: list[torch.LongTensor] = []
+        masks: list[tv_tensors.Mask] = []
 
-        # convert bbox to xyxy and rescale back to original size (resize in OTX)
-        bbox_pred = torchvision.ops.box_convert(boxes, in_fmt="cxcywh", out_fmt="xyxy")
-        if not deploy_mode and original_size is not None:
-            original_size = torch.tensor(original_size).to(bbox_pred.device)
-            bbox_pred *= original_size.repeat(1, 2).unsqueeze(1)
+        h, w = imgs_info[0].img_shape
+        ori_h, ori_w = imgs_info[0].ori_shape
+        scale_factor = [1 / s for s in imgs_info[0].scale_factor]  # h, w
 
-        # perform scores computation and gather topk results
-        scores = F.sigmoid(logits)
-        scores, index = torch.topk(scores.flatten(1), self.num_top_queries, axis=-1)
-        labels = index % self.num_classes
-        index = index // self.num_classes
-        boxes = bbox_pred.gather(dim=1, index=index.unsqueeze(-1).repeat(1, 1, bbox_pred.shape[-1]))
+        for pred_scores, pred_boxes, pred_masks in zip(
+            outputs["pred_logits"],
+            outputs["pred_boxes"],
+            outputs["pred_masks"],
+        ):
+            pred_scores = pred_scores.sigmoid()
+            pred_scores, pred_labels, keep_idxs, _ = filter_scores_and_topk(pred_scores, 0.05, self.num_top_queries)
+            pred_boxes = pred_boxes[keep_idxs]
+            pred_masks = pred_masks.sigmoid()[keep_idxs]
 
-        masks = masks.sigmoid()
-        masks = masks[:, index[0]]
+            pred_boxes = torchvision.ops.box_convert(pred_boxes, in_fmt="cxcywh", out_fmt="xyxy")
+            pred_boxes *= pred_boxes.new_tensor([w, h]).repeat((1, 2))
+            pred_boxes *= pred_boxes.new_tensor(scale_factor[::-1]).repeat((1, 2))
 
-        # FIXME: strange resizing of masks, hard code to (640, 640) for now
-        masks = torch.nn.functional.interpolate(
-            masks,
-            size=original_size[0].tolist(),
-            mode="bilinear",
-            align_corners=False,
-        )
-        masks = masks > 0.5
+            pred_boxes[:, 0::2].clamp_(min=0, max=ori_w - 1)
+            pred_boxes[:, 1::2].clamp_(min=0, max=ori_h - 1)
+            keep_idxs = (pred_boxes[:, 2] - pred_boxes[:, 0]) * (pred_boxes[:, 3] - pred_boxes[:, 1]) > 0
 
-        if deploy_mode:
-            return {"bboxes": boxes, "labels": labels, "scores": scores, "masks": masks}
+            pred_boxes = pred_boxes[keep_idxs > 0]
+            pred_labels = pred_labels[keep_idxs > 0]
+            pred_scores = pred_scores[keep_idxs > 0]
+            pred_masks = pred_masks[keep_idxs > 0]
 
-        scores_list, boxes_list, labels_list, mask_list = [], [], [], []
+            if len(pred_boxes):
+                pred_masks = torch.nn.functional.interpolate(
+                    pred_masks.unsqueeze(0),
+                    size=(math.ceil(h * scale_factor[0]), math.ceil(w * scale_factor[1])),
+                    mode="bilinear",
+                    align_corners=False,
+                ).squeeze(0)[..., :ori_h, :ori_w]
+                pred_masks = pred_masks > 0.5
+                scores.append(pred_scores)
+                bboxes.append(tv_tensors.BoundingBoxes(pred_boxes, format="xyxy", canvas_size=(ori_h, ori_w)))
+                labels.append(pred_labels)
+                masks.append(tv_tensors.Mask(pred_masks, dtype=torch.bool))
 
-        for sc, bb, ll, mask in zip(scores, boxes, labels, masks):
-            scores_list.append(sc)
-            boxes_list.append(
-                torchvision.tv_tensors.BoundingBoxes(bb, format="xyxy", canvas_size=original_size.tolist()),
-            )
-            labels_list.append(ll.long())
-            mask_list.append(
-                tv_tensors.Mask(
-                    mask,
-                    dtype=torch.bool,
-                ),
-            )
-
-        return scores_list, boxes_list, labels_list, mask_list
+        return scores, bboxes, labels, masks
 
 
 class OTX_RTDETR_INST(ExplainableOTXInstanceSegModel):
@@ -97,14 +99,10 @@ class OTX_RTDETR_INST(ExplainableOTXInstanceSegModel):
     mean = (0.0, 0.0, 0.0)
     std = (255.0, 255.0, 255.0)
 
-    def _customize_inputs(
-        self,
-        entity: InstanceSegBatchDataEntity,
-        pad_size_divisor: int = 32,
-        pad_value: int = 0,
-    ) -> dict[str, Any]:
+    def _customize_inputs(self, entity: InstanceSegBatchDataEntity) -> dict[str, Any]:
         return {
             "images": entity.images,
+            "imgs_info": entity.imgs_info,
             "targets": [
                 {"boxes": bb, "labels": ll, "masks": masks, "polygons": polygons}
                 for bb, ll, masks, polygons in zip(entity.bboxes, entity.labels, entity.masks, entity.polygons)
