@@ -269,3 +269,56 @@ class RTDetrInstResNet18(OTX_RTDETR_INST):
             optimizer_configuration=optimizer_configuration,
             multi_scale=[],
         )
+
+
+class RTDetrInstResNet50(OTX_RTDETR_INST):
+    load_from = (
+        "https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r50vd_2x_coco_objects365_from_paddle.pth"
+    )
+
+    def _build_model(self, num_classes: int) -> nn.Module:
+        backbone = PResNet(depth=50, return_idx=[1, 2, 3], num_stages=4, freeze_norm=True, pretrained=True, freeze_at=0)
+        encoder = HybridEncoder(
+            in_channels=[512, 1024, 2048],
+            feat_strides=[8, 16, 32],
+            hidden_dim=256,
+            expansion=1.0,
+            dim_feedforward=1024,
+            eval_spatial_size=self.image_size[2:],
+        )
+        decoder = RTDETRInstSegTransformer(
+            num_classes=num_classes,
+            backbone_feat_channels=[512, 1024, 2048],
+            feat_channels=[256, 256, 256],
+            feat_strides=[8, 16, 32],
+            hidden_dim=256,
+            num_levels=3,
+            num_queries=300,
+            eval_spatial_size=self.image_size[2:],
+            num_decoder_layers=6,
+            num_denoising=100,
+            eval_idx=-1,
+        )
+
+        criterion = RTDetrCriterion(
+            weight_dict={"loss_vfl": 1.0, "loss_bbox": 5, "loss_giou": 2, "loss_mask": 1, "loss_dice": 1},
+            losses=["vfl", "boxes", "masks"],
+            num_classes=num_classes,
+            gamma=2.0,
+            alpha=0.75,
+        )
+
+        optimizer_configuration = [
+            {"params": "backbone", "lr": 0.00001},
+            {"params": "^(?=.*decoder(?=.*bias|.*norm.*weight)).*$", "weight_decay": 0.0},
+            {"params": "^(?=.*encoder(?=.*bias|.*norm.*weight)).*$", "weight_decay": 0.0},
+        ]
+
+        return RTDETR_INST(
+            backbone=backbone,
+            encoder=encoder,
+            decoder=decoder,
+            criterion=criterion,
+            num_classes=num_classes,
+            optimizer_configuration=optimizer_configuration,
+        )
