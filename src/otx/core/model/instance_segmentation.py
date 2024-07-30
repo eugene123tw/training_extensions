@@ -6,10 +6,13 @@
 from __future__ import annotations
 
 import logging as log
+import os
 import types
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Literal
 
+import cv2
+import matplotlib
 import numpy as np
 import torch
 from model_api.tilers import InstanceSegmentationTiler
@@ -33,14 +36,10 @@ from otx.core.schedulers import LRSchedulerListCallable
 from otx.core.types.export import TaskLevelExportParameters
 from otx.core.types.label import LabelInfoTypes
 from otx.core.utils.config import inplace_num_classes
-from otx.core.utils.mask_util import encode_rle, polygon_to_rle, polygon_to_bitmap
+from otx.core.utils.mask_util import encode_rle, polygon_to_rle
 from otx.core.utils.tile_merge import InstanceSegTileMerge
 
-import os
-import matplotlib
-import matplotlib.pyplot as plt
-import cv2
-matplotlib.use('TkAgg')
+matplotlib.use("TkAgg")
 
 if TYPE_CHECKING:
     from lightning.pytorch.cli import LRSchedulerCallable, OptimizerCallable
@@ -311,7 +310,7 @@ class OTXInstanceSegModel(OTXModel[InstanceSegBatchDataEntity, InstanceSegBatchP
             return super()._log_metrics(meter, key, **compute_kwargs)
 
         raise ValueError(key)
-    
+
     def visualize(
         self,
         preds: InstanceSegBatchPredEntity,
@@ -330,19 +329,18 @@ class OTXInstanceSegModel(OTXModel[InstanceSegBatchDataEntity, InstanceSegBatchP
         #     x1, y1, x2, y2 = [int(v) for v in np_bbox]
         #     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
         #     img[np_mask == 1, 1] = 128
-        
+
         for pred_bbox, pred_mask, pred_score in zip(preds.bboxes[0], preds.masks[0], preds.scores[0]):
             np_mask = pred_mask.cpu().numpy()
             np_bbox = pred_bbox.cpu().numpy()
             score = pred_score.cpu().numpy()
-            x1, y1, x2, y2 = [int(v) for v in np_bbox]
+            x1, y1, x2, y2 = (int(v) for v in np_bbox)
             cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
-            cv2.putText(img, f"{score:2f}", (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+            cv2.putText(img, f"{score:.2f}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
             img[np_mask == 1, 1] = 128
 
         output_path = os.path.basename(img_path)
-        cv2.imwrite(os.path.join("./output", output_path), img)
-
+        cv2.imwrite(os.path.join("./otx-workspace/output", output_path), img)
 
     def _convert_pred_entity_to_compute_metric(
         self,
@@ -363,7 +361,7 @@ class OTXInstanceSegModel(OTXModel[InstanceSegBatchDataEntity, InstanceSegBatchP
         pred_info = []
         target_info = []
 
-        self.visualize(preds, inputs)
+        # self.visualize(preds, inputs)
         for bboxes, masks, scores, labels in zip(
             preds.bboxes,
             preds.masks,

@@ -7,19 +7,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from torch import Tensor, nn
 import numpy as np
 import torch
+from torch import Tensor, nn
 from torchvision import tv_tensors
 from transformers import AutoImageProcessor
-
 from transformers.models.mask2former.modeling_mask2former import (
-    Mask2FormerLoss,
-    Mask2FormerForUniversalSegmentation,
     Mask2FormerConfig,
+    Mask2FormerForUniversalSegmentation,
+    Mask2FormerLoss,
+    dice_loss,
     sample_point,
     sigmoid_cross_entropy_loss,
-    dice_loss,
 )
 
 from otx.core.data.entity.base import OTXBatchLossEntity
@@ -29,8 +28,7 @@ from otx.core.model.base import DefaultOptimizerCallable, DefaultSchedulerCallab
 from otx.core.model.instance_segmentation import ExplainableOTXInstanceSegModel
 from otx.core.schedulers import LRSchedulerListCallable
 from otx.core.types.label import LabelInfoTypes
-from otx.core.utils.mask_util import polygon_to_bitmap, mask2bbox
-
+from otx.core.utils.mask_util import mask2bbox, polygon_to_bitmap
 
 if TYPE_CHECKING:
     from lightning.pytorch.cli import LRSchedulerCallable, OptimizerCallable
@@ -77,10 +75,7 @@ class OTXMask2FormerLoss(Mask2FormerLoss):
                 self.importance_sample_ratio,
             )
 
-            point_labels = sample_point(
-                target_masks.float(),
-                point_coordinates,
-                align_corners=False).squeeze(1)
+            point_labels = sample_point(target_masks.float(), point_coordinates, align_corners=False).squeeze(1)
 
         point_logits = sample_point(pred_masks, point_coordinates, align_corners=False).squeeze(1)
 
@@ -101,7 +96,6 @@ class OTXMask2FormerForUniversalSegmentation(Mask2FormerForUniversalSegmentation
 
 
 class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
-
     def __init__(
         self,
         model_name_or_path: str,
@@ -143,7 +137,7 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
             "class_labels": entity.labels,
             "mask_labels": gt_masks,
         }
-    
+
     def _customize_outputs(
         self,
         outputs: ModelOutput,
@@ -155,7 +149,7 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
         target_sizes = [(max(m.shape), max(m.shape)) for m in inputs.masks]
         results = self.image_processor.post_process_instance_segmentation(
             outputs,
-            threshold=0.25,
+            threshold=0.0,
             target_sizes=target_sizes,
             return_binary_maps=True,
         )
@@ -171,18 +165,18 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
                 torch.tensor(
                     [r["score"] for r in pred["segments_info"]],
                     device=img_info.device,
-                )
+                ),
             )
             labels.append(
                 torch.tensor(
                     [r["label_id"] for r in pred["segments_info"]],
                     device=img_info.device,
-                )
+                ),
             )
             bit_masks = tv_tensors.Mask(
-                    pred["segmentation"],
-                    dtype=torch.bool,
-                )[:, :ori_h, :ori_w]
+                pred["segmentation"],
+                dtype=torch.bool,
+            )[:, :ori_h, :ori_w]
             masks.append(bit_masks)
             bboxes.append(
                 tv_tensors.BoundingBoxes(
