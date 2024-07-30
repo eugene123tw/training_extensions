@@ -166,3 +166,30 @@ def crop_and_resize_masks(
     else:
         resized_masks = torch.empty((0, *out_shape), device=device)
     return resized_masks.float()
+
+
+def mask2bbox(masks):
+    """Obtain tight bounding boxes of binary masks.
+
+    Original implementation from: 
+    https://mmdetection.readthedocs.io/en/v2.24.1/api.html#mmdet.core.mask.mask2bbox
+
+    Args:
+        masks (Tensor): Binary mask of shape (n, h, w).
+
+    Returns:
+        Tensor: Bboxe with shape (n, 4) of \
+            positive region in binary mask.
+    """
+    N = masks.shape[0]
+    bboxes = masks.new_zeros((N, 4), dtype=torch.float32)
+    x_any = torch.any(masks, dim=1)
+    y_any = torch.any(masks, dim=2)
+    for i in range(N):
+        x = torch.where(x_any[i, :])[0]
+        y = torch.where(y_any[i, :])[0]
+        if len(x) > 0 and len(y) > 0:
+            bboxes[i, :] = bboxes.new_tensor(
+                [x[0], y[0], x[-1] + 1, y[-1] + 1])
+
+    return bboxes
