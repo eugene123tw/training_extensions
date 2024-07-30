@@ -24,7 +24,7 @@ from transformers.models.mask2former.modeling_mask2former import (
 
 from otx.core.data.entity.base import OTXBatchLossEntity
 from otx.core.data.entity.instance_segmentation import InstanceSegBatchDataEntity, InstanceSegBatchPredEntity
-from otx.core.metrics.fmeasure import MeanAveragePrecisionFMeasureCallable
+from otx.core.metrics.mean_ap import MaskRLEMeanAPFMeasureCallable
 from otx.core.model.base import DefaultOptimizerCallable, DefaultSchedulerCallable
 from otx.core.model.instance_segmentation import ExplainableOTXInstanceSegModel
 from otx.core.schedulers import LRSchedulerListCallable
@@ -108,7 +108,7 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
         label_info: LabelInfoTypes,
         optimizer: OptimizerCallable = DefaultOptimizerCallable,
         scheduler: LRSchedulerCallable | LRSchedulerListCallable = DefaultSchedulerCallable,
-        metric: MetricCallable = MeanAveragePrecisionFMeasureCallable,
+        metric: MetricCallable = MaskRLEMeanAPFMeasureCallable,
         torch_compile: bool = False,
     ) -> None:
         self.model_name = model_name_or_path
