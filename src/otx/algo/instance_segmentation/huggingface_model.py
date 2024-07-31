@@ -91,6 +91,7 @@ class OTXMask2FormerLoss(Mask2FormerLoss):
 
 class OTXMask2FormerForUniversalSegmentation(Mask2FormerForUniversalSegmentation):
     def __init__(self, config: Mask2FormerConfig):
+        # config.num_queries = 300
         super().__init__(config)
         self.criterion = OTXMask2FormerLoss(config=config, weight_dict=self.weight_dict)
 
@@ -162,30 +163,29 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
 
         for img_info, pred in zip(inputs.imgs_info, results):
             ori_h, ori_w = img_info.ori_shape
-            scores.append(
-                torch.tensor(
-                    [r["score"] for r in pred["segments_info"]],
-                    device=img_info.device,
-                ),
+            pred_scores = torch.tensor(
+                [r["score"] for r in pred["segments_info"]],
+                device=img_info.device,
             )
-            labels.append(
-                torch.tensor(
-                    [r["label_id"] for r in pred["segments_info"]],
-                    device=img_info.device,
-                ),
+            pred_labels = torch.tensor(
+                [r["label_id"] for r in pred["segments_info"]],
+                device=img_info.device,
             )
-            bit_masks = tv_tensors.Mask(
-                pred["segmentation"],
-                dtype=torch.bool,
-            )[:, :ori_h, :ori_w]
-            masks.append(bit_masks)
-            bboxes.append(
-                tv_tensors.BoundingBoxes(
-                    mask2bbox(bit_masks),
+
+            pred_masks = torch.empty((0, ori_h, ori_w), device=img_info.device)
+            pred_boxes = torch.empty((0, 4), device=img_info.device)
+            if len(pred_labels):
+                pred_masks = tv_tensors.Mask(pred["segmentation"], dtype=torch.bool)[:, :ori_h, :ori_w]
+                pred_boxes = tv_tensors.BoundingBoxes(
+                    mask2bbox(pred_masks),
                     format="XYXY",
                     canvas_size=img_info.ori_shape,
-                ),
-            )
+                )
+
+            scores.append(pred_scores)
+            labels.append(pred_labels)
+            masks.append(pred_masks)
+            bboxes.append(pred_boxes)
 
         if self.explain_mode:
             msg = "Explain mode is not supported yet."
