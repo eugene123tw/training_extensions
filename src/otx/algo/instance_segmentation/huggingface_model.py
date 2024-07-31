@@ -126,16 +126,17 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
         )
 
     def _customize_inputs(self, entity: InstanceSegBatchDataEntity) -> dict[str, Any]:
-        gt_masks = []
-        for img_info, polygons in zip(entity.imgs_info, entity.polygons):
-            img_h, img_w = img_info.img_shape
-            masks = polygon_to_bitmap(polygons, img_h, img_w)
-            gt_masks.append(tv_tensors.Mask(masks, device=img_info.device, dtype=torch.bool))
+        if self.training:
+            gt_masks = []
+            for img_info, polygons, masks in zip(entity.imgs_info, entity.polygons, entity.masks):
+                if len(masks) == 0:
+                    masks = polygon_to_bitmap(polygons, *img_info.img_shape)
+                gt_masks.append(tv_tensors.Mask(masks, device=img_info.device, dtype=torch.bool))
 
         return {
             "pixel_values": entity.images,
-            "class_labels": entity.labels,
-            "mask_labels": gt_masks,
+            "class_labels": entity.labels if self.training else None,
+            "mask_labels": gt_masks if self.training else None,
         }
 
     def _customize_outputs(
