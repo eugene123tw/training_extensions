@@ -149,11 +149,10 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
             return outputs.loss
 
         target_sizes = [(max(m.shape), max(m.shape)) for m in inputs.masks]
-        results = self.image_processor.post_process_instance_segmentation(
+        results = self.post_process_instance_segmentation(
             outputs,
             threshold=0.0,
             target_sizes=target_sizes,
-            return_binary_maps=True,
         )
 
         scores: list[Tensor] = []
@@ -201,3 +200,73 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
             polygons=[],
             labels=labels,
         )
+
+    def post_process_instance_segmentation(
+        self,
+        outputs,
+        threshold: float = 0.5,
+        target_sizes: Optional[List[Tuple[int, int]]] = None,
+    ) -> List[Dict]:
+
+        # [batch_size, num_queries, num_classes+1]
+        class_queries_logits = outputs.class_queries_logits
+        # [batch_size, num_queries, height, width]
+        masks_queries_logits = outputs.masks_queries_logits
+
+        # Scale back to preprocessed image size - (384, 384) for all models
+        masks_queries_logits = torch.nn.functional.interpolate(
+            masks_queries_logits, size=(384, 384), mode="bilinear", align_corners=False
+        )
+
+        device = masks_queries_logits.device
+        num_classes = class_queries_logits.shape[-1] - 1
+        num_queries = class_queries_logits.shape[-2]
+
+        # Loop over items in batch size
+        results = []
+
+        for i in range(class_queries_logits.shape[0]):
+            mask_pred = masks_queries_logits[i]
+            mask_cls = class_queries_logits[i]
+
+            scores = torch.nn.functional.softmax(mask_cls, dim=-1)[:, :-1]
+            labels = torch.arange(num_classes, device=device).unsqueeze(0).repeat(num_queries, 1).flatten(0, 1)
+
+            scores_per_image, topk_indices = scores.flatten(0, 1).topk(num_queries, sorted=False)
+            labels_per_image = labels[topk_indices]
+
+            topk_indices = torch.div(topk_indices, num_classes, rounding_mode="floor")
+            mask_pred = mask_pred[topk_indices]
+            pred_masks = (mask_pred > 0).float()
+
+            # Calculate average mask prob
+            mask_scores_per_image = (mask_pred.sigmoid().flatten(1) * pred_masks.flatten(1)).sum(1) / (
+                pred_masks.flatten(1).sum(1) + 1e-6
+            )
+            pred_scores = scores_per_image * mask_scores_per_image
+            pred_classes = labels_per_image
+            pred_masks = torch.nn.functional.interpolate(
+                pred_masks.unsqueeze(0), size=target_sizes[i], mode="nearest"
+            )[0]
+
+            instance_maps, segments = [], []
+            for j in range(num_queries):
+                score = pred_scores[j].item()
+                if not torch.all(pred_masks[j] == 0) and score >= threshold:
+                    segments.append(
+                        {
+                            "label_id": pred_classes[j].item(),
+                            "was_fused": False,
+                            "score": round(score, 6),
+                        }
+                    )
+                    instance_maps.append(pred_masks[j].bool())
+
+            # Return a concatenated tensor of binary instance maps
+            if len(instance_maps):
+                instance_maps = torch.stack(instance_maps, dim=0)
+            else:
+                instance_maps = torch.empty(0, *target_sizes[i])
+
+            results.append({"segmentation": instance_maps, "segments_info": segments})
+        return results
