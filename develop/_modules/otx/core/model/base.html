@@ -28,7 +28,7 @@
     <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/tabs.css?v=a5c4661c" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=87e54e7c" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=a41ae7c4" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=0a108b04" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
@@ -287,6 +287,8 @@
 <span class="kn">from</span> <span class="nn">otx</span> <span class="kn">import</span> <span class="n">__version__</span>
 <span class="kn">from</span> <span class="nn">otx.core.config.data</span> <span class="kn">import</span> <span class="n">TileConfig</span>
 <span class="kn">from</span> <span class="nn">otx.core.data.entity.base</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ImageInfo</span><span class="p">,</span>
+    <span class="n">OTXBatchDataEntity</span><span class="p">,</span>
     <span class="n">OTXBatchLossEntity</span><span class="p">,</span>
     <span class="n">T_OTXBatchDataEntity</span><span class="p">,</span>
     <span class="n">T_OTXBatchPredEntity</span><span class="p">,</span>
@@ -306,7 +308,7 @@
 <span class="kn">from</span> <span class="nn">otx.core.types.precision</span> <span class="kn">import</span> <span class="n">OTXPrecisionType</span>
 <span class="kn">from</span> <span class="nn">otx.core.utils.build</span> <span class="kn">import</span> <span class="n">get_default_num_async_infer_requests</span>
 <span class="kn">from</span> <span class="nn">otx.core.utils.miscellaneous</span> <span class="kn">import</span> <span class="n">ensure_callable</span>
-<span class="kn">from</span> <span class="nn">otx.core.utils.utils</span> <span class="kn">import</span> <span class="n">is_ckpt_for_finetuning</span><span class="p">,</span> <span class="n">is_ckpt_from_otx_v1</span>
+<span class="kn">from</span> <span class="nn">otx.core.utils.utils</span> <span class="kn">import</span> <span class="n">is_ckpt_for_finetuning</span><span class="p">,</span> <span class="n">is_ckpt_from_otx_v1</span><span class="p">,</span> <span class="n">remove_state_dict_prefix</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
@@ -372,7 +374,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">classification_layers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_model</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_explain_mode</span> <span class="o">=</span> <span class="kc">False</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_callable</span> <span class="o">=</span> <span class="n">ensure_callable</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_callable</span> <span class="o">=</span> <span class="n">ensure_callable</span><span class="p">(</span><span class="n">scheduler</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">metric_callable</span> <span class="o">=</span> <span class="n">ensure_callable</span><span class="p">(</span><span class="n">metric</span><span class="p">)</span>
@@ -651,6 +652,10 @@
 <a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.model.base.html#otx.core.model.base.OTXModel.on_save_checkpoint">[docs]</a>
     <span class="k">def</span> <span class="nf">on_save_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Callback on saving checkpoint.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">torch_compile</span><span class="p">:</span>
+            <span class="c1"># If torch_compile is True, a prefix key named _orig_mod. is added to the state_dict. Remove this.</span>
+            <span class="n">compiled_state_dict</span> <span class="o">=</span> <span class="n">checkpoint</span><span class="p">[</span><span class="s2">&quot;state_dict&quot;</span><span class="p">]</span>
+            <span class="n">checkpoint</span><span class="p">[</span><span class="s2">&quot;state_dict&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">remove_state_dict_prefix</span><span class="p">(</span><span class="n">compiled_state_dict</span><span class="p">,</span> <span class="s2">&quot;_orig_mod.&quot;</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">on_save_checkpoint</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
 
         <span class="n">checkpoint</span><span class="p">[</span><span class="s2">&quot;label_info&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_info</span>
@@ -1131,6 +1136,20 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_tile_config</span> <span class="o">=</span> <span class="n">tile_config</span>
 
+<div class="viewcode-block" id="OTXModel.get_dummy_input">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.model.base.html#otx.core.model.base.OTXModel.get_dummy_input">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_dummy_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OTXBatchDataEntity</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generates a dummy input, suitable for launching forward() on it.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            batch_size (int, optional): number of elements in a dummy input sequence. Defaults to 1.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            OTXBatchDataEntity[Any]: An entity containing randomly generated inference data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">_dispatch_label_info</span><span class="p">(</span><span class="n">label_info</span><span class="p">:</span> <span class="n">LabelInfoTypes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LabelInfo</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">label_info</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
@@ -1459,7 +1478,25 @@
             <span class="k">return</span> <span class="n">LabelInfo</span><span class="p">(</span><span class="n">label_names</span><span class="o">=</span><span class="n">label_names</span><span class="p">,</span> <span class="n">label_groups</span><span class="o">=</span><span class="p">[</span><span class="n">label_names</span><span class="p">])</span>
 
         <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Cannot construct LabelInfo from OpenVINO IR. Please check this model is trained by OTX.&quot;</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+<div class="viewcode-block" id="OVModel.get_dummy_input">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.model.base.html#otx.core.model.base.OVModel.get_dummy_input">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_dummy_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OTXBatchDataEntity</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a dummy input for base OV model.&quot;&quot;&quot;</span>
+        <span class="c1"># Resize is embedded to the OV model, which means we don&#39;t need to know the actual size</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)]</span>
+        <span class="n">infos</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">img</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">images</span><span class="p">):</span>
+            <span class="n">infos</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">ImageInfo</span><span class="p">(</span>
+                    <span class="n">img_idx</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+                    <span class="n">img_shape</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+                    <span class="n">ori_shape</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">OTXBatchDataEntity</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">images</span><span class="o">=</span><span class="n">images</span><span class="p">,</span> <span class="n">imgs_info</span><span class="o">=</span><span class="n">infos</span><span class="p">)</span></div>
+</div>
 
 </pre></div>
 

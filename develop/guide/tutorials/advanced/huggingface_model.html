@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Deploy &amp; Demo &#8212; OpenVINO™ Training Extensions 2.2.0rc0 documentation</title>
+    <title>Training with Hugging Face pretrained vision models &#8212; OpenVINO™ Training Extensions 2.2.0rc0 documentation</title>
   
   
   
@@ -41,11 +41,11 @@
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'guide/tutorials/base/export';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'guide/tutorials/advanced/huggingface_model';</script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="Advanced Tutorials" href="../advanced/index.html" />
-    <link rel="prev" title="XAI Tutorial" href="explain.html" />
+    <link rel="next" title="Multi-GPU Support" href="multi_gpu.html" />
+    <link rel="prev" title="Use Semi-Supervised Learning" href="semi_supervised_learning.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="docsearch:language" content="en">
   </head>
@@ -245,27 +245,27 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Base Tutorials</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul class="current">
-<li class="toctree-l2 has-children"><a class="reference internal" href="how_to_train/index.html">Training to deployment tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-2"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="how_to_train/classification.html">Classification  model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="how_to_train/detection.html">Object Detection model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="how_to_train/instance_segmentation.html">Instance Segmentation model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="how_to_train/semantic_segmentation.html">Semantic Segmentation model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="how_to_train/anomaly_detection.html">Anomaly Detection Tutorial</a></li>
-<li class="toctree-l3"><a class="reference internal" href="how_to_train/action_classification.html">Action Classification model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="how_to_train/action_detection.html">Action Detection model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="how_to_train/visual_prompting.html">Visual Prompting model</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../base/index.html">Base Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../base/how_to_train/index.html">Training to deployment tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-2"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../base/how_to_train/classification.html">Classification  model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../base/how_to_train/detection.html">Object Detection model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../base/how_to_train/instance_segmentation.html">Instance Segmentation model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../base/how_to_train/semantic_segmentation.html">Semantic Segmentation model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../base/how_to_train/anomaly_detection.html">Anomaly Detection Tutorial</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../base/how_to_train/action_classification.html">Action Classification model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../base/how_to_train/action_detection.html">Action Detection model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../base/how_to_train/visual_prompting.html">Visual Prompting model</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="explain.html">XAI Tutorial</a></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#">Deploy &amp; Demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../base/explain.html">XAI Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../base/export.html">Deploy &amp; Demo</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../advanced/index.html">Advanced Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-3"><i class="fa-solid fa-chevron-down"></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../advanced/configuration.html">How to write OTX Configuration (recipe)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../advanced/semi_supervised_learning.html">Use Semi-Supervised Learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../advanced/huggingface_model.html">Training with Hugging Face pretrained vision models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../advanced/multi_gpu.html">Multi-GPU Support</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Advanced Tutorials</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-3"><i class="fa-solid fa-chevron-down"></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="configuration.html">How to write OTX Configuration (recipe)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semi_supervised_learning.html">Use Semi-Supervised Learning</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Training with Hugging Face pretrained vision models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="multi_gpu.html">Multi-GPU Support</a></li>
 </ul>
 </li>
 </ul>
@@ -392,126 +392,108 @@
             
             <article class="bd-article" role="main">
               
-  <section id="deploy-demo">
-<h1>Deploy &amp; Demo<a class="headerlink" href="#deploy-demo" title="Link to this heading">#</a></h1>
-<p>This guide explains how to deploy a model trained in the <a class="reference internal" href="how_to_train/index.html"><span class="doc">previous stage</span></a> and visualize it outside of this repository.
-As a result of this step, you’ll get the exported model together with the self-contained python package and a demo application to visualize results in other environments without a long installation process.</p>
-<section id="export">
-<h2>Export<a class="headerlink" href="#export" title="Link to this heading">#</a></h2>
-<p>1. Activate the virtual environment
-created in the previous step.</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span><span class="w"> </span>.otx/bin/activate
-<span class="c1"># or by this line, if you created an environment, using tox</span>
-.<span class="w"> </span>venv/otx/bin/activate
-</pre></div>
-</div>
-<p>2. <code class="docutils literal notranslate"><span class="pre">otx</span> <span class="pre">export</span></code> returns an <code class="docutils literal notranslate"><span class="pre">.onnx</span></code>, <code class="docutils literal notranslate"><span class="pre">openvino.xml(.bin)</span></code> and <code class="docutils literal notranslate"><span class="pre">.zip</span></code>
-exportable code with demo depending on the export type passed to CLI or API.</p>
-<p>You can export the model in OpenVINO format and FP32
-using the command below. Specify the path to the trained PyTorch model using <code class="docutils literal notranslate"><span class="pre">--checkpoint</span></code> parameter:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>otx<span class="w"> </span><span class="nb">export</span><span class="w"> </span>-c<span class="w"> </span>CONFIG<span class="w"> </span>--checkpoint<span class="w"> </span>CHECKPOINT<span class="w"> </span>--export_format<span class="w"> </span><span class="o">{</span>ONNX,OPENVINO,EXPORTABLE_CODE<span class="o">}</span><span class="w"> </span>--export_precision<span class="w"> </span><span class="o">{</span>FP16,FP32<span class="o">}</span><span class="w"> </span>--work-dir<span class="w"> </span>WORK_DIR
-</pre></div>
-</div>
-<p>You can also specify <code class="docutils literal notranslate"><span class="pre">export_format</span></code> nad <code class="docutils literal notranslate"><span class="pre">export_precision</span></code> parameters.
-For example, to export a model with precision FP16 and format ONNX, execute:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>otx<span class="w"> </span><span class="nb">export</span><span class="w"> </span>-c<span class="w"> </span>CONFIG<span class="w"> </span>--checkpoint<span class="w"> </span>CHECKPOINT<span class="w"> </span>--export_format<span class="w"> </span>ONNX<span class="w"> </span>--export_precision<span class="w"> </span>FP16<span class="w"> </span>--work-dir<span class="w"> </span>outputs/deploy
-</pre></div>
-</div>
+  <section id="training-with-hugging-face-pretrained-vision-models">
+<h1>Training with Hugging Face pretrained vision models<a class="headerlink" href="#training-with-hugging-face-pretrained-vision-models" title="Link to this heading">#</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">#</a></h2>
+<p>OpenVINO™ Training Extensions streamlines your workflow by leveraging cutting-edge artificial intelligence technologies, enabling rapid and efficient model development. With this latest update, users can now easily train models for multi-class classification, object detection, and semantic segmentation tasks using pre-trained models from Hugging Face, and convert them into optimized Intermediate Representation (IR) models for OpenVINO.</p>
 </section>
-<section id="deploy">
-<h2>Deploy<a class="headerlink" href="#deploy" title="Link to this heading">#</a></h2>
-<p>1. It is also possible to obtain a <code class="docutils literal notranslate"><span class="pre">.zip</span></code>  archive with OpenVINO model and demo to run on your own testing images with visualization possibility.
-The exported archive will consist of the following file structure:</p>
+<section id="introduction-to-hugging-face">
+<h2>Introduction to Hugging Face<a class="headerlink" href="#introduction-to-hugging-face" title="Link to this heading">#</a></h2>
+<p>Hugging Face is an AI community and platform for machine learning that provides a vast repository of pre-trained models. These models span across various domains of natural language processing (NLP), computer vision, and more. Hugging Face’s transformers library is widely recognized for its ease of use and state-of-the-art models, which can be fine-tuned for a wide range of tasks.</p>
+<section id="openvino-ir-model-conversion">
+<h3>OpenVINO IR Model Conversion<a class="headerlink" href="#openvino-ir-model-conversion" title="Link to this heading">#</a></h3>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">LICENSE</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">README.md</span></code></p></li>
-<li><p>model</p>
-<ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">model.xml</span></code> and <code class="docutils literal notranslate"><span class="pre">model.bin</span></code> - model exported to the OpenVINO™ format</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">config.json</span></code> - file containing the post-processing info and meta information about labels in the dataset</p></li>
+<li><p><strong>Model Optimization and Conversion</strong>: Convert the trained models into the IR format using the OpenVINO toolkit to optimize performance across various hardware platforms.</p></li>
+<li><p><strong>Deployment Ready</strong>: The converted models are ready for immediate deployment, and OpenVINO™ Training Extensions simplifies this process, supporting users in easily deploying models to edge devices or servers.</p></li>
 </ul>
-</li>
-<li><p>python</p>
-<ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">demo_package</span></code> - package folder with necessary modules needed to run demo</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">demo.py</span></code>- simple demo to visualize results of model inference</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> - minimal packages required to run the demo</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">setup.py</span></code></p></li>
-</ul>
-</li>
-</ul>
-<p>3. You can deploy the model,
-using the command below:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>otx<span class="o">)</span><span class="w"> </span>...$<span class="w"> </span>otx<span class="w"> </span><span class="nb">export</span><span class="w"> </span>-c<span class="w"> </span>CONFIG
-<span class="w">           </span>--checkpoint<span class="w"> </span><span class="o">{</span>PYTORCH_CHECKPOINT<span class="o">}</span>
-<span class="w">           </span>--export_format<span class="w"> </span>EXPORTABLE_CODE
-<span class="w">           </span>--work-dir<span class="w"> </span>outputs/deploy
-</pre></div>
-</div>
-<p>After that, you can use the resulting <code class="docutils literal notranslate"><span class="pre">exportable_code.zip</span></code> archive in other applications.</p>
-<p>4. It is also possible to pass already exported/optimized OpenVINO IR model
-to create archive with demo and pack in the IR model.</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>otx<span class="o">)</span><span class="w"> </span>...$<span class="w"> </span>otx<span class="w"> </span><span class="nb">export</span><span class="w"> </span>-c<span class="w"> </span>CONFIG
-<span class="w">           </span>--checkpoint<span class="w"> </span><span class="o">{</span>OPENVINO_IR.XML<span class="o">}</span>
-<span class="w">           </span>--work-dir<span class="w"> </span>outputs/deploy
-</pre></div>
-</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>You can also obtain <code class="docutils literal notranslate"><span class="pre">exportable_code.zip</span></code> right away during model optimization passing <code class="docutils literal notranslate"><span class="pre">export_demo_package=True</span></code> parameter to CLI or API call.</p>
-</div>
 </section>
-<section id="demonstration">
-<h2>Demonstration<a class="headerlink" href="#demonstration" title="Link to this heading">#</a></h2>
-<p>Using the exported demo, we’re able to run the model in the demonstration mode outside of this repository, using only the ported <code class="docutils literal notranslate"><span class="pre">.zip</span></code> archive with minimum required packages.
-The demo allows us to apply our model on the custom data or the online footage from a web camera and see how it will work in a real-life scenario. It is not required to install OTX or PyTorch.</p>
-<p>1. Unzip the <code class="docutils literal notranslate"><span class="pre">exportable_code.zip</span></code>
-archive.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">unzip</span>  <span class="n">outputs</span><span class="o">/</span><span class="n">deploy</span><span class="o">/.</span><span class="n">latest</span><span class="o">/</span><span class="n">export</span><span class="o">/</span><span class="n">exportable_code</span><span class="o">.</span><span class="n">zip</span> <span class="o">-</span><span class="n">d</span> <span class="n">outputs</span><span class="o">/</span><span class="n">deploy</span><span class="o">/</span>
+</section>
+<section id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><strong>Environment Setup</strong>: Set up the OpenVINO™ Training Extensions environment and install the necessary libraries and toolkits.</p></li>
+</ol>
+<p>You can follow the installation process from a <a class="reference internal" href="../../get_started/installation.html"><span class="doc">quick start guide</span></a> to create a universal virtual environment for OpenVINO™ Training Extensions.
+Then install transformers with the command below.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>otx<span class="o">)</span><span class="w"> </span>...$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>transformers
 </pre></div>
 </div>
-<p>2. To run the demo in exportable code, we can use a brand-new virtual environment,
-where we need to install a minimalistic set of packages required for inference only.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">venv</span> <span class="n">demo_venv</span> <span class="o">--</span><span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;demo&quot;</span>
-<span class="n">source</span> <span class="n">demo_venv</span><span class="o">/</span><span class="nb">bin</span><span class="o">/</span><span class="n">activate</span>
-<span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span>
+<ol class="arabic simple" start="2">
+<li><p><strong>Dataset Preparation</strong>: Set up dataset for training.</p></li>
+</ol>
+<p>You can follow the preparation step per each tasks. <a class="reference internal" href="../base/how_to_train/index.html"><span class="doc">quick start guide</span></a></p>
+<ol class="arabic simple" start="3">
+<li><p><strong>Model Selection and Training</strong>: Select an appropriate pre-trained model from the Hugging Face hub and start training with your dataset using OpenVINO™ Training Extensions.</p></li>
+</ol>
+<p>You can find a list of pre-trained models provided by hugging-face <a class="reference external" href="https://huggingface.co/models">here</a>.
+Currently, we support models in the Image Classification, Object Detection, and Image Segmentation categories, and some models may not be supported due to API policy.</p>
+<p>OTX provides the model classes below in three tasks for this purpose:
+- Classification: <cite>otx.algo.classification.huggingface_model.HuggingFaceModelForMulticlassCls</cite>
+- Detection: <cite>otx.algo.detection.huggingface_model.HuggingFaceModelForDetection</cite>
+- Semantic Segmentation: <cite>otx.algo.segmentation.huggingface_model.HuggingFaceModelForSegmentation</cite></p>
+<p>You can run training on a Custom Dataset using the examples below.</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-0">
+CLI</label><div class="sd-tab-content docutils">
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>otx<span class="o">)</span><span class="w"> </span>...$<span class="w"> </span>otx<span class="w"> </span>train<span class="w"> </span><span class="se">\</span>
+<span class="w">            </span>--model<span class="w"> </span>otx.algo.classification.huggingface_model.HuggingFaceModelForMulticlassCls<span class="w"> </span><span class="se">\</span>
+<span class="w">            </span>--model.model_name_or_path<span class="w"> </span>google/vit-base-patch16-224<span class="w"> </span><span class="se">\</span>
+<span class="w">            </span>--data_root<span class="w"> </span>/datasets/otx_v2_dataset/multiclass_classification/multiclass_food101_large<span class="w"> </span><span class="se">\</span>
+<span class="w">            </span>--work_dir<span class="w"> </span>otx-workspace/vit-base-224
 </pre></div>
 </div>
-<p>3. The following line will run the demo on your input source,
-using the model in the <code class="docutils literal notranslate"><span class="pre">model</span></code> folder. You can pass as <code class="docutils literal notranslate"><span class="pre">input</span></code> a single image, a folder of images, a video file, or a web camera id.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>(demo) ...$ python outputs/deploy/python/demo.py --input docs/utils/images/wgisd_dataset_sample.jpg \
-                                                  --model outputs/deploy/model
+</div>
+<input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-1">
+API</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">otx.algo.classification.huggingface_model</span> <span class="kn">import</span> <span class="n">HuggingFaceModelForMulticlassCls</span>
+<span class="kn">from</span> <span class="nn">otx.engine</span> <span class="kn">import</span> <span class="n">Engine</span>
+
+<span class="n">data_root</span> <span class="o">=</span> <span class="s2">&quot;/datasets/otx_v2_dataset/multiclass_classification/multiclass_food101_large&quot;</span>
+
+<span class="n">otx_model</span> <span class="o">=</span> <span class="n">HuggingFaceModelForMulticlassCls</span><span class="p">(</span>
+    <span class="n">model_name_or_path</span><span class="o">=</span><span class="s2">&quot;google/vit-base-patch16-224&quot;</span><span class="p">,</span>
+    <span class="n">label_info</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">engine</span> <span class="o">=</span> <span class="n">Engine</span><span class="p">(</span>
+    <span class="n">data_root</span><span class="o">=</span><span class="n">data_root</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">otx_model</span><span class="p">,</span>
+    <span class="n">work_dir</span><span class="o">=</span><span class="s2">&quot;otx-workspace/vit-base-224&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">engine</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>You can press <code class="docutils literal notranslate"><span class="pre">Q</span></code> to stop inference during the demo running.</p>
-<p>For example, the model inference on the image from the WGISD dataset will look like this:</p>
-<a class="reference internal image-reference" href="../../../_images/wgisd_pr_sample.jpg"><img alt="this image shows the inference results on the WGISD dataset" src="../../../_images/wgisd_pr_sample.jpg" style="width: 600px;" /></a>
+</div>
+</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>If you provide a single image as input, the demo processes and renders it quickly, then exits. To continuously
-visualize inference results on the screen, and apply the <code class="docutils literal notranslate"><span class="pre">loop</span></code> option, which enforces processing a single image in a loop.
-In this case, you can stop the demo by pressing <cite>Q</cite> button or killing the process in the terminal (<code class="docutils literal notranslate"><span class="pre">Ctrl+C</span></code> for Linux).</p>
+<p>For detection, you can use the <cite>otx.algo.detection.huggingface_model.HuggingFaceModelForDetection</cite> class,
+and for semantic segmentation, you can use the <cite>otx.algo.segmentation.huggingface_model.HuggingFaceModelForSegmentation</cite> class. Otherwise, the usage is the same.</p>
 </div>
-<p>To learn how to run the demo on Windows and MacOS, please refer to the <code class="docutils literal notranslate"><span class="pre">outputs/deploy/python/README.md</span></code> file in exportable code.</p>
-<p>4. To save inference results with predictions on it, we can specify the folder path, using <code class="docutils literal notranslate"><span class="pre">--output</span></code>.
-It works for images, videos, image folders and web cameras. To prevent issues, do not specify it together with a <code class="docutils literal notranslate"><span class="pre">--loop</span></code> parameter.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>(demo) ...$ python outputs/deploy/python/demo.py --input docs/utils/images/wgisd_dataset_sample.jpg \
-                                                  --model outputs/deploy/model \
-                                                  --output resulted_images
+<ol class="arabic simple" start="4">
+<li><p><strong>Model Conversion</strong>: Convert the trained model into the IR format using the OpenVINO toolkit.</p></li>
+</ol>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-2" name="sd-tab-set-1" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-2">
+CLI</label><div class="sd-tab-content docutils">
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="o">(</span>otx<span class="o">)</span><span class="w"> </span>...$<span class="w"> </span>otx<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="se">\</span>
+<span class="w">            </span>--work_dir<span class="w"> </span>otx-workspace/vit-base-224
 </pre></div>
 </div>
-<p>5. To run a demo on a web camera, we need to know its ID.
-We can check a list of camera devices by running this command line on Linux system:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sudo</span> <span class="n">apt</span><span class="o">-</span><span class="n">get</span> <span class="n">install</span> <span class="n">v4l</span><span class="o">-</span><span class="n">utils</span>
-<span class="n">v4l2</span><span class="o">-</span><span class="n">ctl</span> <span class="o">--</span><span class="nb">list</span><span class="o">-</span><span class="n">devices</span>
+</div>
+<input id="sd-tab-item-3" name="sd-tab-set-1" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-3">
+API</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">engine</span><span class="o">.</span><span class="n">export</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>The output will look like this:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Integrated</span> <span class="n">Camera</span> <span class="p">(</span><span class="n">usb</span><span class="o">-</span><span class="mi">0000</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mi">1</span><span class="n">a</span><span class="mf">.0</span><span class="o">-</span><span class="mf">1.6</span><span class="p">):</span>
-    <span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="n">video0</span>
-</pre></div>
 </div>
-<p>After that, we can use this <code class="docutils literal notranslate"><span class="pre">/dev/video0</span></code> as a camera ID for <code class="docutils literal notranslate"><span class="pre">--input</span></code>.</p>
+</div>
 </section>
 </section>
 
@@ -523,17 +505,17 @@ We can check a list of camera devices by running this command line on Linux syst
             <footer class="bd-footer-article">
                 <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-  <a class='left-prev' id="prev-link" href="explain.html" title="previous page">
+  <a class='left-prev' id="prev-link" href="semi_supervised_learning.html" title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
           <p class="prev-next-subtitle">previous</p>
-          <p class="prev-next-title">XAI Tutorial</p>
+          <p class="prev-next-title">Use Semi-Supervised Learning</p>
       </div>
   </a>
-  <a class='right-next' id="next-link" href="../advanced/index.html" title="next page">
+  <a class='right-next' id="next-link" href="multi_gpu.html" title="next page">
   <div class="prev-next-info">
       <p class="prev-next-subtitle">next</p>
-      <p class="prev-next-title">Advanced Tutorials</p>
+      <p class="prev-next-title">Multi-GPU Support</p>
   </div>
   <i class="fa-solid fa-angle-right"></i>
   </a>
@@ -554,18 +536,25 @@ We can check a list of camera devices by running this command line on Linux syst
 <nav id="bd-toc-nav" class="page-toc">
     <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#export">
-   Export
+  <a class="reference internal nav-link" href="#overview">
+   Overview
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#deploy">
-   Deploy
+  <a class="reference internal nav-link" href="#introduction-to-hugging-face">
+   Introduction to Hugging Face
   </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#openvino-ir-model-conversion">
+     OpenVINO IR Model Conversion
+    </a>
+   </li>
+  </ul>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#demonstration">
-   Demonstration
+  <a class="reference internal nav-link" href="#getting-started">
+   Getting Started
   </a>
  </li>
 </ul>
@@ -585,7 +574,7 @@ We can check a list of camera devices by running this command line on Linux syst
 <div class="toc-item">
   
 <div class="tocsection sourcelink">
-    <a href="../../../_sources/guide/tutorials/base/export.rst.txt">
+    <a href="../../../_sources/guide/tutorials/advanced/huggingface_model.rst.txt">
         <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
 </div>

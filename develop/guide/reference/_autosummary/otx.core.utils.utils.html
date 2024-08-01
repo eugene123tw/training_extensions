@@ -29,7 +29,7 @@
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/tabs.css?v=a5c4661c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=87e54e7c" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=a41ae7c4" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=0a108b04" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
@@ -264,6 +264,8 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/advanced/index.html">Advanced Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-3"><i class="fa-solid fa-chevron-down"></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/advanced/configuration.html">How to write OTX Configuration (recipe)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/advanced/semi_supervised_learning.html">Use Semi-Supervised Learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/advanced/huggingface_model.html">Training with Hugging Face pretrained vision models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/advanced/multi_gpu.html">Multi-GPU Support</a></li>
 </ul>
 </li>
 </ul>
@@ -405,11 +407,17 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#otx.core.utils.utils.get_mean_std_from_data_processing" title="otx.core.utils.utils.get_mean_std_from_data_processing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_mean_std_from_data_processing</span></code></a>(config)</p></td>
 <td><p>Get mean and std value from data_processing.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#otx.core.utils.utils.is_ckpt_for_finetuning" title="otx.core.utils.utils.is_ckpt_for_finetuning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_ckpt_for_finetuning</span></code></a>(ckpt)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#otx.core.utils.utils.import_object_from_module" title="otx.core.utils.utils.import_object_from_module"><code class="xref py py-obj docutils literal notranslate"><span class="pre">import_object_from_module</span></code></a>(obj_path)</p></td>
+<td><p>Get object from import format string.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#otx.core.utils.utils.is_ckpt_for_finetuning" title="otx.core.utils.utils.is_ckpt_for_finetuning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_ckpt_for_finetuning</span></code></a>(ckpt)</p></td>
 <td><p>Check the checkpoint will be used to finetune.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#otx.core.utils.utils.is_ckpt_from_otx_v1" title="otx.core.utils.utils.is_ckpt_from_otx_v1"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_ckpt_from_otx_v1</span></code></a>(ckpt)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#otx.core.utils.utils.is_ckpt_from_otx_v1" title="otx.core.utils.utils.is_ckpt_from_otx_v1"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_ckpt_from_otx_v1</span></code></a>(ckpt)</p></td>
 <td><p>Check the checkpoint where it comes from.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#otx.core.utils.utils.remove_state_dict_prefix" title="otx.core.utils.utils.remove_state_dict_prefix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_state_dict_prefix</span></code></a>(state_dict, prefix)</p></td>
+<td><p>Remove prefix from state_dict keys.</p></td>
 </tr>
 </tbody>
 </table>
@@ -447,6 +455,12 @@
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="otx.core.utils.utils.import_object_from_module">
+<span class="sig-prename descclassname"><span class="pre">otx.core.utils.utils.</span></span><span class="sig-name descname"><span class="pre">import_object_from_module</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.12)"><span class="pre">Any</span></a></span></span><a class="reference internal" href="../../../_modules/otx/core/utils/utils.html#import_object_from_module"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.utils.utils.import_object_from_module" title="Link to this definition">#</a></dt>
+<dd><p>Get object from import format string.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="otx.core.utils.utils.is_ckpt_for_finetuning">
 <span class="sig-prename descclassname"><span class="pre">otx.core.utils.utils.</span></span><span class="sig-name descname"><span class="pre">is_ckpt_for_finetuning</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ckpt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../../_modules/otx/core/utils/utils.html#is_ckpt_for_finetuning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.utils.utils.is_ckpt_for_finetuning" title="Link to this definition">#</a></dt>
 <dd><p>Check the checkpoint will be used to finetune.</p>
@@ -478,6 +492,12 @@
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)">bool</a></p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="otx.core.utils.utils.remove_state_dict_prefix">
+<span class="sig-prename descclassname"><span class="pre">otx.core.utils.utils.</span></span><span class="sig-name descname"><span class="pre">remove_state_dict_prefix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.12)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.12)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/otx/core/utils/utils.html#remove_state_dict_prefix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.utils.utils.remove_state_dict_prefix" title="Link to this definition">#</a></dt>
+<dd><p>Remove prefix from state_dict keys.</p>
 </dd></dl>
 
 </section>
@@ -548,6 +568,15 @@
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#otx.core.utils.utils.import_object_from_module">
+   <code class="docutils literal notranslate">
+    <span class="pre">
+     import_object_from_module()
+    </span>
+   </code>
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#otx.core.utils.utils.is_ckpt_for_finetuning">
    <code class="docutils literal notranslate">
     <span class="pre">
@@ -561,6 +590,15 @@
    <code class="docutils literal notranslate">
     <span class="pre">
      is_ckpt_from_otx_v1()
+    </span>
+   </code>
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#otx.core.utils.utils.remove_state_dict_prefix">
+   <code class="docutils literal notranslate">
+    <span class="pre">
+     remove_state_dict_prefix()
     </span>
    </code>
   </a>
