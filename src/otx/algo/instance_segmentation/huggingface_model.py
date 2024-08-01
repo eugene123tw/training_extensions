@@ -11,7 +11,6 @@ import numpy as np
 import torch
 from torch import Tensor, nn
 from torchvision import tv_tensors
-from transformers import AutoImageProcessor
 from transformers.models.mask2former.modeling_mask2former import (
     Mask2FormerConfig,
     Mask2FormerForUniversalSegmentation,
@@ -91,7 +90,7 @@ class OTXMask2FormerLoss(Mask2FormerLoss):
 
 class OTXMask2FormerForUniversalSegmentation(Mask2FormerForUniversalSegmentation):
     def __init__(self, config: Mask2FormerConfig):
-        # config.num_queries = 300
+        # config.num_queries = 200
         super().__init__(config)
         self.criterion = OTXMask2FormerLoss(config=config, weight_dict=self.weight_dict)
 
@@ -107,6 +106,7 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
         torch_compile: bool = False,
     ) -> None:
         self.model_name = model_name_or_path
+        # NOTE: huggingface model loaded in _build_model phase
         self.load_from = None
 
         super().__init__(
@@ -116,7 +116,6 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
             metric=metric,
             torch_compile=torch_compile,
         )
-        self.image_processor = AutoImageProcessor.from_pretrained(self.model_name)
 
     def _build_model(self, num_classes: int) -> nn.Module:
         # TODO: change this to universal segmentation model
@@ -149,42 +148,11 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
             return outputs.loss
 
         target_sizes = [(max(m.shape), max(m.shape)) for m in inputs.masks]
-        results = self.post_process_instance_segmentation(
+        masks, bboxes, labels, scores = self.post_process_instance_segmentation(
             outputs,
-            threshold=0.0,
+            inputs.imgs_info,
             target_sizes=target_sizes,
         )
-
-        scores: list[Tensor] = []
-        bboxes: list[tv_tensors.BoundingBoxes] = []
-        labels: list[torch.LongTensor] = []
-        masks: list[tv_tensors.Mask] = []
-
-        for img_info, pred in zip(inputs.imgs_info, results):
-            ori_h, ori_w = img_info.ori_shape
-            pred_scores = torch.tensor(
-                [r["score"] for r in pred["segments_info"]],
-                device=img_info.device,
-            )
-            pred_labels = torch.tensor(
-                [r["label_id"] for r in pred["segments_info"]],
-                device=img_info.device,
-            )
-
-            pred_masks = torch.empty((0, ori_h, ori_w), device=img_info.device)
-            pred_boxes = torch.empty((0, 4), device=img_info.device)
-            if len(pred_labels):
-                pred_masks = tv_tensors.Mask(pred["segmentation"], dtype=torch.bool)[:, :ori_h, :ori_w]
-                pred_boxes = tv_tensors.BoundingBoxes(
-                    mask2bbox(pred_masks),
-                    format="XYXY",
-                    canvas_size=img_info.ori_shape,
-                )
-
-            scores.append(pred_scores)
-            labels.append(pred_labels)
-            masks.append(pred_masks)
-            bboxes.append(pred_boxes)
 
         if self.explain_mode:
             msg = "Explain mode is not supported yet."
@@ -204,10 +172,9 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
     def post_process_instance_segmentation(
         self,
         outputs,
-        threshold: float = 0.5,
-        target_sizes: Optional[List[Tuple[int, int]]] = None,
-    ) -> List[Dict]:
-
+        imgs_info,
+        target_sizes: list[tuple[int, int]] | None = None,
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         # [batch_size, num_queries, num_classes+1]
         class_queries_logits = outputs.class_queries_logits
         # [batch_size, num_queries, height, width]
@@ -215,20 +182,28 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
 
         # Scale back to preprocessed image size - (384, 384) for all models
         masks_queries_logits = torch.nn.functional.interpolate(
-            masks_queries_logits, size=(384, 384), mode="bilinear", align_corners=False
+            masks_queries_logits,
+            size=(384, 384),
+            mode="bilinear",
+            align_corners=False,
         )
 
         device = masks_queries_logits.device
         num_classes = class_queries_logits.shape[-1] - 1
         num_queries = class_queries_logits.shape[-2]
 
-        # Loop over items in batch size
-        results = []
+        batch_scores: list[Tensor] = []
+        batch_bboxes: list[tv_tensors.BoundingBoxes] = []
+        batch_labels: list[torch.LongTensor] = []
+        batch_masks: list[tv_tensors.Mask] = []
 
-        for i in range(class_queries_logits.shape[0]):
-            mask_pred = masks_queries_logits[i]
-            mask_cls = class_queries_logits[i]
-
+        for mask_pred, mask_cls, img_info, target_size in zip(
+            masks_queries_logits,
+            class_queries_logits,
+            imgs_info,
+            target_sizes,
+        ):
+            ori_h, ori_w = img_info.ori_shape
             scores = torch.nn.functional.softmax(mask_cls, dim=-1)[:, :-1]
             labels = torch.arange(num_classes, device=device).unsqueeze(0).repeat(num_queries, 1).flatten(0, 1)
 
@@ -246,27 +221,17 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
             pred_scores = scores_per_image * mask_scores_per_image
             pred_classes = labels_per_image
             pred_masks = torch.nn.functional.interpolate(
-                pred_masks.unsqueeze(0), size=target_sizes[i], mode="nearest"
-            )[0]
+                pred_masks.unsqueeze(0),
+                size=target_size,
+                mode="nearest",
+            )[0][:, :ori_h, :ori_w]
 
-            instance_maps, segments = [], []
-            for j in range(num_queries):
-                score = pred_scores[j].item()
-                if not torch.all(pred_masks[j] == 0) and score >= threshold:
-                    segments.append(
-                        {
-                            "label_id": pred_classes[j].item(),
-                            "was_fused": False,
-                            "score": round(score, 6),
-                        }
-                    )
-                    instance_maps.append(pred_masks[j].bool())
+            pred_boxes = mask2bbox(pred_masks)
 
-            # Return a concatenated tensor of binary instance maps
-            if len(instance_maps):
-                instance_maps = torch.stack(instance_maps, dim=0)
-            else:
-                instance_maps = torch.empty(0, *target_sizes[i])
+            keep = (pred_masks.sum((1, 2)) > 10) & (pred_scores > 0.05)
+            batch_masks.append(pred_masks[keep])
+            batch_bboxes.append(pred_boxes[keep])
+            batch_labels.append(pred_classes[keep])
+            batch_scores.append(pred_scores[keep])
 
-            results.append({"segmentation": instance_maps, "segments_info": segments})
-        return results
+        return batch_masks, batch_bboxes, batch_labels, batch_scores
