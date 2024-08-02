@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 def fxt_deterministic(request: pytest.FixtureRequest) -> bool:
     """Override the deterministic setting for detection task."""
     deterministic = request.config.getoption("--deterministic")
-    deterministic = True if deterministic is None else deterministic == "true"
+    deterministic = "warn" if deterministic is None or deterministic == "warn" else deterministic == "true"
     log.info(f"{deterministic=}")
     return deterministic
 
@@ -113,7 +113,6 @@ class TestPerfObjectDetection(PerfTestBase):
         fxt_model: Benchmark.Model,
         fxt_dataset: Benchmark.Dataset,
         fxt_benchmark: Benchmark,
-        fxt_resume_from: Path | None,
         fxt_accelerator: str,
     ):
         if fxt_model.name == "atss_resnext101" and fxt_accelerator == "xpu":
@@ -124,5 +123,4 @@ class TestPerfObjectDetection(PerfTestBase):
             dataset=fxt_dataset,
             benchmark=fxt_benchmark,
             criteria=self.BENCHMARK_CRITERIA,
-            resume_from=fxt_resume_from,
         )

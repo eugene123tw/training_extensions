@@ -1,123 +1,37 @@
-"""by lyuwenyu
-"""
+# Copyright (C) 2024 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+"""RTDetr model implementations."""
+
+from __future__ import annotations
 
 import copy
 import re
 from typing import Any
 
-import numpy as np
 import torch
-import torch.nn.functional as F
-import torchvision
 from torch import Tensor, nn
+from torchvision.ops import box_convert
+from torchvision.tv_tensors import BoundingBoxFormat
 
 from otx.algo.detection.backbones import PResNet
+from otx.algo.detection.base_models.detection_transformer import DETR
 from otx.algo.detection.heads import RTDETRTransformer
-from otx.algo.detection.losses import RTDetrCriterion
 from otx.algo.detection.necks import HybridEncoder
-from otx.algo.utils.mmengine_utils import InstanceData
 from otx.core.data.entity.base import OTXBatchLossEntity
 from otx.core.data.entity.detection import DetBatchDataEntity, DetBatchPredEntity
 from otx.core.exporter.base import OTXModelExporter
 from otx.core.exporter.native import OTXNativeModelExporter
 from otx.core.model.detection import ExplainableOTXDetModel
 
-__all__ = ["RTDETR"]
 
+class RTDETR(ExplainableOTXDetModel):
+    """RTDETR model."""
 
-class RTDETR(nn.Module):
-    def __init__(
-        self,
-        backbone: nn.Module,
-        encoder: nn.Module,
-        decoder: nn.Module,
-        num_classes: int,
-        criterion: nn.Module | None = None,
-        optimizer_configuration: list[dict] | None = None,
-        multi_scale: list[int] | None = None,
-        num_top_queries: int = 300,
-    ):
-        super().__init__()
-        self.backbone = backbone
-        self.decoder = decoder
-        self.encoder = encoder
-        self.multi_scale = (
-            multi_scale
-            if multi_scale is not None
-            else [480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800]
-        )
-        self.num_classes = num_classes
-        self.num_top_queries = num_top_queries
-        default_criterion = RTDetrCriterion(
-            weight_dict={"loss_vfl": 1.0, "loss_bbox": 5, "loss_giou": 2},
-            losses=["vfl", "boxes"],
-            num_classes=num_classes,
-            gamma=2.0,
-            alpha=0.75,
-        )
-        self.criterion = criterion if criterion is not None else default_criterion
-        self.optimizer_configuration = optimizer_configuration
-
-    def _forward_features(self, images: Tensor, targets: dict[str, Any] | None = None):
-        images = self.backbone(images)
-        images = self.encoder(images)
-        return self.decoder(images, targets)
-
-    def forward(self, images: Tensor, targets: dict[str, Any] | None = None):
-        original_size = images.shape[-2:]
-
-        if self.multi_scale and self.training:
-            sz = int(np.random.choice(self.multi_scale))
-            images = F.interpolate(images, size=[sz, sz])
-
-        output = self._forward_features(images, targets)
-        if self.training:
-            return self.criterion(output, targets)
-        return self.postprocess(output, original_size)
-
-    def postprocess(self, outputs, original_size=None, deploy_mode=False):
-        logits, boxes = outputs["pred_logits"], outputs["pred_boxes"]
-
-        # convert bbox to xyxy and rescale back to original size (resize in OTX)
-        bbox_pred = torchvision.ops.box_convert(boxes, in_fmt="cxcywh", out_fmt="xyxy")
-        if not deploy_mode and original_size is not None:
-            original_size = torch.tensor(original_size).to(bbox_pred.device)
-            bbox_pred *= original_size.repeat(1, 2).unsqueeze(1)
-
-        # perform scores computation and gather topk results
-        scores = F.sigmoid(logits)
-        scores, index = torch.topk(scores.flatten(1), self.num_top_queries, axis=-1)
-        labels = index % self.num_classes
-        index = index // self.num_classes
-        boxes = bbox_pred.gather(dim=1, index=index.unsqueeze(-1).repeat(1, 1, bbox_pred.shape[-1]))
-
-        if deploy_mode:
-            return {"bboxes": boxes, "labels": labels, "scores": scores}
-
-        scores_list, boxes_list, labels_list = [], [], []
-
-        for sc, bb, ll in zip(scores, boxes, labels):
-            scores_list.append(sc)
-            boxes_list.append(
-                torchvision.tv_tensors.BoundingBoxes(bb, format="xyxy", canvas_size=original_size.tolist()),
-            )
-            labels_list.append(ll.long())
-
-        return scores_list, boxes_list, labels_list
-
-    def export(
-        self,
-        batch_inputs: Tensor,
-        batch_img_metas: list[dict],
-        explain_mode: bool = False,
-    ) -> dict[str, Any]:
-        return self.postprocess(self._forward_features(batch_inputs), deploy_mode=True)
-
-
-class OTX_RTDETR(ExplainableOTXDetModel):
     image_size = (1, 3, 640, 640)
-    mean = (0.0, 0.0, 0.0)
-    std = (255.0, 255.0, 255.0)
+    mean: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    std: tuple[float, float, float] = (255.0, 255.0, 255.0)
+    load_from: str | None = None
 
     def _customize_inputs(
         self,
@@ -125,14 +39,27 @@ class OTX_RTDETR(ExplainableOTXDetModel):
         pad_size_divisor: int = 32,
         pad_value: int = 0,
     ) -> dict[str, Any]:
+        targets: list[dict[str, Any]] = []
+        # prepare bboxes for the model
+        for bb, ll in zip(entity.bboxes, entity.labels):
+            # convert to cxcywh if needed
+            converted_bboxes = (
+                box_convert(bb, in_fmt="xyxy", out_fmt="cxcywh") if bb.format == BoundingBoxFormat.XYXY else bb
+            )
+            # normalize the bboxes
+            scaled_bboxes = converted_bboxes / torch.tensor(bb.canvas_size[::-1]).tile(2)[None].to(
+                converted_bboxes.device,
+            )
+            targets.append({"boxes": scaled_bboxes, "labels": ll})
+
         return {
             "images": entity.images,
-            "targets": [{"boxes": bb, "labels": ll} for bb, ll in zip(entity.bboxes, entity.labels)],
+            "targets": targets,
         }
 
     def _customize_outputs(
         self,
-        outputs: list[InstanceData] | dict,
+        outputs: list[torch.Tensor] | dict,
         inputs: DetBatchDataEntity,
     ) -> DetBatchPredEntity | OTXBatchLossEntity:
         if self.training:
@@ -150,9 +77,7 @@ class OTX_RTDETR(ExplainableOTXDetModel):
                     raise TypeError(msg)
             return losses
 
-        saliency_map = []  # TODO add saliency map and XAI feature
-        feature_vector = []
-        scores, bboxes, labels = outputs
+        scores, bboxes, labels = self.model.postprocess(outputs, [img_info.img_shape for img_info in inputs.imgs_info])
 
         return DetBatchPredEntity(
             batch_size=len(outputs),
@@ -161,17 +86,9 @@ class OTX_RTDETR(ExplainableOTXDetModel):
             scores=scores,
             bboxes=bboxes,
             labels=labels,
-            saliency_map=saliency_map,
-            feature_vector=feature_vector,
         )
 
-    def get_num_anchors(self) -> list[int]:
-        """Gets the anchor configuration from model."""
-        # TODO update anchor configuration
-
-        return [1] * 10
-
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> tuple[list[torch.optim.Optimizer], list[dict[str, Any]]]:
         """Configure an optimizer and learning-rate schedulers.
 
         Configure an optimizer and learning-rate schedulers
@@ -183,9 +100,8 @@ class OTX_RTDETR(ExplainableOTXDetModel):
             Two list. The former is a list that contains an optimizer
             The latter is a list of lr scheduler configs which has a dictionary format.
         """
-        param_groups = self.get_optim_params(self.model.optimizer_configuration, self.model)
-        optimizer = torch.optim.AdamW(param_groups, lr=1e-4, weight_decay=1e-4)
-        # optimizer = self.optimizer_callable(param_groups)
+        param_groups = self._get_optim_params(self.model.optimizer_configuration, self.model)
+        optimizer = self.optimizer_callable(param_groups)
         schedulers = self.scheduler_callable(optimizer)
 
         def ensure_list(item: Any) -> list:  # noqa: ANN401
@@ -203,9 +119,16 @@ class OTX_RTDETR(ExplainableOTXDetModel):
         return [optimizer], lr_scheduler_configs
 
     @staticmethod
-    def get_optim_params(cfg: list[dict[str, Any]] | None, model: nn.Module):
+    def _get_optim_params(cfg: list[dict[str, Any]] | None, model: nn.Module) -> list[dict[str, Any]]:
         """Perform no bias decay and learning rate correction for the modules.
+
+        The configuration dict should consist of regular expression pattern for the model parameters with "params" key.
+        Other optimizer parameters can be added as well.
+
         E.g.:
+            cfg = [{"params": "^((?!b).)*$", "lr": 0.01, "weight_decay": 0.0}, ..]
+            The above configuration is for the parameters that do not contain "b".
+
             ^(?=.*a)(?=.*b).*$         means including a and b
             ^((?!b.)*a((?!b).)*$       means including a but not b
             ^((?!b|c).)*a((?!b|c).)*$  means including a but not (b | c)
@@ -218,6 +141,9 @@ class OTX_RTDETR(ExplainableOTXDetModel):
         param_groups = []
         visited = []
         for pg in cfg:
+            if "params" not in pg:
+                msg = f"The 'params' key should be included in the configuration, but got {pg.keys()}"
+                raise ValueError(msg)
             pattern = pg["params"]
             params = {k: v for k, v in model.named_parameters() if v.requires_grad and len(re.findall(pattern, k)) > 0}
             pg["params"] = params.values()
@@ -252,7 +178,7 @@ class OTX_RTDETR(ExplainableOTXDetModel):
                 "input_names": ["images"],
                 "output_names": ["bboxes", "labels", "scores"],
                 "dynamic_axes": {
-                    "images": {0: "batch", 2: "height", 3: "width"},
+                    "images": {0: "batch"},
                     "boxes": {0: "batch", 1: "num_dets"},
                     "labels": {0: "batch", 1: "num_dets"},
                     "scores": {0: "batch", 1: "num_dets"},
@@ -260,16 +186,18 @@ class OTX_RTDETR(ExplainableOTXDetModel):
                 "autograd_inlining": False,
                 "opset_version": 16,
             },
-            output_names=["bboxes", "labels", "feature_vector", "saliency_map"] if self.explain_mode else None,
+            output_names=["bboxes", "labels", "scores"],
         )
 
     @property
     def _optimization_config(self) -> dict[str, Any]:
-        """PTQ config for DinoV2Seg."""
+        """PTQ config for RT-DETR."""
         return {"model_type": "transformer"}
 
 
-class OTX_RTDETR_18(OTX_RTDETR):
+class RTDETR18(RTDETR):
+    """RT-DETR with ResNet-18 backbone."""
+
     load_from = (
         "https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r18vd_5x_coco_objects365_from_paddle.pth"
     )
@@ -278,85 +206,73 @@ class OTX_RTDETR_18(OTX_RTDETR):
         backbone = PResNet(
             depth=18,
             pretrained=True,
-            freeze_at=-1,
             return_idx=[1, 2, 3],
-            num_stages=4,
-            freeze_norm=False,
         )
         encoder = HybridEncoder(
             in_channels=[128, 256, 512],
-            feat_strides=[8, 16, 32],
-            hidden_dim=256,
             expansion=0.5,
-            dim_feedforward=1024,
             eval_spatial_size=self.image_size[2:],
         )
         decoder = RTDETRTransformer(
             num_classes=num_classes,
             num_decoder_layers=3,
             feat_channels=[256, 256, 256],
-            feat_strides=[8, 16, 32],
-            hidden_dim=256,
             eval_spatial_size=self.image_size[2:],
         )
-        criterion = RTDetrCriterion(
-            weight_dict={"loss_vfl": 1.0, "loss_bbox": 5, "loss_giou": 2},
-            losses=["vfl", "boxes"],
-            num_classes=num_classes,
-            gamma=2.0,
-            alpha=0.75,
-        )
+
         optimizer_configuration = [
+            # no weight decay for norm layers in backbone
             {"params": "^(?=.*backbone)(?=.*norm).*$", "weight_decay": 0.0, "lr": 0.00001},
+            # lr for the backbone, but not norm layers is 0.00001
             {"params": "^(?=.*backbone)(?!.*norm).*$", "lr": 0.00001},
+            # no weight decay for norm layers and biases in encoder and decoder layers
             {"params": "^(?=.*(?:encoder|decoder))(?=.*(?:norm|bias)).*$", "weight_decay": 0.0},
         ]
 
-        return RTDETR(
+        return DETR(
             backbone=backbone,
             encoder=encoder,
             decoder=decoder,
             num_classes=num_classes,
-            criterion=criterion,
             optimizer_configuration=optimizer_configuration,
         )
 
 
-class OTX_RTDETR_50(OTX_RTDETR):
+class RTDETR50(RTDETR):
+    """RT-DETR with ResNet-50 backbone."""
+
     load_from = (
         "https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r50vd_2x_coco_objects365_from_paddle.pth"
     )
 
     def _build_model(self, num_classes: int) -> nn.Module:
-        backbone = PResNet(depth=50, return_idx=[1, 2, 3], num_stages=4, freeze_norm=True, pretrained=True, freeze_at=0)
+        backbone = PResNet(
+            depth=50,
+            return_idx=[1, 2, 3],
+            pretrained=True,
+            freeze_at=0,
+            norm_cfg={"type": "FBN", "name": "norm"},
+        )
         encoder = HybridEncoder(
-            in_channels=[512, 1024, 2048],
-            feat_strides=[8, 16, 32],
-            hidden_dim=256,
-            expansion=1.0,
-            dim_feedforward=1024,
             eval_spatial_size=self.image_size[2:],
         )
         decoder = RTDETRTransformer(
             num_classes=num_classes,
             feat_channels=[256, 256, 256],
-            feat_strides=[8, 16, 32],
-            hidden_dim=256,
-            num_levels=3,
-            num_queries=300,
             eval_spatial_size=self.image_size[2:],
             num_decoder_layers=6,
-            num_denoising=100,
-            eval_idx=-1,
         )
 
         optimizer_configuration = [
+            # lr for all layers in backbone is 0.00001
             {"params": "backbone", "lr": 0.00001},
+            # no weight decay for norm layers and biases in decoder
             {"params": "^(?=.*decoder(?=.*bias|.*norm.*weight)).*$", "weight_decay": 0.0},
+            # no weight decay for norm layers and biases in encoder
             {"params": "^(?=.*encoder(?=.*bias|.*norm.*weight)).*$", "weight_decay": 0.0},
         ]
 
-        return RTDETR(
+        return DETR(
             backbone=backbone,
             encoder=encoder,
             decoder=decoder,
@@ -365,7 +281,9 @@ class OTX_RTDETR_50(OTX_RTDETR):
         )
 
 
-class OTX_RTDETR_101(OTX_RTDETR):
+class RTDETR101(RTDETR):
+    """RT-DETR with ResNet-101 backbone."""
+
     load_from = (
         "https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r101vd_2x_coco_objects365_from_paddle.pth"
     )
@@ -374,8 +292,7 @@ class OTX_RTDETR_101(OTX_RTDETR):
         backbone = PResNet(
             depth=101,
             return_idx=[1, 2, 3],
-            num_stages=4,
-            freeze_norm=True,
+            norm_cfg={"type": "FBN", "name": "norm"},
             pretrained=True,
             freeze_at=0,
         )
@@ -384,33 +301,27 @@ class OTX_RTDETR_101(OTX_RTDETR):
             hidden_dim=384,
             dim_feedforward=2048,
             in_channels=[512, 1024, 2048],
-            feat_strides=[8, 16, 32],
-            expansion=1.0,
             eval_spatial_size=self.image_size[2:],
         )
 
         decoder = RTDETRTransformer(
             num_classes=num_classes,
             feat_channels=[384, 384, 384],
-            feat_strides=[8, 16, 32],
-            hidden_dim=256,
-            num_levels=3,
-            num_queries=300,
             eval_spatial_size=self.image_size[2:],
-            num_decoder_layers=6,
-            nhead=8,
-            num_denoising=100,
-            eval_idx=-1,
         )
 
-        # no bias decay and learning rate correction for the backbone. Without this correction gradients explosion will take place.
+        # no bias decay and learning rate correction for the backbone.
+        # Without this correction gradients explosion will take place.
         optimizer_configuration = [
+            # lr for all layers in backbone is 0.000001
             {"params": "backbone", "lr": 0.000001},
+            # no weight decay for norm layers and biases in encoder
             {"params": "^(?=.*encoder(?=.*bias|.*norm.*weight)).*$", "weight_decay": 0.0},
+            # no weight decay for norm layers and biases in decoder
             {"params": "^(?=.*decoder(?=.*bias|.*norm.*weight)).*$", "weight_decay": 0.0},
         ]
 
-        return RTDETR(
+        return DETR(
             backbone=backbone,
             encoder=encoder,
             decoder=decoder,

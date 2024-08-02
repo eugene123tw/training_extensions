@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
     from torch import nn
 
-    from otx.algo.detection.ssd import SingleStageDetector
+    from otx.algo.detection.base_models import SingleStageDetector
 
 
 class OTXDetectionModel(OTXModel[DetBatchDataEntity, DetBatchPredEntity]):
@@ -497,7 +497,9 @@ class ExplainableOTXDetModel(OTXDetectionModel):
 
     def get_num_anchors(self) -> list[int]:
         """Gets the anchor configuration from model."""
-        if anchor_generator := getattr(self.model.bbox_head, "prior_generator", None):
+        if hasattr(self.model, "bbox_head") and (
+            anchor_generator := getattr(self.model.bbox_head, "prior_generator", None)
+        ):
             return (
                 anchor_generator.num_base_anchors
                 if hasattr(anchor_generator, "num_base_anchors")

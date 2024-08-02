@@ -1,110 +1,33 @@
-"""by lyuwenyu
-"""
+# Copyright (C) 2024 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+"""Hybrid Encoder module for detection task, modified from https://github.com/lyuwenyu/RT-DETR."""
+
+from __future__ import annotations
 
 import copy
 
 import torch
-import torch.nn.functional as F
 from torch import nn
 
-from otx.algo.detection.utils import get_activation
+from otx.algo.detection.layers import CSPRepLayer
+from otx.algo.modules import ConvModule, build_activation_layer
+from otx.algo.modules.base_module import BaseModule
 
 __all__ = ["HybridEncoder"]
 
 
-class ConvNormLayer(nn.Module):
-    def __init__(self, ch_in, ch_out, kernel_size, stride, padding=None, bias=False, act=None):
-        super().__init__()
-        self.conv = nn.Conv2d(
-            ch_in,
-            ch_out,
-            kernel_size,
-            stride,
-            padding=(kernel_size - 1) // 2 if padding is None else padding,
-            bias=bias,
-        )
-        self.norm = nn.BatchNorm2d(ch_out)
-        self.act = nn.Identity() if act is None else get_activation(act)
-
-    def forward(self, x):
-        return self.act(self.norm(self.conv(x)))
-
-
-class RepVggBlock(nn.Module):
-    def __init__(self, ch_in, ch_out, act="relu"):
-        super().__init__()
-        self.ch_in = ch_in
-        self.ch_out = ch_out
-        self.conv1 = ConvNormLayer(ch_in, ch_out, 3, 1, padding=1, act=None)
-        self.conv2 = ConvNormLayer(ch_in, ch_out, 1, 1, padding=0, act=None)
-        self.act = nn.Identity() if act is None else get_activation(act)
-
-    def forward(self, x):
-        if hasattr(self, "conv"):
-            y = self.conv(x)
-        else:
-            y = self.conv1(x) + self.conv2(x)
-
-        return self.act(y)
-
-    def convert_to_deploy(self):
-        if not hasattr(self, "conv"):
-            self.conv = nn.Conv2d(self.ch_in, self.ch_out, 3, 1, padding=1)
-
-        kernel, bias = self.get_equivalent_kernel_bias()
-        self.conv.weight.data = kernel
-        self.conv.bias.data = bias
-
-    def get_equivalent_kernel_bias(self):
-        kernel3x3, bias3x3 = self._fuse_bn_tensor(self.conv1)
-        kernel1x1, bias1x1 = self._fuse_bn_tensor(self.conv2)
-
-        return kernel3x3 + self._pad_1x1_to_3x3_tensor(kernel1x1), bias3x3 + bias1x1
-
-    def _pad_1x1_to_3x3_tensor(self, kernel1x1):
-        if kernel1x1 is None:
-            return 0
-        else:
-            return F.pad(kernel1x1, [1, 1, 1, 1])
-
-    def _fuse_bn_tensor(self, branch: ConvNormLayer):
-        if branch is None:
-            return 0, 0
-        kernel = branch.conv.weight
-        running_mean = branch.norm.running_mean
-        running_var = branch.norm.running_var
-        gamma = branch.norm.weight
-        beta = branch.norm.bias
-        eps = branch.norm.eps
-        std = (running_var + eps).sqrt()
-        t = (gamma / std).reshape(-1, 1, 1, 1)
-        return kernel * t, beta - running_mean * gamma / std
-
-
-class CSPRepLayer(nn.Module):
-    def __init__(self, in_channels, out_channels, num_blocks=3, expansion=1.0, bias=None, act="silu"):
-        super(CSPRepLayer, self).__init__()
-        hidden_channels = int(out_channels * expansion)
-        self.conv1 = ConvNormLayer(in_channels, hidden_channels, 1, 1, bias=bias, act=act)
-        self.conv2 = ConvNormLayer(in_channels, hidden_channels, 1, 1, bias=bias, act=act)
-        self.bottlenecks = nn.Sequential(
-            *[RepVggBlock(hidden_channels, hidden_channels, act=act) for _ in range(num_blocks)],
-        )
-        if hidden_channels != out_channels:
-            self.conv3 = ConvNormLayer(hidden_channels, out_channels, 1, 1, bias=bias, act=act)
-        else:
-            self.conv3 = nn.Identity()
-
-    def forward(self, x):
-        x_1 = self.conv1(x)
-        x_1 = self.bottlenecks(x_1)
-        x_2 = self.conv2(x)
-        return self.conv3(x_1 + x_2)
-
-
 # transformer
 class TransformerEncoderLayer(nn.Module):
-    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu", normalize_before=False):
+    def __init__(
+        self,
+        d_model: int,
+        nhead: int,
+        dim_feedforward: int = 2048,
+        dropout: float = 0.1,
+        act_cfg: dict[str, str] | None = None,
+        normalize_before: bool = False,
+    ) -> None:
         super().__init__()
         self.normalize_before = normalize_before
 
@@ -118,13 +41,19 @@ class TransformerEncoderLayer(nn.Module):
         self.norm2 = nn.LayerNorm(d_model)
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
-        self.activation = get_activation(activation)
+        act_cfg = act_cfg if act_cfg is not None else {"type": "GELU"}
+        self.activation = build_activation_layer(act_cfg)
 
     @staticmethod
-    def with_pos_embed(tensor, pos_embed):
+    def with_pos_embed(tensor: torch.Tensor, pos_embed: torch.Tensor | None) -> torch.Tensor:
         return tensor if pos_embed is None else tensor + pos_embed
 
-    def forward(self, src, src_mask=None, pos_embed=None) -> torch.Tensor:
+    def forward(
+        self,
+        src: torch.Tensor,
+        src_mask: torch.Tensor | None = None,
+        pos_embed: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         residual = src
         if self.normalize_before:
             src = self.norm1(src)
@@ -146,13 +75,18 @@ class TransformerEncoderLayer(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, encoder_layer, num_layers, norm=None):
-        super(TransformerEncoder, self).__init__()
+    def __init__(self, encoder_layer: nn.Module, num_layers: int, norm: nn.Module | None = None) -> None:
+        super().__init__()
         self.layers = nn.ModuleList([copy.deepcopy(encoder_layer) for _ in range(num_layers)])
         self.num_layers = num_layers
         self.norm = norm
 
-    def forward(self, src, src_mask=None, pos_embed=None) -> torch.Tensor:
+    def forward(
+        self,
+        src: torch.Tensor,
+        src_mask: torch.Tensor | None = None,
+        pos_embed: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         output = src
         for layer in self.layers:
             output = layer(output, src_mask=src_mask, pos_embed=pos_embed)
@@ -163,24 +97,59 @@ class TransformerEncoder(nn.Module):
         return output
 
 
-class HybridEncoder(nn.Module):
+class HybridEncoder(BaseModule):
+    """HybridEncoder for RTDetr.
+
+    Args:
+        in_channels (list[int], optional): List of input channels for each feature map.
+            Defaults to [512, 1024, 2048].
+        feat_strides (list[int], optional): List of stride values for
+            each feature map. Defaults to [8, 16, 32].
+        hidden_dim (int, optional): Hidden dimension size. Defaults to 256.
+        nhead (int, optional): Number of attention heads in the transformer encoder.
+                Defaults to 8.
+        dim_feedforward (int, optional): Dimension of the feedforward network
+            in the transformer encoder. Defaults to 1024.
+        dropout (float, optional): Dropout rate. Defaults to 0.0.
+        enc_act_cfg (dict[str, str] | None, optional): Activation configuration
+            for the encoder. Defaults to None.
+        norm_cfg (dict[str, str] | None, optional): Normalization configuration.
+            Defaults to None.
+        use_encoder_idx (list[int], optional): List of indices of the encoder to use.
+            Defaults to [2].
+        num_encoder_layers (int, optional): Number of layers in the transformer encoder.
+            Defaults to 1.
+        pe_temperature (float, optional): Temperature parameter for positional encoding.
+            Defaults to 10000.
+        expansion (float, optional): Expansion factor for the CSPRepLayer.
+            Defaults to 1.0.
+        depth_mult (float, optional): Depth multiplier for the CSPRepLayer.
+            Defaults to 1.0.
+        act_cfg (dict[str, str] | None, optional): Activation configuration
+            for the CSPRepLayer. Defaults to None.
+        eval_spatial_size (tuple[int, int] | None, optional): Spatial size for
+            evaluation. Defaults to None.
+    """
+
     def __init__(
         self,
-        in_channels=[512, 1024, 2048],
-        feat_strides=[8, 16, 32],
-        hidden_dim=256,
-        nhead=8,
-        dim_feedforward=1024,
-        dropout=0.0,
-        enc_act="gelu",
-        use_encoder_idx=[2],
-        num_encoder_layers=1,
-        pe_temperature=10000,
-        expansion=1.0,
-        depth_mult=1.0,
-        act="silu",
-        eval_spatial_size=None,
-    ):
+        in_channels: list[int] = [512, 1024, 2048],  # noqa: B006
+        feat_strides: list[int] = [8, 16, 32],  # noqa: B006
+        hidden_dim: int = 256,
+        nhead: int = 8,
+        dim_feedforward: int = 1024,
+        dropout: float = 0.0,
+        enc_act_cfg: dict[str, str] | None = None,
+        norm_cfg: dict[str, str] | None = None,
+        use_encoder_idx: list[int] = [2],  # noqa: B006
+        num_encoder_layers: int = 1,
+        pe_temperature: float = 10000,
+        expansion: float = 1.0,
+        depth_mult: float = 1.0,
+        act_cfg: dict[str, str] | None = None,
+        eval_spatial_size: tuple[int, int] | None = None,
+    ) -> None:
+        """Initialize the HybridEncoder module."""
         super().__init__()
         self.in_channels = in_channels
         self.feat_strides = feat_strides
@@ -192,7 +161,9 @@ class HybridEncoder(nn.Module):
 
         self.out_channels = [hidden_dim for _ in range(len(in_channels))]
         self.out_strides = feat_strides
-
+        enc_act_cfg = enc_act_cfg if enc_act_cfg is not None else {"type": "GELU"}
+        act_cfg = act_cfg if act_cfg is not None else {"type": "SiLU"}
+        norm_cfg = norm_cfg if norm_cfg is not None else {"type": "BN", "name": "norm"}
         # channel projection
         self.input_proj = nn.ModuleList()
         for in_channel in in_channels:
@@ -209,7 +180,7 @@ class HybridEncoder(nn.Module):
             nhead=nhead,
             dim_feedforward=dim_feedforward,
             dropout=dropout,
-            activation=enc_act,
+            act_cfg=enc_act_cfg,
         )
 
         self.encoder = nn.ModuleList(
@@ -220,9 +191,16 @@ class HybridEncoder(nn.Module):
         self.lateral_convs = nn.ModuleList()
         self.fpn_blocks = nn.ModuleList()
         for _ in range(len(in_channels) - 1, 0, -1):
-            self.lateral_convs.append(ConvNormLayer(hidden_dim, hidden_dim, 1, 1, act=act))
+            self.lateral_convs.append(ConvModule(hidden_dim, hidden_dim, 1, 1, act_cfg=act_cfg, norm_cfg=norm_cfg))
             self.fpn_blocks.append(
-                CSPRepLayer(hidden_dim * 2, hidden_dim, round(3 * depth_mult), act=act, expansion=expansion),
+                CSPRepLayer(
+                    hidden_dim * 2,
+                    hidden_dim,
+                    round(3 * depth_mult),
+                    act_cfg=act_cfg,
+                    expansion=expansion,
+                    norm_cfg=norm_cfg,
+                ),
             )
 
         # bottom-up pan
@@ -230,15 +208,21 @@ class HybridEncoder(nn.Module):
         self.pan_blocks = nn.ModuleList()
         for _ in range(len(in_channels) - 1):
             self.downsample_convs.append(
-                ConvNormLayer(hidden_dim, hidden_dim, 3, 2, act=act),
+                ConvModule(hidden_dim, hidden_dim, 3, 2, padding=1, act_cfg=act_cfg, norm_cfg=norm_cfg),
             )
             self.pan_blocks.append(
-                CSPRepLayer(hidden_dim * 2, hidden_dim, round(3 * depth_mult), act=act, expansion=expansion),
+                CSPRepLayer(
+                    hidden_dim * 2,
+                    hidden_dim,
+                    round(3 * depth_mult),
+                    act_cfg=act_cfg,
+                    expansion=expansion,
+                    norm_cfg=norm_cfg,
+                ),
             )
 
-        self._reset_parameters()
-
-    def _reset_parameters(self):
+    def init_weights(self) -> None:
+        """Initialize weights."""
         if self.eval_spatial_size:
             for idx in self.use_encoder_idx:
                 stride = self.feat_strides[idx]
@@ -251,12 +235,19 @@ class HybridEncoder(nn.Module):
                 setattr(self, f"pos_embed{idx}", pos_embed)
 
     @staticmethod
-    def build_2d_sincos_position_embedding(w, h, embed_dim=256, temperature=10000.0):
-        """ """
+    def build_2d_sincos_position_embedding(
+        w: int,
+        h: int,
+        embed_dim: int = 256,
+        temperature: float = 10000.0,
+    ) -> torch.Tensor:
+        """Build 2D sin-cos position embedding."""
         grid_w = torch.arange(int(w), dtype=torch.float32)
         grid_h = torch.arange(int(h), dtype=torch.float32)
         grid_w, grid_h = torch.meshgrid(grid_w, grid_h, indexing="ij")
-        assert embed_dim % 4 == 0, "Embed dimension must be divisible by 4 for 2D sin-cos position embedding"
+        if embed_dim % 4 != 0:
+            msg = "Embed dimension must be divisible by 4 for 2D sin-cos position embedding"
+            raise ValueError(msg)
         pos_dim = embed_dim // 4
         omega = torch.arange(pos_dim, dtype=torch.float32) / pos_dim
         omega = 1.0 / (temperature**omega)
@@ -266,8 +257,11 @@ class HybridEncoder(nn.Module):
 
         return torch.concat([out_w.sin(), out_w.cos(), out_h.sin(), out_h.cos()], dim=1)[None, :, :]
 
-    def forward(self, feats):
-        assert len(feats) == len(self.in_channels)
+    def forward(self, feats: torch.Tensor) -> list[torch.Tensor]:
+        """Forward pass."""
+        if len(feats) != len(self.in_channels):
+            msg = f"Input feature size {len(feats)} does not match the number of input channels {len(self.in_channels)}"
+            raise ValueError(msg)
         proj_feats = [self.input_proj[i](feat) for i, feat in enumerate(feats)]
 
         # encoder
@@ -281,7 +275,9 @@ class HybridEncoder(nn.Module):
                         src_flatten.device,
                     )
                 else:
-                    pos_embed = getattr(self, f"pos_embed{enc_ind}", None).to(src_flatten.device)
+                    pos_embed = getattr(self, f"pos_embed{enc_ind}", None)
+                    if pos_embed is not None:
+                        pos_embed = pos_embed.to(src_flatten.device)
 
                 memory = self.encoder[i](src_flatten, pos_embed=pos_embed)
                 proj_feats[enc_ind] = memory.permute(0, 2, 1).reshape(-1, self.hidden_dim, h, w).contiguous()
@@ -293,7 +289,7 @@ class HybridEncoder(nn.Module):
             feat_low = proj_feats[idx - 1]
             feat_high = self.lateral_convs[len(self.in_channels) - 1 - idx](feat_high)
             inner_outs[0] = feat_high
-            upsample_feat = F.interpolate(feat_high, scale_factor=2.0, mode="nearest")
+            upsample_feat = nn.functional.interpolate(feat_high, scale_factor=2.0, mode="nearest")
             inner_out = self.fpn_blocks[len(self.in_channels) - 1 - idx](torch.concat([upsample_feat, feat_low], dim=1))
             inner_outs.insert(0, inner_out)
 
