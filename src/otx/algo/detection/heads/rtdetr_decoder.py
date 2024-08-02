@@ -449,7 +449,7 @@ class TransformerDecoder(nn.Module):
             ref_points = inter_ref_bbox
             ref_points_detach = inter_ref_bbox.detach() if self.training else inter_ref_bbox
 
-        return torch.stack(dec_out_bboxes), torch.stack(dec_out_logits)
+        return torch.stack(dec_out_bboxes), torch.stack(dec_out_logits), output
 
 
 class RTDETRTransformer(BaseModule):
@@ -739,7 +739,7 @@ class RTDETRTransformer(BaseModule):
         if denoising_class is not None:
             target = torch.concat([denoising_class, target], 1)
 
-        return target, reference_points_unact.detach(), enc_topk_bboxes, enc_topk_logits
+        return target, reference_points_unact.detach(), enc_topk_bboxes, enc_topk_logits, output_memory
 
     def forward(self, feats: torch.Tensor, targets: list[dict[str, torch.Tensor]] | None = None) -> torch.Tensor:
         """Forward pass of the RTDETRTransformer module."""
@@ -760,7 +760,7 @@ class RTDETRTransformer(BaseModule):
         else:
             denoising_class, denoising_bbox_unact, attn_mask, dn_meta = None, None, None, None
 
-        target, init_ref_points_unact, enc_topk_bboxes, enc_topk_logits = self._get_decoder_input(
+        target, init_ref_points_unact, enc_topk_bboxes, enc_topk_logits, _ = self._get_decoder_input(
             memory,
             spatial_shapes,
             denoising_class,

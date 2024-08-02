@@ -10,6 +10,9 @@ import types
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Literal
 
+import cv2
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from model_api.tilers import InstanceSegmentationTiler
@@ -35,6 +38,8 @@ from otx.core.types.label import LabelInfoTypes
 from otx.core.utils.config import inplace_num_classes
 from otx.core.utils.mask_util import encode_rle, polygon_to_rle
 from otx.core.utils.tile_merge import InstanceSegTileMerge
+
+matplotlib.use("TkAgg")
 
 if TYPE_CHECKING:
     from lightning.pytorch.cli import LRSchedulerCallable, OptimizerCallable
@@ -75,7 +80,8 @@ class OTXInstanceSegModel(OTXModel[InstanceSegBatchDataEntity, InstanceSegBatchP
 
     def _create_model(self) -> nn.Module:
         detector = self._build_model(num_classes=self.label_info.num_classes)
-        detector.init_weights()
+        if hasattr(detector, "init_weights"):
+            detector.init_weights()
         self.classification_layers = self.get_classification_layers("model.")
 
         if self.load_from is not None:
@@ -308,6 +314,30 @@ class OTXInstanceSegModel(OTXModel[InstanceSegBatchDataEntity, InstanceSegBatchP
 
         raise ValueError(key)
 
+    def visualize(
+        self,
+        inputs: InstanceSegBatchDataEntity,
+        preds: InstanceSegBatchPredEntity,
+    ):
+        indices = [img_info.img_idx for img_info in inputs.imgs_info]
+        fnames = self.trainer.datamodule.file_names["val"]
+
+        for pred_scores, pred_boxes, pred_masks, idx in zip(
+            preds.scores,
+            preds.bboxes,
+            preds.masks,
+            indices,
+        ):
+            np_image = cv2.imread(fnames[idx])
+            np_image = cv2.cvtColor(np_image, cv2.COLOR_BGR2RGB)
+            for pred_box, pred_score, pred_mask in zip(pred_boxes, pred_scores, pred_masks):
+                if pred_score > 0.5:
+                    pred_mask = pred_mask.cpu().numpy()
+                    pred_box = pred_box.cpu().numpy().astype(int)
+                    cv2.rectangle(np_image, (pred_box[0], pred_box[1]), (pred_box[2], pred_box[3]), (0, 255, 0), 2)
+                    np_image[pred_mask == 1, 1] = 0
+            plt.imshow(np_image)
+
     def _convert_pred_entity_to_compute_metric(
         self,
         preds: InstanceSegBatchPredEntity,
@@ -326,6 +356,8 @@ class OTXInstanceSegModel(OTXModel[InstanceSegBatchDataEntity, InstanceSegBatchP
         """
         pred_info = []
         target_info = []
+
+        # self.visualize(inputs, preds)
 
         for bboxes, masks, scores, labels in zip(
             preds.bboxes,
