@@ -9,19 +9,20 @@ import torch.nn.functional as F
 import torchvision
 from torch import Tensor, nn
 from torchvision import tv_tensors
+from torchvision.ops import box_convert
 
 from otx.algo.common.utils.utils import filter_scores_and_topk
 from otx.algo.detection.backbones import PResNet
-from otx.algo.detection.losses import RTDetrCriterion
+from otx.algo.detection.base_models.detection_transformer import DETR
+from otx.algo.detection.losses import DetrCriterion
 from otx.algo.detection.necks import HybridEncoder
-from otx.algo.detection.rtdetr import RTDETR
 from otx.algo.instance_segmentation.heads.rtdetr_insg_seg_decoder import RTDETRInstSegTransformer
 from otx.core.data.entity.base import ImageInfo, OTXBatchLossEntity
 from otx.core.data.entity.instance_segmentation import InstanceSegBatchDataEntity, InstanceSegBatchPredEntity
 from otx.core.model.instance_segmentation import ExplainableOTXInstanceSegModel
 
 
-class RTDETR_INST(RTDETR):
+class DETR_INST(DETR):
     def _forward_features(self, images: Tensor, targets: dict[str, Any] | None = None):
         feats = self.backbone(images)
         encoded_feats, last_proj = self.encoder(feats)
@@ -100,13 +101,33 @@ class OTX_RTDETR_INST(ExplainableOTXInstanceSegModel):
     std = (255.0, 255.0, 255.0)
 
     def _customize_inputs(self, entity: InstanceSegBatchDataEntity) -> dict[str, Any]:
+        targets: list[dict[str, Any]] = []
+        # prepare bboxes for the model
+        for bb, ll, masks, polygons in zip(
+            entity.bboxes,
+            entity.labels,
+            entity.masks,
+            entity.polygons,
+        ):
+            # convert to cxcywh if needed
+            converted_bboxes = (
+                box_convert(bb, in_fmt="xyxy", out_fmt="cxcywh")
+                if bb.format == tv_tensors.BoundingBoxFormat.XYXY
+                else bb
+            )
+            # normalize the bboxes
+            scaled_bboxes = converted_bboxes / torch.tensor(bb.canvas_size[::-1]).tile(2)[None].to(
+                converted_bboxes.device,
+            )
+
+            targets.append(
+                {"boxes": scaled_bboxes, "labels": ll, "masks": masks, "polygons": polygons},
+            )
+
         return {
             "images": entity.images,
             "imgs_info": entity.imgs_info,
-            "targets": [
-                {"boxes": bb, "labels": ll, "masks": masks, "polygons": polygons}
-                for bb, ll, masks, polygons in zip(entity.bboxes, entity.labels, entity.masks, entity.polygons)
-            ],
+            "targets": targets,
         }
 
     def _customize_outputs(
@@ -146,13 +167,7 @@ class OTX_RTDETR_INST(ExplainableOTXInstanceSegModel):
             feature_vector=feature_vector,
         )
 
-    def get_num_anchors(self) -> list[int]:
-        """Gets the anchor configuration from model."""
-        # TODO update anchor configuration
-
-        return [1] * 10
-
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> tuple[list[torch.optim.Optimizer], list[dict[str, Any]]]:
         """Configure an optimizer and learning-rate schedulers.
 
         Configure an optimizer and learning-rate schedulers
@@ -164,9 +179,8 @@ class OTX_RTDETR_INST(ExplainableOTXInstanceSegModel):
             Two list. The former is a list that contains an optimizer
             The latter is a list of lr scheduler configs which has a dictionary format.
         """
-        param_groups = self.get_optim_params(self.model.optimizer_configuration, self.model)
-        optimizer = torch.optim.AdamW(param_groups, lr=1e-4, weight_decay=1e-4)
-        # optimizer = self.optimizer_callable(param_groups)
+        param_groups = self._get_optim_params(self.model.optimizer_configuration, self.model)
+        optimizer = self.optimizer_callable(param_groups)
         schedulers = self.scheduler_callable(optimizer)
 
         def ensure_list(item: Any) -> list:  # noqa: ANN401
@@ -184,9 +198,16 @@ class OTX_RTDETR_INST(ExplainableOTXInstanceSegModel):
         return [optimizer], lr_scheduler_configs
 
     @staticmethod
-    def get_optim_params(cfg: list[dict[str, Any]] | None, model: nn.Module):
+    def _get_optim_params(cfg: list[dict[str, Any]] | None, model: nn.Module) -> list[dict[str, Any]]:
         """Perform no bias decay and learning rate correction for the modules.
+
+        The configuration dict should consist of regular expression pattern for the model parameters with "params" key.
+        Other optimizer parameters can be added as well.
+
         E.g.:
+            cfg = [{"params": "^((?!b).)*$", "lr": 0.01, "weight_decay": 0.0}, ..]
+            The above configuration is for the parameters that do not contain "b".
+
             ^(?=.*a)(?=.*b).*$         means including a and b
             ^((?!b.)*a((?!b).)*$       means including a but not b
             ^((?!b|c).)*a((?!b|c).)*$  means including a but not (b | c)
@@ -199,6 +220,9 @@ class OTX_RTDETR_INST(ExplainableOTXInstanceSegModel):
         param_groups = []
         visited = []
         for pg in cfg:
+            if "params" not in pg:
+                msg = f"The 'params' key should be included in the configuration, but got {pg.keys()}"
+                raise ValueError(msg)
             pattern = pg["params"]
             params = {k: v for k, v in model.named_parameters() if v.requires_grad and len(re.findall(pattern, k)) > 0}
             pg["params"] = params.values()
@@ -225,10 +249,7 @@ class RTDetrInstResNet18(OTX_RTDETR_INST):
         backbone = PResNet(
             depth=18,
             pretrained=True,
-            freeze_at=-1,
             return_idx=[1, 2, 3],
-            num_stages=4,
-            freeze_norm=False,
         )
         encoder = HybridEncoder(
             in_channels=[128, 256, 512],
@@ -247,9 +268,8 @@ class RTDetrInstResNet18(OTX_RTDETR_INST):
             hidden_dim=256,
             eval_spatial_size=self.image_size[2:],
         )
-        criterion = RTDetrCriterion(
+        criterion = DetrCriterion(
             weight_dict={"loss_vfl": 1.0, "loss_bbox": 5, "loss_giou": 2, "loss_mask": 1, "loss_dice": 1},
-            losses=["vfl", "boxes", "masks"],
             num_classes=num_classes,
             gamma=2.0,
             alpha=0.75,
@@ -260,7 +280,7 @@ class RTDetrInstResNet18(OTX_RTDETR_INST):
             {"params": "^(?=.*(?:encoder|decoder))(?=.*(?:norm|bias)).*$", "weight_decay": 0.0},
         ]
 
-        return RTDETR_INST(
+        return DETR_INST(
             backbone=backbone,
             encoder=encoder,
             decoder=decoder,
@@ -300,7 +320,7 @@ class RTDetrInstResNet50(OTX_RTDETR_INST):
             eval_idx=-1,
         )
 
-        criterion = RTDetrCriterion(
+        criterion = DetrCriterion(
             weight_dict={"loss_vfl": 1.0, "loss_bbox": 5, "loss_giou": 2, "loss_mask": 1, "loss_dice": 1},
             losses=["vfl", "boxes", "masks"],
             num_classes=num_classes,
@@ -314,7 +334,7 @@ class RTDetrInstResNet50(OTX_RTDETR_INST):
             {"params": "^(?=.*encoder(?=.*bias|.*norm.*weight)).*$", "weight_decay": 0.0},
         ]
 
-        return RTDETR_INST(
+        return DETR_INST(
             backbone=backbone,
             encoder=encoder,
             decoder=decoder,

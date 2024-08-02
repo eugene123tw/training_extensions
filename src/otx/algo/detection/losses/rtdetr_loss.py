@@ -11,18 +11,11 @@ import torch
 from torch import nn
 from torchvision.ops import box_convert
 
-from otx.algo.detection.utils.matchers.hungarian_matcher import HungarianMatcher
-from otx.algo.detection.utils.utils import (
-    box_cxcywh_to_xyxy,
-    box_iou,
-    generalized_box_iou,
-    get_world_size,
-    is_dist_available_and_initialized,
-)
-from otx.core.utils.mask_util import polygon_to_bitmap
 from otx.algo.common.losses import GIoULoss, L1Loss
 from otx.algo.common.utils.bbox_overlaps import bbox_overlaps
 from otx.algo.detection.utils.matchers import HungarianMatcher
+from otx.algo.detection.utils.matchers.hungarian_matcher import HungarianMatcher
+from otx.core.utils.mask_util import polygon_to_bitmap
 
 
 def _max_by_axis(the_list):
@@ -128,7 +121,6 @@ def sigmoid_focal_loss(
         loss = alpha_t * loss
 
     return loss.mean(1).sum() / num_boxes
-
 
 
 class DetrCriterion(nn.Module):
@@ -280,7 +272,7 @@ class DetrCriterion(nn.Module):
         src_masks = src_masks[:, 0].flatten(1)
 
         # TODO: figure this out
-        target_masks = target_masks[:, 2 :: 4, 2 :: 4]
+        target_masks = target_masks[:, 2::4, 2::4]
         target_masks = target_masks.flatten(1)
         target_masks = target_masks.view(src_masks.shape)
         losses = {

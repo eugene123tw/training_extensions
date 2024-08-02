@@ -13,9 +13,7 @@ def _expand(tensor, length: int):
 
 
 class DetrMaskHeadSmallConv(nn.Module):
-    """
-    Simple convolutional head, using group norm. Upsampling is done using a FPN approach
-    """
+    """Simple convolutional head, using group norm. Upsampling is done using a FPN approach"""
 
     def __init__(self, dim, fpn_dims, context_dim):
         super().__init__()
@@ -23,7 +21,7 @@ class DetrMaskHeadSmallConv(nn.Module):
         if dim % 8 != 0:
             raise ValueError(
                 "The hidden_size + number of attention heads must be divisible by 8 as the number of groups in"
-                " GroupNorm is set to 8"
+                " GroupNorm is set to 8",
             )
 
         inter_dims = [dim, context_dim // 2, context_dim // 4, context_dim // 8, context_dim // 16, context_dim // 64]
@@ -152,28 +150,28 @@ class DetrMHAttentionMap(nn.Module):
 class RTDETRInstSegTransformer(RTDETRTransformer):
     def __init__(
         self,
-        num_classes=80,
-        hidden_dim=256,
-        num_queries=300,
-        position_embed_type="sine",
-        backbone_feat_channels=[512, 1024, 2048],
-        feat_channels=[512, 1024, 2048],
-        feat_strides=[8, 16, 32],
-        num_levels=3,
-        num_decoder_points=4,
-        nhead=8,
-        num_decoder_layers=6,
-        dim_feedforward=1024,
-        dropout=0.0,
-        activation="relu",
-        num_denoising=100,
-        label_noise_ratio=0.5,
-        box_noise_scale=1.0,
-        learnt_init_query=False,
-        eval_spatial_size=None,
-        eval_idx=-1,
-        eps=1e-2,
-        aux_loss=True,
+        num_classes: int = 80,
+        hidden_dim: int = 256,
+        num_queries: int = 300,
+        position_embed_type: str = "sine",
+        backbone_feat_channels: list[int] = [512, 1024, 2048],
+        feat_channels: list[int] = [512, 1024, 2048],
+        feat_strides: list[int] = [8, 16, 32],  # noqa: B006
+        num_levels: int = 3,
+        num_decoder_points: int = 4,
+        nhead: int = 8,
+        num_decoder_layers: int = 6,
+        dim_feedforward: int = 1024,
+        dropout: float = 0.0,
+        activation: dict[str, str] | None = None,
+        num_denoising: int = 100,
+        label_noise_ratio: float = 0.5,
+        box_noise_scale: float = 1.0,
+        learnt_init_query: bool = False,
+        eval_spatial_size: tuple[int, int] | None = None,
+        eval_idx: int = -1,
+        eps: float = 1e-2,
+        aux_loss: bool = True,
     ):
         super().__init__(
             num_classes=num_classes,
