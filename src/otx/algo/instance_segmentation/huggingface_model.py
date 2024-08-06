@@ -10,13 +10,20 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
+from scipy.optimize import linear_sum_assignment
 from torch import Tensor, nn
+from torch.cuda.amp import autocast
 from torchvision import tv_tensors
-from transformers import AutoModelForUniversalSegmentation
+from transformers import AutoModelForUniversalSegmentation, AutoProcessor
 from transformers.models.mask2former.modeling_mask2former import (
     dice_loss,
     sample_point,
     sigmoid_cross_entropy_loss,
+)
+from transformers.models.oneformer.modeling_oneformer import (
+    OneFormerHungarianMatcher,
+    pair_wise_dice_loss,
+    pair_wise_sigmoid_cross_entropy_loss,
 )
 
 from otx.core.data.entity.base import OTXBatchLossEntity
@@ -97,7 +104,7 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
         metric: MetricCallable = MaskRLEMeanAPFMeasureCallable,
         torch_compile: bool = False,
     ) -> None:
-        self.model_name = model_name_or_path
+        self.model_name_or_path = model_name_or_path
         # NOTE: huggingface model loaded in _build_model phase
         self.load_from = None
 
@@ -111,7 +118,7 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
 
     def _build_model(self, num_classes: int) -> nn.Module:
         model = AutoModelForUniversalSegmentation.from_pretrained(
-            pretrained_model_name_or_path=self.model_name,
+            pretrained_model_name_or_path=self.model_name_or_path,
             num_labels=num_classes,
             ignore_mismatched_sizes=True,
         )
@@ -228,3 +235,152 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
             batch_scores.append(pred_scores[keep])
 
         return batch_masks, batch_bboxes, batch_labels, batch_scores
+
+
+class OTXOneFormerHungarianMatcher(OneFormerHungarianMatcher):
+    @torch.no_grad()
+    def forward(self, masks_queries_logits, class_queries_logits, mask_labels, class_labels) -> List[Tuple[Tensor]]:
+        indices: list[tuple[np.array]] = []
+
+        num_queries = class_queries_logits.shape[1]
+
+        preds_masks = masks_queries_logits
+        preds_probs = class_queries_logits
+        # iterate through batch size
+        for pred_probs, pred_mask, target_mask, labels in zip(preds_probs, preds_masks, mask_labels, class_labels):
+            pred_probs = pred_probs.softmax(-1)
+            # Compute the classification cost. Contrary to the loss, we don't use the NLL,
+            # but approximate it in 1 - proba[target class].
+            # The 1 is a constant that doesn't change the matching, it can be ommitted.
+            cost_class = -pred_probs[:, labels]
+
+            pred_mask = pred_mask[:, None]
+            target_mask = target_mask[:, None].to(pred_mask.device)
+
+            # all masks share the same set of points for efficient matching!
+            point_coords = torch.rand(1, self.num_points, 2, device=pred_mask.device)
+
+            # get ground truth labels
+            target_mask = sample_point(
+                target_mask.float(),
+                point_coords.repeat(target_mask.shape[0], 1, 1),
+                align_corners=False,
+            ).squeeze(1)
+
+            pred_mask = sample_point(
+                pred_mask,
+                point_coords.repeat(pred_mask.shape[0], 1, 1),
+                align_corners=False,
+            ).squeeze(1)
+
+            with autocast(enabled=False):
+                pred_mask = pred_mask.float()
+                target_mask = target_mask.float()
+
+                # compute the sigmoid ce loss
+                cost_mask = pair_wise_sigmoid_cross_entropy_loss(pred_mask, target_mask)
+                # Compute the dice loss
+                cost_dice = pair_wise_dice_loss(pred_mask, target_mask)
+                # final cost matrix
+                cost_matrix = self.cost_mask * cost_mask + self.cost_class * cost_class + self.cost_dice * cost_dice
+                cost_matrix = cost_matrix.reshape(num_queries, -1).cpu()
+                # do the assigmented using the hungarian algorithm in scipy
+                assigned_indices: tuple[np.array] = linear_sum_assignment(cost_matrix.cpu())
+                indices.append(assigned_indices)
+
+        # It could be stacked in one tensor
+        matched_indices = [
+            (torch.as_tensor(i, dtype=torch.int64), torch.as_tensor(j, dtype=torch.int64)) for i, j in indices
+        ]
+        return matched_indices
+
+
+class HuggingFaceOneFormerInstanceSeg(HuggingFaceModelForInstanceSeg):
+    def __init__(
+        self,
+        model_name_or_path: str,
+        label_info: LabelInfoTypes,
+        optimizer: OptimizerCallable = DefaultOptimizerCallable,
+        scheduler: LRSchedulerCallable | LRSchedulerListCallable = DefaultSchedulerCallable,
+        metric: MetricCallable = MaskRLEMeanAPFMeasureCallable,
+        torch_compile: bool = False,
+    ) -> None:
+        super().__init__(
+            model_name_or_path=model_name_or_path,
+            label_info=label_info,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            metric=metric,
+            torch_compile=torch_compile,
+        )
+        self.processor = AutoProcessor.from_pretrained(
+            model_name_or_path,
+            # NOTE: set is_training = True in order to randomly initialize a text encoder
+            is_training=True,
+        )
+        self.task_token = self._generate_task_tokens()
+
+    def _build_model(self, num_classes: int) -> nn.Module:
+        model = AutoModelForUniversalSegmentation.from_pretrained(
+            pretrained_model_name_or_path=self.model_name_or_path,
+            num_labels=num_classes,
+            ignore_mismatched_sizes=True,
+            # NOTE: set is_training = True in order to randomly initialize a text encoder
+            is_training=True,
+        )
+        model.matcher = OTXOneFormerHungarianMatcher(
+            num_points=model.matcher.num_points,
+            cost_class=model.matcher.cost_class,
+            cost_mask=model.matcher.cost_mask,
+            cost_dice=model.matcher.cost_dice,
+        )
+        model.criterion.loss_masks = MethodType(loss_masks, model.criterion)
+        model.criterion.matcher = model.matcher
+        return model
+
+    def _generate_task_tokens(self, task: str = "instance"):
+        return self.processor._preprocess_text([task])
+
+    def _generate_txt_tokens(self, labels) -> Tensor:
+        num_texts = self.model.config.num_queries - self.model.config.text_encoder_n_ctx
+        text_list = ["an instance photo"] * num_texts
+        for i, label in enumerate(labels[:num_texts]):
+            text_list[i] = f"a photo with a {self.label_info.label_names[label]}"
+        return self.processor._preprocess_text(text_list)
+
+    def _customize_inputs(self, entity: InstanceSegBatchDataEntity) -> dict[str, Any]:
+        device = entity.images.device
+
+        task_inputs = self.task_token.repeat(entity.batch_size, 1).to(device)
+        if self.training:
+            gt_masks = []
+            text_inputs = []
+
+            for img_info, polygons, masks, labels in zip(
+                entity.imgs_info,
+                entity.polygons,
+                entity.masks,
+                entity.labels,
+            ):
+                if len(masks) == 0:
+                    masks = polygon_to_bitmap(polygons, *img_info.img_shape)
+                gt_masks.append(tv_tensors.Mask(masks, device=device, dtype=torch.bool))
+                text_inputs.append(self._generate_txt_tokens(labels).to(device))
+            text_inputs = torch.stack(text_inputs, dim=0)
+        return {
+            "pixel_values": entity.images,
+            "class_labels": entity.labels if self.training else None,
+            "mask_labels": gt_masks if self.training else None,
+            "text_inputs": text_inputs if self.training else None,
+            "task_inputs": task_inputs,
+        }
+
+    def forward(
+        self,
+        inputs: InstanceSegBatchDataEntity,
+    ) -> InstanceSegBatchPredEntity | OTXBatchLossEntity:
+        if self.training != self.model.model.is_training:
+            self.model.model.is_training = self.training
+            for layer in self.model.model.pixel_level_module.decoder.encoder.layers:
+                layer.is_training = self.training
+        return super().forward(inputs)
