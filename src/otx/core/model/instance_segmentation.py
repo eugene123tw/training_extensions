@@ -11,7 +11,6 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Literal
 
 import cv2
-import matplotlib
 import numpy as np
 import torch
 from model_api.tilers import InstanceSegmentationTiler
@@ -36,8 +35,6 @@ from otx.core.types.export import TaskLevelExportParameters
 from otx.core.types.label import LabelInfoTypes
 from otx.core.utils.mask_util import encode_rle, polygon_to_rle
 from otx.core.utils.tile_merge import InstanceSegTileMerge
-
-matplotlib.use("TkAgg")
 
 if TYPE_CHECKING:
     from lightning.pytorch.cli import LRSchedulerCallable, OptimizerCallable
