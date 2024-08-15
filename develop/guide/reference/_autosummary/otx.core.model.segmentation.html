@@ -28,7 +28,7 @@
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/tabs.css?v=a5c4661c" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=87e54e7c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=0a108b04" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
@@ -44,7 +44,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'guide/reference/_autosummary/otx.core.model.segmentation';</script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="otx.core.model.utils" href="otx.core.model.utils.html" />
+    <link rel="next" title="otx.core.model.visual_prompting" href="otx.core.model.visual_prompting.html" />
     <link rel="prev" title="otx.core.model.rotated_detection" href="otx.core.model.rotated_detection.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="docsearch:language" content="en">
@@ -347,7 +347,6 @@
 <li class="toctree-l3"><a class="reference internal" href="otx.recipe.html">otx.recipe</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="otx.tools.html">otx.tools</a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-16"><i class="fa-solid fa-chevron-down"></i></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="otx.tools.converter.html">otx.tools.converter</a></li>
-<li class="toctree-l4"><a class="reference internal" href="otx.tools.translate_mmrecipe.html">otx.tools.translate_mmrecipe</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="otx.utils.html">otx.utils</a></li>
@@ -398,56 +397,20 @@
 <p class="rubric">Classes</p>
 <table class="autosummary longtable table autosummary">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#otx.core.model.segmentation.MMSegCompatibleModel" title="otx.core.model.segmentation.MMSegCompatibleModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MMSegCompatibleModel</span></code></a>(label_info, config, ...)</p></td>
-<td><p>Segmentation model compatible for MMSeg.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#otx.core.model.segmentation.OTXSegmentationModel" title="otx.core.model.segmentation.OTXSegmentationModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OTXSegmentationModel</span></code></a>(label_info, optimizer, ...)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#otx.core.model.segmentation.OTXSegmentationModel" title="otx.core.model.segmentation.OTXSegmentationModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OTXSegmentationModel</span></code></a>(label_info, input_size, ...)</p></td>
 <td><p>Base class for the semantic segmentation models used in OTX.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#otx.core.model.segmentation.OVSegmentationModel" title="otx.core.model.segmentation.OVSegmentationModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OVSegmentationModel</span></code></a>(model_name, model_type, ...)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#otx.core.model.segmentation.OVSegmentationModel" title="otx.core.model.segmentation.OVSegmentationModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OVSegmentationModel</span></code></a>(model_name, model_type, ...)</p></td>
 <td><p>Semantic segmentation model compatible for OpenVINO IR inference.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#otx.core.model.segmentation.TorchVisionCompatibleModel" title="otx.core.model.segmentation.TorchVisionCompatibleModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TorchVisionCompatibleModel</span></code></a>(label_info, ...)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#otx.core.model.segmentation.TorchVisionCompatibleModel" title="otx.core.model.segmentation.TorchVisionCompatibleModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TorchVisionCompatibleModel</span></code></a>(label_info, ...)</p></td>
 <td><p>Segmentation model compatible with torchvision data pipeline.</p></td>
 </tr>
 </tbody>
 </table>
 <dl class="py class">
-<dt class="sig sig-object py" id="otx.core.model.segmentation.MMSegCompatibleModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.core.model.segmentation.</span></span><span class="sig-name descname"><span class="pre">MMSegCompatibleModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label_info:</span> <span class="pre">LabelInfoTypes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config:</span> <span class="pre">DictConfig</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer:</span> <span class="pre">OptimizerCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_optimizer_callable&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheduler:</span> <span class="pre">LRSchedulerCallable</span> <span class="pre">|</span> <span class="pre">LRSchedulerListCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_scheduler_callable&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric:</span> <span class="pre">MetricCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_segm_callable&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torch_compile:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/otx/core/model/segmentation.html#MMSegCompatibleModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.model.segmentation.MMSegCompatibleModel" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#otx.core.model.segmentation.OTXSegmentationModel" title="otx.core.model.segmentation.OTXSegmentationModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">OTXSegmentationModel</span></code></a></p>
-<p>Segmentation model compatible for MMSeg.</p>
-<p>It can consume MMSeg model configuration translated into OTX configuration
-(please see otx.tools.translate_mmrecipe) and create the OTX detection model
-compatible for OTX pipelines.</p>
-<p>MMSeg compatible model.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>label_info</strong> (<em>LabelInfoTypes</em>) – The label information for the segmentation model.</p></li>
-<li><p><strong>config</strong> (<em>DictConfig</em>) – The configuration for the segmentation model.</p></li>
-<li><p><strong>optimizer</strong> (<em>OptimizerCallable</em><em>, </em><em>optional</em>) – The optimizer to use for training.
-Defaults to DefaultOptimizerCallable.</p></li>
-<li><p><strong>scheduler</strong> (<em>LRSchedulerCallable</em><em> | </em><em>LRSchedulerListCallable</em><em>, </em><em>optional</em>) – <dl class="simple">
-<dt>The scheduler to use for learning rate adjustment.</dt><dd><p>Defaults to DefaultSchedulerCallable.</p>
-</dd>
-</dl>
-</p></li>
-<li><p><strong>metric</strong> (<em>MetricCallable</em><em>, </em><em>optional</em>) – The metric to use for evaluation.
-Defaults to SegmCallable.</p></li>
-<li><p><strong>torch_compile</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to compile the model using TorchScript.
-Defaults to False.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py class">
 <dt class="sig sig-object py" id="otx.core.model.segmentation.OTXSegmentationModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.core.model.segmentation.</span></span><span class="sig-name descname"><span class="pre">OTXSegmentationModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label_info:</span> <span class="pre">LabelInfoTypes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer:</span> <span class="pre">OptimizerCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_optimizer_callable&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheduler:</span> <span class="pre">LRSchedulerCallable</span> <span class="pre">|</span> <span class="pre">LRSchedulerListCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_scheduler_callable&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric:</span> <span class="pre">MetricCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_segm_callable&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torch_compile:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/otx/core/model/segmentation.html#OTXSegmentationModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.model.segmentation.OTXSegmentationModel" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.core.model.segmentation.</span></span><span class="sig-name descname"><span class="pre">OTXSegmentationModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">label_info:</span> <span class="pre">LabelInfoTypes,</span> <span class="pre">input_size:</span> <span class="pre">tuple[int,</span> <span class="pre">int],</span> <span class="pre">optimizer:</span> <span class="pre">OptimizerCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_optimizer_callable&gt;,</span> <span class="pre">scheduler:</span> <span class="pre">LRSchedulerCallable</span> <span class="pre">|</span> <span class="pre">LRSchedulerListCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_scheduler_callable&gt;,</span> <span class="pre">metric:</span> <span class="pre">MetricCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_segm_callable&gt;,</span> <span class="pre">torch_compile:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/otx/core/model/segmentation.html#OTXSegmentationModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.model.segmentation.OTXSegmentationModel" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="otx.core.model.base.html#otx.core.model.base.OTXModel" title="otx.core.model.base.OTXModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">OTXModel</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">SegBatchDataEntity</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">SegBatchPredEntity</span></code>]</p>
 <p>Base class for the semantic segmentation models used in OTX.</p>
 <p>Base semantic segmentation model.</p>
@@ -455,6 +418,7 @@ Defaults to False.</p></li>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>label_info</strong> (<em>LabelInfoTypes</em>) – The label information for the segmentation model.</p></li>
+<li><p><strong>input_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.12)"><em>tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><em>int</em></a><em>]</em>) – Model input size in the order of height and width.</p></li>
 <li><p><strong>optimizer</strong> (<em>OptimizerCallable</em><em>, </em><em>optional</em>) – The optimizer to use for training.
 Defaults to DefaultOptimizerCallable.</p></li>
 <li><p><strong>scheduler</strong> (<em>LRSchedulerCallable</em><em> | </em><em>LRSchedulerListCallable</em><em>, </em><em>optional</em>) – The scheduler to use for learning rate adjustment. Defaults to DefaultSchedulerCallable.</p></li>
@@ -465,6 +429,29 @@ Defaults to False.</p></li>
 </ul>
 </dd>
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="otx.core.model.segmentation.OTXSegmentationModel.export">
+<span class="sig-name descname"><span class="pre">export</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">export_format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">OTXExportFormatType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precision</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">OTXPrecisionType</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">OTXPrecisionType.FP32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_exportable_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Path</span></span></span><a class="reference internal" href="../../../_modules/otx/core/model/segmentation.html#OTXSegmentationModel.export"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.model.segmentation.OTXSegmentationModel.export" title="Link to this definition">#</a></dt>
+<dd><p>Export this model to the specified output directory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_dir</strong> (<em>Path</em>) – directory for saving the exported model</p></li>
+<li><p><strong>base_name</strong> – (str): base name for the exported model file. Extension is defined by the target export format</p></li>
+<li><p><strong>export_format</strong> (<em>OTXExportFormatType</em>) – format of the output model</p></li>
+<li><p><strong>precision</strong> (<em>OTXExportPrecisionType</em>) – precision of the output model</p></li>
+<li><p><strong>to_exportable_code</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><em>bool</em></a>) – flag to export model in exportable code with demo package</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>path to the exported model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Path</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="otx.core.model.segmentation.OTXSegmentationModel.forward_for_tracing">
 <span class="sig-name descname"><span class="pre">forward_for_tracing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/otx/core/model/segmentation.html#OTXSegmentationModel.forward_for_tracing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.model.segmentation.OTXSegmentationModel.forward_for_tracing" title="Link to this definition">#</a></dt>
@@ -490,7 +477,7 @@ and create the OTX segmentation model compatible for OTX testing pipeline.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="otx.core.model.segmentation.TorchVisionCompatibleModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.core.model.segmentation.</span></span><span class="sig-name descname"><span class="pre">TorchVisionCompatibleModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label_info:</span> <span class="pre">LabelInfoTypes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer:</span> <span class="pre">OptimizerCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_optimizer_callable&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheduler:</span> <span class="pre">LRSchedulerCallable</span> <span class="pre">|</span> <span class="pre">LRSchedulerListCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_scheduler_callable&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric:</span> <span class="pre">MetricCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_segm_callable&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torch_compile:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backbone_configuration:</span> <span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Any]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decode_head_configuration:</span> <span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Any]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">criterion_configuration:</span> <span class="pre">list[dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Any]]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">export_image_configuration:</span> <span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Any]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name_base_model:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'semantic_segmentation_model'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/otx/core/model/segmentation.html#TorchVisionCompatibleModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.model.segmentation.TorchVisionCompatibleModel" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">otx.core.model.segmentation.</span></span><span class="sig-name descname"><span class="pre">TorchVisionCompatibleModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">label_info:</span> <span class="pre">LabelInfoTypes,</span> <span class="pre">input_size:</span> <span class="pre">tuple[int,</span> <span class="pre">int],</span> <span class="pre">optimizer:</span> <span class="pre">OptimizerCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_optimizer_callable&gt;,</span> <span class="pre">scheduler:</span> <span class="pre">LRSchedulerCallable</span> <span class="pre">|</span> <span class="pre">LRSchedulerListCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_default_scheduler_callable&gt;,</span> <span class="pre">metric:</span> <span class="pre">MetricCallable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">_segm_callable&gt;,</span> <span class="pre">torch_compile:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">backbone_configuration:</span> <span class="pre">dict[str,</span> <span class="pre">Any]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">decode_head_configuration:</span> <span class="pre">dict[str,</span> <span class="pre">Any]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">criterion_configuration:</span> <span class="pre">list[dict[str,</span> <span class="pre">Any]]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">export_image_configuration:</span> <span class="pre">dict[str,</span> <span class="pre">Any]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">name_base_model:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'semantic_segmentation_model'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/otx/core/model/segmentation.html#TorchVisionCompatibleModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#otx.core.model.segmentation.TorchVisionCompatibleModel" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#otx.core.model.segmentation.OTXSegmentationModel" title="otx.core.model.segmentation.OTXSegmentationModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">OTXSegmentationModel</span></code></a></p>
 <p>Segmentation model compatible with torchvision data pipeline.</p>
 <p>Torchvision compatible model.</p>
@@ -498,6 +485,7 @@ and create the OTX segmentation model compatible for OTX testing pipeline.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>label_info</strong> (<em>LabelInfoTypes</em>) – The label information for the segmentation model.</p></li>
+<li><p><strong>input_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.12)"><em>tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><em>int</em></a><em>]</em>) – Model input size in the order of height and width.</p></li>
 <li><p><strong>optimizer</strong> (<em>OptimizerCallable</em><em>, </em><em>optional</em>) – The optimizer callable for the model.
 Defaults to DefaultOptimizerCallable.</p></li>
 <li><p><strong>scheduler</strong> (<em>LRSchedulerCallable</em><em> | </em><em>LRSchedulerListCallable</em><em>, </em><em>optional</em>) – The learning rate scheduler callable for the model. Defaults to DefaultSchedulerCallable.</p></li>
@@ -507,7 +495,7 @@ Defaults to SegmCallable.</p></li>
 <li><p><strong>backbone_configuration</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a><em>, </em><em>Any</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – The configuration for the backbone of the model. Defaults to None.</p></li>
 <li><p><strong>decode_head_configuration</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a><em>, </em><em>Any</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – The configuration for the decode head of the model. Defaults to None.</p></li>
 <li><p><strong>criterion_configuration</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – The configuration for the criterion of the model. Defaults to None.</p></li>
-<li><p><strong>export_image_configuration</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a><em>, </em><em>Any</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – The configuration for the export of the model like mean, scale and image_size. Defaults to None.</p></li>
+<li><p><strong>export_image_configuration</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a><em>, </em><em>Any</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – The configuration for the export of the model like mean and scale. Defaults to None.</p></li>
 <li><p><strong>name_base_model</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a><em>, </em><em>optional</em>) – The name of the base model used for trainig.
 Defaults to “semantic_segmentation_model”.</p></li>
 </ul>
@@ -532,10 +520,10 @@ Defaults to “semantic_segmentation_model”.</p></li>
           <p class="prev-next-title">otx.core.model.rotated_detection</p>
       </div>
   </a>
-  <a class='right-next' id="next-link" href="otx.core.model.utils.html" title="next page">
+  <a class='right-next' id="next-link" href="otx.core.model.visual_prompting.html" title="next page">
   <div class="prev-next-info">
       <p class="prev-next-subtitle">next</p>
-      <p class="prev-next-title">otx.core.model.utils</p>
+      <p class="prev-next-title">otx.core.model.visual_prompting</p>
   </div>
   <i class="fa-solid fa-angle-right"></i>
   </a>
@@ -556,15 +544,6 @@ Defaults to “semantic_segmentation_model”.</p></li>
 <nav id="bd-toc-nav" class="page-toc">
     <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#otx.core.model.segmentation.MMSegCompatibleModel">
-   <code class="docutils literal notranslate">
-    <span class="pre">
-     MMSegCompatibleModel
-    </span>
-   </code>
-  </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#otx.core.model.segmentation.OTXSegmentationModel">
    <code class="docutils literal notranslate">
     <span class="pre">
@@ -573,6 +552,15 @@ Defaults to “semantic_segmentation_model”.</p></li>
    </code>
   </a>
   <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#otx.core.model.segmentation.OTXSegmentationModel.export">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       OTXSegmentationModel.export()
+      </span>
+     </code>
+    </a>
+   </li>
    <li class="toc-h3 nav-item toc-entry">
     <a class="reference internal nav-link" href="#otx.core.model.segmentation.OTXSegmentationModel.forward_for_tracing">
      <code class="docutils literal notranslate">
