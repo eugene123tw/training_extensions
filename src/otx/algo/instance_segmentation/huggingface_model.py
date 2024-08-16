@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import copy
 from types import MethodType
 from typing import TYPE_CHECKING, Any
 
@@ -116,6 +117,85 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
             torch_compile=torch_compile,
         )
 
+    @staticmethod
+    def _get_optim_params(model: nn.Module) -> list[dict[str, Any]]:
+        """Perform no bias decay and learning rate correction for the modules.
+
+        The configuration dict should consist of regular expression pattern for the model parameters with "params" key.
+        Other optimizer parameters can be added as well.
+
+        E.g.:
+            cfg = [{"params": "^((?!b).)*$", "lr": 0.01, "weight_decay": 0.0}, ..]
+            The above configuration is for the parameters that do not contain "b".
+
+            ^(?=.*a)(?=.*b).*$         means including a and b
+            ^((?!b.)*a((?!b).)*$       means including a but not b
+            ^((?!b|c).)*a((?!b|c).)*$  means including a but not (b | c)
+        """
+        weight_decay_norm = 0.0
+        weight_decay_embed = 0.0
+
+        defaults = {}
+        defaults["lr"] = 0.0001
+        defaults["weight_decay"] = 0.05
+        backbone_lr = 0.00001
+
+        norm_module_types = (
+            torch.nn.BatchNorm1d,
+            torch.nn.BatchNorm2d,
+            torch.nn.BatchNorm3d,
+            torch.nn.SyncBatchNorm,
+            torch.nn.GroupNorm,
+            torch.nn.InstanceNorm1d,
+            torch.nn.InstanceNorm2d,
+            torch.nn.InstanceNorm3d,
+            torch.nn.LayerNorm,
+            torch.nn.LocalResponseNorm,
+        )
+
+        param_groups: list[dict[str, Any]] = []
+        visited: set[torch.nn.parameter.Parameter] = set()
+        for module_name, module in model.named_modules():
+            for module_param_name, value in module.named_parameters(recurse=False):
+                if not value.requires_grad:
+                    continue
+                # Avoid duplicating parameters
+                if value in visited:
+                    continue
+                visited.add(value)
+
+                hyper_params = copy.copy(defaults)
+                if "backbone" in module_name:
+                    hyper_params["lr"] = backbone_lr
+                if "relative_position_bias_table" in module_param_name or "absolute_pos_embed" in module_param_name:
+                    hyper_params["weight_decay"] = 0.0
+                if isinstance(module, norm_module_types):
+                    hyper_params["weight_decay"] = weight_decay_norm
+                if isinstance(module, torch.nn.Embedding):
+                    hyper_params["weight_decay"] = weight_decay_embed
+                param_groups.append({"params": [value], **hyper_params})
+
+        return param_groups
+
+    def configure_optimizers(self) -> tuple[list[torch.optim.Optimizer], list[dict[str, Any]]]:
+        param_groups = self._get_optim_params(self.model)
+        optimizer = self.optimizer_callable(param_groups)
+        schedulers = self.scheduler_callable(optimizer)
+
+        def ensure_list(item: Any) -> list:  # noqa: ANN401
+            return item if isinstance(item, list) else [item]
+
+        lr_scheduler_configs = []
+        for scheduler in ensure_list(schedulers):
+            lr_scheduler_config = {"scheduler": scheduler}
+            if hasattr(scheduler, "interval"):
+                lr_scheduler_config["interval"] = scheduler.interval
+            if hasattr(scheduler, "monitor"):
+                lr_scheduler_config["monitor"] = scheduler.monitor
+            lr_scheduler_configs.append(lr_scheduler_config)
+
+        return [optimizer], lr_scheduler_configs
+
     def _build_model(self, num_classes: int) -> nn.Module:
         model = AutoModelForUniversalSegmentation.from_pretrained(
             pretrained_model_name_or_path=self.model_name_or_path,
@@ -147,11 +227,9 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
         if self.training:
             return outputs.loss
 
-        target_sizes = [(max(m.shape), max(m.shape)) for m in inputs.masks]
         masks, bboxes, labels, scores = self.post_process_instance_segmentation(
             outputs,
             inputs.imgs_info,
-            target_sizes=target_sizes,
         )
 
         if self.explain_mode:
@@ -173,20 +251,11 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
         self,
         outputs,
         imgs_info,
-        target_sizes: list[tuple[int, int]] | None = None,
     ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         # [batch_size, num_queries, num_classes+1]
         class_queries_logits = outputs.class_queries_logits
         # [batch_size, num_queries, height, width]
         masks_queries_logits = outputs.masks_queries_logits
-
-        # Scale back to preprocessed image size - (384, 384) for all models
-        masks_queries_logits = torch.nn.functional.interpolate(
-            masks_queries_logits,
-            size=(384, 384),
-            mode="bilinear",
-            align_corners=False,
-        )
 
         device = masks_queries_logits.device
         num_classes = class_queries_logits.shape[-1] - 1
@@ -197,11 +266,10 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
         batch_labels: list[torch.LongTensor] = []
         batch_masks: list[tv_tensors.Mask] = []
 
-        for mask_pred, mask_cls, img_info, target_size in zip(
+        for mask_pred, mask_cls, img_info in zip(
             masks_queries_logits,
             class_queries_logits,
             imgs_info,
-            target_sizes,
         ):
             ori_h, ori_w = img_info.ori_shape
             scores = torch.nn.functional.softmax(mask_cls, dim=-1)[:, :-1]
@@ -211,6 +279,14 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
             labels_per_image = labels[topk_indices]
 
             topk_indices = torch.div(topk_indices, num_classes, rounding_mode="floor")
+
+            mask_pred = torch.nn.functional.interpolate(
+                mask_pred.unsqueeze(0),
+                size=(ori_h, ori_w),
+                mode="bilinear",
+                align_corners=False,
+            )[0]
+
             mask_pred = mask_pred[topk_indices]
             pred_masks = (mask_pred > 0).float()
 
@@ -220,11 +296,6 @@ class HuggingFaceModelForInstanceSeg(ExplainableOTXInstanceSegModel):
             )
             pred_scores = scores_per_image * mask_scores_per_image
             pred_classes = labels_per_image
-            pred_masks = torch.nn.functional.interpolate(
-                pred_masks.unsqueeze(0),
-                size=target_size,
-                mode="nearest",
-            )[0][:, :ori_h, :ori_w]
 
             pred_boxes = mask2bbox(pred_masks)
 
