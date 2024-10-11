@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>otx.core.model.keypoint_detection &#8212; OpenVINO™ Training Extensions 2.2.0rc0 documentation</title>
+    <title>otx.core.model.keypoint_detection &#8212; OpenVINO™ Training Extensions 2.3.0rc0 documentation</title>
   
   
   
@@ -26,7 +26,6 @@
 
     <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/tabs.css?v=a5c4661c" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=0a108b04" />
   
@@ -34,12 +33,11 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script src="../../../../_static/documentation_options.js?v=6e6ef3c1"></script>
+    <script src="../../../../_static/documentation_options.js?v=931ecc87"></script>
     <script src="../../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../../_static/copybutton.js?v=f281be69"></script>
-    <script src="../../../../_static/tabs.js?v=3030b3cb"></script>
     <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/otx/core/model/keypoint_detection';</script>
     <link rel="index" title="Index" href="../../../../genindex.html" />
@@ -270,20 +268,21 @@
 <span class="kn">from</span> <span class="nn">otx.core.data.entity.keypoint_detection</span> <span class="kn">import</span> <span class="n">KeypointDetBatchDataEntity</span><span class="p">,</span> <span class="n">KeypointDetBatchPredEntity</span>
 <span class="kn">from</span> <span class="nn">otx.core.metrics</span> <span class="kn">import</span> <span class="n">MetricCallable</span><span class="p">,</span> <span class="n">MetricInput</span>
 <span class="kn">from</span> <span class="nn">otx.core.metrics.pck</span> <span class="kn">import</span> <span class="n">PCKMeasureCallable</span>
-<span class="kn">from</span> <span class="nn">otx.core.model.base</span> <span class="kn">import</span> <span class="n">DefaultOptimizerCallable</span><span class="p">,</span> <span class="n">DefaultSchedulerCallable</span><span class="p">,</span> <span class="n">OTXModel</span>
+<span class="kn">from</span> <span class="nn">otx.core.model.base</span> <span class="kn">import</span> <span class="n">DefaultOptimizerCallable</span><span class="p">,</span> <span class="n">DefaultSchedulerCallable</span><span class="p">,</span> <span class="n">OTXModel</span><span class="p">,</span> <span class="n">OVModel</span>
 <span class="kn">from</span> <span class="nn">otx.core.schedulers</span> <span class="kn">import</span> <span class="n">LRSchedulerListCallable</span>
 <span class="kn">from</span> <span class="nn">otx.core.types.export</span> <span class="kn">import</span> <span class="n">TaskLevelExportParameters</span>
 <span class="kn">from</span> <span class="nn">otx.core.types.label</span> <span class="kn">import</span> <span class="n">LabelInfoTypes</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">lightning.pytorch.cli</span> <span class="kn">import</span> <span class="n">LRSchedulerCallable</span><span class="p">,</span> <span class="n">OptimizerCallable</span>
+    <span class="kn">from</span> <span class="nn">model_api.models.utils</span> <span class="kn">import</span> <span class="n">DetectedKeypoints</span>
     <span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">nn</span>
 
 
 <div class="viewcode-block" id="OTXKeypointDetectionModel">
 <a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.model.keypoint_detection.html#otx.core.model.keypoint_detection.OTXKeypointDetectionModel">[docs]</a>
 <span class="k">class</span> <span class="nc">OTXKeypointDetectionModel</span><span class="p">(</span><span class="n">OTXModel</span><span class="p">[</span><span class="n">KeypointDetBatchDataEntity</span><span class="p">,</span> <span class="n">KeypointDetBatchPredEntity</span><span class="p">]):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for the detection models used in OTX.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for the keypoint detection models used in OTX.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -294,8 +293,6 @@
         <span class="n">metric</span><span class="p">:</span> <span class="n">MetricCallable</span> <span class="o">=</span> <span class="n">PCKMeasureCallable</span><span class="p">,</span>
         <span class="n">torch_compile</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">=</span> <span class="p">(</span><span class="mf">255.0</span><span class="p">,</span> <span class="mf">255.0</span><span class="p">,</span> <span class="mf">255.0</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">label_info</span><span class="o">=</span><span class="n">label_info</span><span class="p">,</span>
             <span class="n">input_size</span><span class="o">=</span><span class="n">input_size</span><span class="p">,</span>
@@ -361,6 +358,14 @@
             <span class="n">bbox_info</span><span class="o">=</span><span class="p">[],</span>
         <span class="p">)</span>
 
+<div class="viewcode-block" id="OTXKeypointDetectionModel.configure_metric">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.model.keypoint_detection.html#otx.core.model.keypoint_detection.OTXKeypointDetectionModel.configure_metric">[docs]</a>
+    <span class="k">def</span> <span class="nf">configure_metric</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure the metric.&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">configure_metric</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metric</span><span class="o">.</span><span class="n">input_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_size</span></div>
+
+
     <span class="k">def</span> <span class="nf">_convert_pred_entity_to_compute_metric</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">preds</span><span class="p">:</span> <span class="n">KeypointDetBatchPredEntity</span><span class="p">,</span>
@@ -415,9 +420,109 @@
             <span class="n">model_type</span><span class="o">=</span><span class="s2">&quot;keypoint_detection&quot;</span><span class="p">,</span>
             <span class="n">task_type</span><span class="o">=</span><span class="s2">&quot;keypoint_detection&quot;</span><span class="p">,</span>
             <span class="n">confidence_threshold</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hparams</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;best_confidence_threshold&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-            <span class="n">iou_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-            <span class="n">tile_config</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tile_config</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tile_config</span><span class="o">.</span><span class="n">enable_tiler</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="OTXKeypointDetectionModel.get_dummy_input">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.model.keypoint_detection.html#otx.core.model.keypoint_detection.OTXKeypointDetectionModel.get_dummy_input">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_dummy_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">KeypointDetBatchDataEntity</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a dummy input for key point detection model.&quot;&quot;&quot;</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">input_size</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">KeypointDetBatchDataEntity</span><span class="p">(</span>
+            <span class="n">batch_size</span><span class="p">,</span>
+            <span class="n">images</span><span class="p">,</span>
+            <span class="p">[],</span>
+            <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]])],</span>
+            <span class="n">labels</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">bbox_info</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">keypoints</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">keypoints_visible</span><span class="o">=</span><span class="p">[],</span>
         <span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="OVKeypointDetectionModel">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.model.keypoint_detection.html#otx.core.model.keypoint_detection.OVKeypointDetectionModel">[docs]</a>
+<span class="k">class</span> <span class="nc">OVKeypointDetectionModel</span><span class="p">(</span><span class="n">OVModel</span><span class="p">[</span><span class="n">KeypointDetBatchDataEntity</span><span class="p">,</span> <span class="n">KeypointDetBatchPredEntity</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Keypoint detection model compatible for OpenVINO IR inference.</span>
+
+<span class="sd">    It can consume OpenVINO IR model path or model name from Intel OMZ repository</span>
+<span class="sd">    and create the OTX keypoint detection model compatible for OTX testing pipeline.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;keypoint_detection&quot;</span><span class="p">,</span>
+        <span class="n">async_inference</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">max_num_requests</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">use_throughput_mode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">model_api_configuration</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">metric</span><span class="p">:</span> <span class="n">MetricCallable</span> <span class="o">=</span> <span class="n">PCKMeasureCallable</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">model_name</span><span class="o">=</span><span class="n">model_name</span><span class="p">,</span>
+            <span class="n">model_type</span><span class="o">=</span><span class="n">model_type</span><span class="p">,</span>
+            <span class="n">async_inference</span><span class="o">=</span><span class="n">async_inference</span><span class="p">,</span>
+            <span class="n">max_num_requests</span><span class="o">=</span><span class="n">max_num_requests</span><span class="p">,</span>
+            <span class="n">use_throughput_mode</span><span class="o">=</span><span class="n">use_throughput_mode</span><span class="p">,</span>
+            <span class="n">model_api_configuration</span><span class="o">=</span><span class="n">model_api_configuration</span><span class="p">,</span>
+            <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_customize_outputs</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">outputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DetectedKeypoints</span><span class="p">],</span>
+        <span class="n">inputs</span><span class="p">:</span> <span class="n">KeypointDetBatchDataEntity</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">KeypointDetBatchPredEntity</span> <span class="o">|</span> <span class="n">OTXBatchLossEntity</span><span class="p">:</span>
+        <span class="n">keypoints</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">output</span> <span class="ow">in</span> <span class="n">outputs</span><span class="p">:</span>
+            <span class="n">keypoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">keypoints</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>
+            <span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">scores</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">KeypointDetBatchPredEntity</span><span class="p">(</span>
+            <span class="n">batch_size</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">outputs</span><span class="p">),</span>
+            <span class="n">images</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">images</span><span class="p">,</span>
+            <span class="n">imgs_info</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">imgs_info</span><span class="p">,</span>
+            <span class="n">keypoints</span><span class="o">=</span><span class="n">keypoints</span><span class="p">,</span>
+            <span class="n">scores</span><span class="o">=</span><span class="n">scores</span><span class="p">,</span>
+            <span class="n">keypoints_visible</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">bboxes</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">labels</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">bbox_info</span><span class="o">=</span><span class="p">[],</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="OVKeypointDetectionModel.configure_metric">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.model.keypoint_detection.html#otx.core.model.keypoint_detection.OVKeypointDetectionModel.configure_metric">[docs]</a>
+    <span class="k">def</span> <span class="nf">configure_metric</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure the metric.&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">configure_metric</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metric</span><span class="o">.</span><span class="n">input_size</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">h</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">w</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_convert_pred_entity_to_compute_metric</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">preds</span><span class="p">:</span> <span class="n">KeypointDetBatchPredEntity</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="p">:</span> <span class="n">KeypointDetBatchDataEntity</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MetricInput</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;preds&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;keypoints&quot;</span><span class="p">:</span> <span class="n">kpt</span><span class="p">,</span>
+                    <span class="s2">&quot;scores&quot;</span><span class="p">:</span> <span class="n">score</span><span class="p">,</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">kpt</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">preds</span><span class="o">.</span><span class="n">keypoints</span><span class="p">,</span> <span class="n">preds</span><span class="o">.</span><span class="n">scores</span><span class="p">)</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;keypoints&quot;</span><span class="p">:</span> <span class="n">kpt</span><span class="p">,</span>
+                    <span class="s2">&quot;keypoints_visible&quot;</span><span class="p">:</span> <span class="n">kpt_visible</span><span class="p">,</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">kpt</span><span class="p">,</span> <span class="n">kpt_visible</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">keypoints</span><span class="p">,</span> <span class="n">inputs</span><span class="o">.</span><span class="n">keypoints_visible</span><span class="p">)</span>
+            <span class="p">],</span>
+        <span class="p">}</span></div>
 
 </pre></div>
 

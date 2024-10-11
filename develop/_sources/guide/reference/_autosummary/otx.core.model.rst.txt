@@ -32,10 +32,10 @@ otx.core.model
    otx.core.model.base
    otx.core.model.classification
    otx.core.model.detection
+   otx.core.model.detection_3d
    otx.core.model.instance_segmentation
    otx.core.model.keypoint_detection
    otx.core.model.rotated_detection
-   otx.core.model.seg_tiler
    otx.core.model.segmentation
    otx.core.model.visual_prompting
 
