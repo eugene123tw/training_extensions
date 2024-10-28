@@ -15,6 +15,7 @@ from otx.algo.common.layers.transformer_layers import MLP, MSDeformableAttention
 from otx.algo.common.utils.utils import gen_encoder_output_proposals, get_clones, inverse_sigmoid
 from otx.algo.instance_segmentation.utils.structures.mask.mask_target import masks_to_boxes
 from otx.algo.modules.base_module import BaseModule
+from otx.utils.utils import timeit
 
 
 class DeformableTransformerDecoderLayer(BaseModule):
@@ -446,6 +447,7 @@ class MaskDINODecoderHeadModule(BaseModule):
             outputs_coord_list.append(layer_outputs_unsig)
         return torch.stack(outputs_coord_list)
 
+    # @timeit
     def forward(
         self,
         x: list[Tensor],

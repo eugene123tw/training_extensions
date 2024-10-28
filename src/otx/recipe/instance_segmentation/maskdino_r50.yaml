@@ -3,7 +3,7 @@ model:
   init_args:
     model_name: resnet50
     label_info: 80
-    lora: false
+    lora: true
 
     optimizer:
       class_path: torch.optim.AdamW

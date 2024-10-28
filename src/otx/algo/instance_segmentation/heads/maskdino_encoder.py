@@ -21,6 +21,7 @@ from otx.algo.instance_segmentation.utils.utils import (
 )
 from otx.algo.modules.base_module import BaseModule
 from otx.algo.modules.conv_module import Conv2dModule
+from otx.utils.utils import timeit
 
 
 class MSDeformAttnTransformerEncoder(BaseModule):
@@ -308,6 +309,7 @@ class MaskDINOEncoderHeadModule(BaseModule):
         self.lateral_convs = lateral_convs[::-1]
         self.output_convs = output_convs[::-1]
 
+    # @timeit
     def forward(self, features: dict[str, Tensor]) -> tuple[Tensor, Tensor, list[Tensor]]:
         """Forward pass of the encoder."""
         # backbone features

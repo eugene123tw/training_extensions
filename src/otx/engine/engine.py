@@ -1111,7 +1111,7 @@ class Engine:
                     self._cache.args["precision"] = None
 
             kwargs = self._cache.args
-            self._trainer = Trainer(**kwargs)
+            self._trainer = Trainer(**kwargs, benchmark=True)
             self._cache.is_trainer_args_identical = True
             self._trainer.task = self.task
             self.work_dir = self._trainer.default_root_dir

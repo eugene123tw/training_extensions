@@ -8,6 +8,8 @@ from __future__ import annotations
 import importlib
 import inspect
 import pickle  # nosec B403 used pickle for internal state dump/load
+import time
+import functools
 from decimal import Decimal
 from functools import partial
 from types import LambdaType
@@ -278,3 +280,21 @@ def measure_flops(
         else:
             loss_fn(forward_fn()).backward()
     return flop_counter.get_total_flops()
+
+
+def timeit(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Get the class name if the function is part of a class
+        class_name = args[0].__class__.__name__ if args and hasattr(args[0], "__class__") else ""
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        # Include class name if available
+        if class_name:
+            print(f"{class_name}.{func.__name__} took {elapsed_time:.4f} seconds to execute.")
+        else:
+            print(f"{func.__name__} took {elapsed_time:.4f} seconds to execute.")
+        return result
+    return wrapper
