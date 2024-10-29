@@ -308,7 +308,7 @@ class MaskDINOEncoderHeadModule(BaseModule):
         self.lateral_convs = lateral_convs[::-1]
         self.output_convs = output_convs[::-1]
 
-    # @timeit
+    # TODO(Eugene): measure this function
     def forward(self, features: dict[str, Tensor]) -> tuple[Tensor, Tensor, list[Tensor]]:
         """Forward pass of the encoder."""
         # backbone features

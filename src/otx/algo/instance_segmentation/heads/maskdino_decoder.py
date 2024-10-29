@@ -169,10 +169,9 @@ class DeformableTransformerDecoder(nn.Module):
     ) -> list[list[Tensor]]:
         """Forward pass."""
         output = tgt
-        device = tgt.device
 
         intermediate = []
-        reference_points = refpoints_unsigmoid.sigmoid().to(device)
+        reference_points = refpoints_unsigmoid.sigmoid()
         ref_points = [reference_points]
 
         for layer_id, layer in enumerate(self.layers):
@@ -195,7 +194,7 @@ class DeformableTransformerDecoder(nn.Module):
             # iter update
             if self.bbox_embed is not None:
                 reference_before_sigmoid = inverse_sigmoid(reference_points)
-                delta_unsig = self.bbox_embed[layer_id](output).to(device)
+                delta_unsig = self.bbox_embed[layer_id](output)
                 outputs_unsig = delta_unsig + reference_before_sigmoid
                 new_reference_points = outputs_unsig.sigmoid()
 
@@ -435,18 +434,16 @@ class MaskDINODecoderHeadModule(BaseModule):
         valid_ratio_w = valid_width / width
         return torch.stack([valid_ratio_w, valid_ratio_h], -1)
 
-    def pred_box(self, reference: Tensor, hs: list[Tensor], ref0: Tensor | None = None) -> Tensor:
+    def pred_box(self, reference: Tensor, hs: list[Tensor], ref0: Tensor) -> Tensor:
         """Predict boxes."""
-        device = reference[0].device
-        outputs_coord_list = [] if ref0 is None else [ref0.to(device)]
+        outputs_coord_list = [ref0]
         for layer_ref_sig, layer_bbox_embed, layer_hs in zip(reference[:-1], self.bbox_embed, hs, strict=True):
-            layer_delta_unsig = layer_bbox_embed(layer_hs).to(device)
-            layer_outputs_unsig = layer_delta_unsig + inverse_sigmoid(layer_ref_sig).to(device)
+            layer_delta_unsig = layer_bbox_embed(layer_hs)
+            layer_outputs_unsig = layer_delta_unsig + inverse_sigmoid(layer_ref_sig)
             layer_outputs_unsig = layer_outputs_unsig.sigmoid()
             outputs_coord_list.append(layer_outputs_unsig)
         return torch.stack(outputs_coord_list)
 
-    # @timeit
     def forward(
         self,
         x: list[Tensor],

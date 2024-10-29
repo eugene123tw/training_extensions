@@ -5,7 +5,9 @@
 
 from __future__ import annotations
 
+import functools
 import importlib
+import time
 from collections import defaultdict
 from multiprocessing import cpu_count
 from typing import TYPE_CHECKING, Any
@@ -79,3 +81,22 @@ def remove_state_dict_prefix(state_dict: dict[str, Any], prefix: str) -> dict[st
         new_key = key.replace(prefix, "")
         new_state_dict[new_key] = value
     return new_state_dict
+
+
+def measure_execution_time(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Get the class name if the function is part of a class
+        class_name = args[0].__class__.__name__ if args and hasattr(args[0], "__class__") else ""
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        # Include class name if available
+        if class_name:
+            print(f"{class_name}.{func.__name__} took {elapsed_time:.4f} seconds to execute.")
+        else:
+            print(f"{func.__name__} took {elapsed_time:.4f} seconds to execute.")
+        return result
+
+    return wrapper
