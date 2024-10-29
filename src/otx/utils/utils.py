@@ -5,11 +5,11 @@
 
 from __future__ import annotations
 
+import functools
 import importlib
 import inspect
 import pickle  # nosec B403 used pickle for internal state dump/load
 import time
-import functools
 from decimal import Decimal
 from functools import partial
 from types import LambdaType
@@ -297,4 +297,5 @@ def timeit(func):
         else:
             print(f"{func.__name__} took {elapsed_time:.4f} seconds to execute.")
         return result
+
     return wrapper

@@ -21,7 +21,6 @@ from otx.algo.instance_segmentation.utils.utils import (
 )
 from otx.algo.modules.base_module import BaseModule
 from otx.algo.modules.conv_module import Conv2dModule
-from otx.utils.utils import timeit
 
 
 class MSDeformAttnTransformerEncoder(BaseModule):

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import torch
 from torch import Tensor, nn
-from torchtune.modules.peft import get_adapter_params, set_trainable_params
+from torchtune.modules.peft import LoRALinear
 from torchvision import tv_tensors
 from torchvision.models import resnet50
 from torchvision.models._utils import IntermediateLayerGetter
@@ -206,11 +206,10 @@ class MaskDINO(ExplainableOTXInstanceSegModel):
         )
 
         if self.lora:
-            # Fetch all params from the model that are associated with LoRA.
-            lora_params = get_adapter_params(model)
-
-            # Set requires_grad=True on lora_params, and requires_grad=False on all others.
-            set_trainable_params(model, lora_params)
+            for _, module in model.named_modules():
+                if isinstance(module, LoRALinear):
+                    module.weight.requires_grad_(False)
+                    module.bias.requires_grad_(False)
         return model
 
     @property
