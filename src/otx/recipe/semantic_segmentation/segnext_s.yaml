@@ -1,13 +1,8 @@
 model:
-  class_path: otx.algo.segmentation.segnext.OTXSegNext
+  class_path: otx.algo.segmentation.segnext.SegNext
   init_args:
     label_info: 2
-    name_base_model: SegNextS
-
-    criterion_configuration:
-      - type: CrossEntropyLoss
-        params:
-          ignore_index: 255
+    model_name: segnext_small
 
     optimizer:
       class_path: torch.optim.AdamW
@@ -25,7 +20,7 @@ model:
         main_scheduler_callable:
           class_path: torch.optim.lr_scheduler.PolynomialLR
           init_args:
-            total_iters: 100
+            total_iters: 150
             power: 0.9
             last_epoch: -1
 

@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import torch
 from otx.algo.common.utils.structures import AssignResult, SamplingResult
+from otx.utils.device import is_xpu_available
 
 if TYPE_CHECKING:
     from otx.algo.utils.mmengine_utils import InstanceData
@@ -218,7 +219,13 @@ class RandomSampler(BaseSampler):
             raise ValueError(msg)
 
         is_tensor = isinstance(gallery, torch.Tensor)
-        device = torch.cuda.current_device() if torch.cuda.is_available() else "cpu"
+        if is_xpu_available():
+            device = torch.xpu.current_device()
+        elif torch.cuda.is_available():
+            device = torch.cuda.current_device()
+        else:
+            device = "cpu"
+
         _gallery: torch.Tensor = torch.tensor(gallery, dtype=torch.long, device=device) if not is_tensor else gallery
         perm = torch.randperm(_gallery.numel())[:num].to(device=_gallery.device)
         rand_inds = _gallery[perm]
@@ -298,7 +305,7 @@ class RandomSampler(BaseSampler):
         if self.add_gt_as_proposals and len(gt_bboxes) > 0:
             priors = torch.cat([gt_bboxes, priors], dim=0)
             assign_result.add_gt_(gt_labels)
-            gt_ones = priors.new_ones(gt_bboxes.shape[0], dtype=torch.uint8)
+            gt_ones = priors.new_ones(len(gt_bboxes), dtype=torch.uint8)
             gt_flags = torch.cat([gt_ones, gt_flags])
 
         num_expected_pos = int(self.num * self.pos_fraction)
@@ -311,8 +318,7 @@ class RandomSampler(BaseSampler):
         if self.neg_pos_ub >= 0:
             _pos = max(1, num_sampled_pos)
             neg_upper_bound = int(self.neg_pos_ub * _pos)
-            if num_expected_neg > neg_upper_bound:
-                num_expected_neg = neg_upper_bound
+            num_expected_neg = min(num_expected_neg, neg_upper_bound)
         neg_inds = self.neg_sampler._sample_neg(assign_result, num_expected_neg, bboxes=priors, **kwargs)  # noqa: SLF001
         neg_inds = neg_inds.unique()
 

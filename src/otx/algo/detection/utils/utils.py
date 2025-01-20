@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Intel Corporation
+# Copyright (C) 2024-2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OpenMMLab. All rights reserved.
 """Utils for otx detection algo.
@@ -6,16 +6,24 @@
 Reference :
     - https://github.com/open-mmlab/mmdetection/blob/v3.2.0/mmdet/models/utils.
     - https://github.com/open-mmlab/mmdeploy/blob/v1.3.1/mmdeploy/codebase/mmdet/structures/bbox/transforms.
+    - https://github.com/Peterande/D-FINE/blob/master/src/zoo/dfine/dfine_utils.py
 """
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import torch
-from torch import Tensor
+from einops import rearrange
+from torch import Tensor, nn
 from torch.autograd import Function
+from torchvision.ops import box_convert
 
 from otx.algo.utils.mmengine_utils import InstanceData
 from otx.core.data.entity.detection import DetBatchDataEntity
+
+if TYPE_CHECKING:
+    from otx.algo.detection.detectors.single_stage_detector import SingleStageDetector
 
 
 def images_to_levels(target: list[Tensor], num_levels: list[int]) -> list[Tensor]:
@@ -179,7 +187,313 @@ class SigmoidGeometricMean(Function):
 sigmoid_geometric_mean = SigmoidGeometricMean.apply
 
 
-def inverse_sigmoid(x: torch.Tensor, eps: float = 1e-5) -> torch.Tensor:
-    """Compute the inverse of sigmoid function."""
-    x = x.clip(min=0.0, max=1.0)
-    return torch.log(x.clip(min=eps) / (1 - x).clip(min=eps))
+def auto_pad(kernel_size: int | tuple[int, int], dilation: int | tuple[int, int] = 1, **kwargs) -> tuple[int, int]:  # noqa: ARG001
+    """Auto Padding for the convolution blocks.
+
+    Args:
+        kernel_size (int | tuple[int, int]): The kernel size of the convolution block.
+        dilation (int | tuple[int, int]): The dilation rate of the convolution block. Defaults to 1.
+
+    Returns:
+        tuple[int, int]: The padding size for the convolution block.
+    """
+    if isinstance(kernel_size, int):
+        kernel_size = (kernel_size, kernel_size)
+    if isinstance(dilation, int):
+        dilation = (dilation, dilation)
+
+    pad_h = ((kernel_size[0] - 1) * dilation[0]) // 2
+    pad_w = ((kernel_size[1] - 1) * dilation[1]) // 2
+    return pad_h, pad_w
+
+
+def round_up(x: int | Tensor, div: int = 1) -> int | Tensor:
+    """Rounds up `x` to the bigger-nearest multiple of `div`.
+
+    Args:
+        x (int | Tensor): The input value.
+        div (int): The divisor value. Defaults to 1.
+
+    Returns:
+        int | Tensor: The rounded up value.
+    """
+    return x + (-x % div)
+
+
+def generate_anchors(image_size: tuple[int, int], strides: list[int]) -> tuple[Tensor, Tensor]:
+    """Find the anchor maps for each height and width.
+
+    TODO (sungchul): check if it can be integrated with otx anchor generators
+
+    Args:
+        image_size (tuple[int, int]): the image size of augmented image size.
+        strides list[int]: the stride size for each predicted layer.
+
+    Returns:
+        tuple[Tensor, Tensor]: The anchor maps with (HW x 2) and the scaler maps with (HW,).
+    """
+    height, width = image_size
+    anchors = []
+    scaler = []
+    for stride in strides:
+        anchor_num = width // stride * height // stride
+        scaler.append(torch.full((anchor_num,), stride))
+        shift = stride // 2
+        h = torch.arange(0, height, stride) + shift
+        w = torch.arange(0, width, stride) + shift
+        anchor_h, anchor_w = torch.meshgrid(h, w, indexing="ij")
+        anchor = torch.stack([anchor_w.flatten(), anchor_h.flatten()], dim=-1)
+        anchors.append(anchor)
+    all_anchors = torch.cat(anchors, dim=0)
+    all_scalers = torch.cat(scaler, dim=0)
+    return all_anchors, all_scalers
+
+
+class Vec2Box:
+    """Convert the vector to bounding box.
+
+    Args:
+        detector (SingleStageDetector): The single stage detector instance.
+        image_size (tuple[int, int]): The image size.
+        strides (list[int] | None): The strides for each predicted layer. Defaults to None.
+        device (str): The device to use. Defaults to "cpu".
+    """
+
+    def __init__(
+        self,
+        detector: SingleStageDetector,
+        image_size: tuple[int, int],
+        strides: list[int] | None,
+        device: str = "cpu",
+    ) -> None:
+        self.device = device
+        self.strides = strides if strides else self.create_auto_anchor(detector, image_size)
+        self.update(image_size, device)
+
+    def create_auto_anchor(self, detector: SingleStageDetector, image_size: tuple[int, int]) -> list[int]:
+        """Create the auto anchor for the given detector.
+
+        Args:
+            detector (SingleStageDetector): The single stage detector instance.
+            image_size (tuple[int, int]): The image size.
+
+        Returns:
+            list[int]: The strides for each predicted layer.
+        """
+        dummy_input = torch.zeros(1, 3, *image_size).to(self.device)
+        dummy_main_preds, _ = detector(dummy_input)
+        strides = []
+        for predict_head in dummy_main_preds:
+            _, _, *anchor_num = predict_head[2].shape
+            strides.append(image_size[1] // anchor_num[1])
+        return strides
+
+    def update(self, image_size: tuple[int, int], device: str | torch.device) -> None:
+        """Update the anchor grid and scaler.
+
+        Args:
+            image_size (tuple[int, int]): The image size.
+            device (str | torch.device): The device to use.
+        """
+        anchor_grid, scaler = generate_anchors(image_size, self.strides)
+        self.anchor_grid, self.scaler = anchor_grid.to(device), scaler.to(device)
+
+    def __call__(self, predicts: tuple[Tensor, Tensor, Tensor]) -> tuple[Tensor, Tensor, Tensor]:
+        """Convert the vector to bounding box.
+
+        Args:
+            predicts (tuple[Tensor, Tensor, Tensor]): The list of prediction results.
+
+        Returns:
+            tuple[Tensor, Tensor, Tensor]: The converted results.
+        """
+        preds_cls, preds_anc, preds_box = [], [], []
+        for layer_output in predicts:
+            pred_cls, pred_anc, pred_box = layer_output
+            preds_cls.append(rearrange(pred_cls, "B C h w -> B (h w) C"))
+            preds_anc.append(rearrange(pred_anc, "B A R h w -> B (h w) R A"))
+            preds_box.append(rearrange(pred_box, "B X h w -> B (h w) X"))
+        preds_cls = torch.concat(preds_cls, dim=1)
+        preds_anc = torch.concat(preds_anc, dim=1)
+        preds_box = torch.concat(preds_box, dim=1)
+
+        pred_lt_rb = preds_box * self.scaler.view(1, -1, 1)
+        lt, rb = pred_lt_rb.chunk(2, dim=-1)
+        preds_box = torch.cat([self.anchor_grid - lt, self.anchor_grid + rb], dim=-1)
+        return preds_cls, preds_anc, preds_box
+
+
+def set_info_into_instance(layer_dict: dict[str, Any]) -> nn.Module:
+    """Set the information into the instance.
+
+    Args:
+        layer_dict (dict[str, Any]): The dictionary of instance with given information.
+
+    Returns:
+        nn.Module: The instance with given information.
+    """
+    layer = layer_dict.pop("module")
+    for k, v in layer_dict.items():
+        setattr(layer, k, v)
+    return layer
+
+
+def dfine_weighting_function(reg_max: int, up: Tensor, reg_scale: Tensor) -> Tensor:
+    """Generates the non-uniform Weighting Function W(n) for bounding box regression.
+
+    Args:
+        reg_max (int): Max number of the discrete bins.
+        up (Tensor): Controls upper bounds of the sequence, where maximum offset is ±up * H / W.
+        reg_scale (Tensor): Controls the curvature of the Weighting Function.
+                        Larger values result in flatter weights near the central axis W(reg_max/2)=0
+                        and steeper weights at both ends.
+        deploy (bool): If True, uses deployment mode settings.
+
+    Returns:
+        Tensor: Sequence of Weighting Function.
+    """
+    upper_bound1 = abs(up[0]) * abs(reg_scale)
+    upper_bound2 = abs(up[0]) * abs(reg_scale) * 2
+    step = (upper_bound1 + 1) ** (2 / (reg_max - 2))
+    left_values = [-((step) ** i) + 1 for i in range(reg_max // 2 - 1, 0, -1)]
+    right_values = [(step) ** i - 1 for i in range(1, reg_max // 2)]
+    return torch.cat(
+        [
+            -upper_bound2,
+            torch.cat(left_values),
+            torch.zeros_like(up[0][None]),
+            torch.cat(right_values),
+            upper_bound2,
+        ],
+        0,
+    )
+
+
+def dfine_distance2bbox(points: Tensor, distance: Tensor, reg_scale: Tensor) -> Tensor:
+    """Decodes edge-distances into bounding box coordinates.
+
+    Args:
+        points (Tensor): (B, N, 4) or (N, 4) format, representing [x, y, w, h],
+                        where (x, y) is the center and (w, h) are width and height.
+        distance (Tensor): (B, N, 4) or (N, 4), representing distances from the
+                        point to the left, top, right, and bottom boundaries.
+
+        reg_scale (float): Controls the curvature of the Weighting Function.
+
+    Returns:
+        Tensor: Bounding boxes in (N, 4) or (B, N, 4) format [cx, cy, w, h].
+    """
+    reg_scale = abs(reg_scale)
+    x1 = points[..., 0] - (0.5 * reg_scale + distance[..., 0]) * (points[..., 2] / reg_scale)
+    y1 = points[..., 1] - (0.5 * reg_scale + distance[..., 1]) * (points[..., 3] / reg_scale)
+    x2 = points[..., 0] + (0.5 * reg_scale + distance[..., 2]) * (points[..., 2] / reg_scale)
+    y2 = points[..., 1] + (0.5 * reg_scale + distance[..., 3]) * (points[..., 3] / reg_scale)
+
+    bboxes = torch.stack([x1, y1, x2, y2], -1)
+    return box_convert(bboxes, in_fmt="xyxy", out_fmt="cxcywh")
+
+
+def dfine_bbox2distance(
+    points: Tensor,
+    bbox: Tensor,
+    reg_max: int,
+    reg_scale: Tensor,
+    up: Tensor,
+    eps: float = 0.1,
+) -> tuple[Tensor, Tensor, Tensor]:
+    """Converts bounding box coordinates to distances from a reference point.
+
+    Refer to D-Fine: https://github.com/Peterande/D-FINE.
+
+    Args:
+        points (Tensor): (n, 4) [x, y, w, h], where (x, y) is the center.
+        bbox (Tensor): (n, 4) bounding boxes in "xyxy" format.
+        reg_max (float): Maximum bin value.
+        reg_scale (float): Controling curvarture of W(n).
+        up (Tensor): Controling upper bounds of W(n).
+        eps (float): Small value to ensure target < reg_max.
+
+    Returns:
+        Tuple[Tensor, Tensor, Tensor]:
+            - indices (Tensor): Index of the left bin closest to each GT value, shape (N, ).
+            - weight_right (Tensor): Weight assigned to the right bin, shape (N, ).
+            - weight_left (Tensor): Weight assigned to the left bin, shape (N, ).
+    """
+
+    def _translate_gt(gt: Tensor, reg_max: int, reg_scale: Tensor, up: Tensor) -> tuple[Tensor, Tensor, Tensor]:
+        """Decodes bounding box ground truth (GT) values into distribution-based GT representations.
+
+        This function maps continuous GT values into discrete distribution bins, which can be used
+        for regression tasks in object detection models.
+
+        It calculates the indices of the closest bins to each GT value and assigns interpolation weights
+        to these bins based on their proximity to the GT value.
+
+        In the paper:
+            'a' (up) controlling the upper bounds.
+            'c' (reg_scale) controlling the curvature.
+
+        Args:
+            gt (Tensor): Ground truth bounding box values, shape (N, ).
+            reg_max (int): Maximum number of discrete bins for the distribution.
+            reg_scale (Tensor): Controls the curvature of the Weighting Function.
+            up (Tensor): Controls the upper bounds of the Weighting Function.
+
+        Returns:
+            Tuple[Tensor, Tensor, Tensor]:
+                - indices (Tensor): Index of the left bin closest to each GT value, shape (N, ).
+                - weight_right (Tensor): Weight assigned to the right bin, shape (N, ).
+                - weight_left (Tensor): Weight assigned to the left bin, shape (N, ).
+        """
+        gt = gt.reshape(-1)
+        function_values = dfine_weighting_function(reg_max, up, reg_scale)
+
+        # Find the closest left-side indices for each value
+        diffs = function_values.unsqueeze(0) - gt.unsqueeze(1)
+        mask = diffs <= 0
+        closest_left_indices = torch.sum(mask, dim=1) - 1
+
+        # Calculate the weights for the interpolation
+        indices = closest_left_indices.float()
+
+        weight_right = torch.zeros_like(indices)
+        weight_left = torch.zeros_like(indices)
+
+        valid_idx_mask = (indices >= 0) & (indices < reg_max)
+        valid_indices = indices[valid_idx_mask].long()
+
+        # Obtain distances
+        left_values = function_values[valid_indices]
+        right_values = function_values[valid_indices + 1]
+
+        left_diffs = torch.abs(gt[valid_idx_mask] - left_values)
+        right_diffs = torch.abs(right_values - gt[valid_idx_mask])
+
+        # Valid weights
+        weight_right[valid_idx_mask] = left_diffs / (left_diffs + right_diffs)
+        weight_left[valid_idx_mask] = 1.0 - weight_right[valid_idx_mask]
+
+        # Invalid weights (out of range)
+        invalid_idx_mask_neg = indices < 0
+        weight_right[invalid_idx_mask_neg] = 0.0
+        weight_left[invalid_idx_mask_neg] = 1.0
+        indices[invalid_idx_mask_neg] = 0.0
+
+        invalid_idx_mask_pos = indices >= reg_max
+        weight_right[invalid_idx_mask_pos] = 1.0
+        weight_left[invalid_idx_mask_pos] = 0.0
+        indices[invalid_idx_mask_pos] = reg_max - 0.1
+
+        return indices, weight_right, weight_left
+
+    reg_scale = abs(reg_scale)
+    # ϕ = (dᴳᵀ- d⁰) / {H, H, W, W}
+    left = (points[:, 0] - bbox[:, 0]) / (points[..., 2] / reg_scale + 1e-16) - 0.5 * reg_scale
+    top = (points[:, 1] - bbox[:, 1]) / (points[..., 3] / reg_scale + 1e-16) - 0.5 * reg_scale
+    right = (bbox[:, 2] - points[:, 0]) / (points[..., 2] / reg_scale + 1e-16) - 0.5 * reg_scale
+    bottom = (bbox[:, 3] - points[:, 1]) / (points[..., 3] / reg_scale + 1e-16) - 0.5 * reg_scale
+    four_lens = torch.stack([left, top, right, bottom], -1)
+    four_lens, weight_right, weight_left = _translate_gt(four_lens, reg_max, reg_scale, up)
+    if reg_max is not None:
+        four_lens = four_lens.clamp(min=0, max=reg_max - eps)
+    return four_lens.reshape(-1).detach(), weight_right.detach(), weight_left.detach()

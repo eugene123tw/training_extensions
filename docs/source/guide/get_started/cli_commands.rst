@@ -50,6 +50,7 @@ Help
     │     export              Export the trained model to OpenVINO Intermediate Representation (IR) or ONNX formats.  │
     │     optimize            Applies NNCF.PTQ to the underlying models (now works only for OV models).               │
     │     explain             Run XAI using the specified model and data (test subset).                               │
+    |     benchmark           Executes model micro benchmarking on random data.                                       |
     │                                                                                                                 │
     ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
@@ -232,25 +233,25 @@ Example to find ready-to-use recipes for the detection task:
 .. code-block:: shell
 
     (otx) ...$ otx find --task DETECTION
-    ┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓                                  
-    ┃ Task      ┃ Model Name            ┃ Recipe Path                                 ┃                                  
-    ┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩                                  
-    │ DETECTION │ yolox_tiny            │ recipe/detection/yolox_tiny.yaml            │                                  
-    │ DETECTION │ atss_mobilenetv2_tile │ recipe/detection/atss_mobilenetv2_tile.yaml │                                  
-    │ DETECTION │ openvino_model        │ recipe/detection/openvino_model.yaml        │                                  
-    │ DETECTION │ atss_mobilenetv2      │ recipe/detection/atss_mobilenetv2.yaml      │                                  
-    │ DETECTION │ atss_resnext101       │ recipe/detection/atss_resnext101.yaml       │                                  
-    │ DETECTION │ yolox_l_tile          │ recipe/detection/yolox_l_tile.yaml          │                                  
-    │ DETECTION │ ssd_mobilenetv2_tile  │ recipe/detection/ssd_mobilenetv2_tile.yaml  │                                  
-    │ DETECTION │ atss_r50_fpn          │ recipe/detection/atss_r50_fpn.yaml          │                                  
-    │ DETECTION │ yolox_tiny_tile       │ recipe/detection/yolox_tiny_tile.yaml       │                                  
-    │ DETECTION │ yolox_s               │ recipe/detection/yolox_s.yaml               │                                  
-    │ DETECTION │ yolox_s_tile          │ recipe/detection/yolox_s_tile.yaml          │                                  
-    │ DETECTION │ rtmdet_tiny           │ recipe/detection/rtmdet_tiny.yaml           │                                  
-    │ DETECTION │ yolox_x               │ recipe/detection/yolox_x.yaml               │                                  
-    │ DETECTION │ yolox_x_tile          │ recipe/detection/yolox_x_tile.yaml          │                                  
-    │ DETECTION │ ssd_mobilenetv2       │ recipe/detection/ssd_mobilenetv2.yaml       │                                  
-    │ DETECTION │ yolox_l               │ recipe/detection/yolox_l.yaml               │                                  
+    ┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+    ┃ Task      ┃ Model Name            ┃ Recipe Path                                 ┃
+    ┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+    │ DETECTION │ yolox_tiny            │ recipe/detection/yolox_tiny.yaml            │
+    │ DETECTION │ atss_mobilenetv2_tile │ recipe/detection/atss_mobilenetv2_tile.yaml │
+    │ DETECTION │ openvino_model        │ recipe/detection/openvino_model.yaml        │
+    │ DETECTION │ atss_mobilenetv2      │ recipe/detection/atss_mobilenetv2.yaml      │
+    │ DETECTION │ atss_resnext101       │ recipe/detection/atss_resnext101.yaml       │
+    │ DETECTION │ yolox_l_tile          │ recipe/detection/yolox_l_tile.yaml          │
+    │ DETECTION │ ssd_mobilenetv2_tile  │ recipe/detection/ssd_mobilenetv2_tile.yaml  │
+    │ DETECTION │ atss_r50_fpn          │ recipe/detection/atss_r50_fpn.yaml          │
+    │ DETECTION │ yolox_tiny_tile       │ recipe/detection/yolox_tiny_tile.yaml       │
+    │ DETECTION │ yolox_s               │ recipe/detection/yolox_s.yaml               │
+    │ DETECTION │ yolox_s_tile          │ recipe/detection/yolox_s_tile.yaml          │
+    │ DETECTION │ rtmdet_tiny           │ recipe/detection/rtmdet_tiny.yaml           │
+    │ DETECTION │ yolox_x               │ recipe/detection/yolox_x.yaml               │
+    │ DETECTION │ yolox_x_tile          │ recipe/detection/yolox_x_tile.yaml          │
+    │ DETECTION │ ssd_mobilenetv2       │ recipe/detection/ssd_mobilenetv2.yaml       │
+    │ DETECTION │ yolox_l               │ recipe/detection/yolox_l.yaml               │
     └───────────┴───────────────────────┴─────────────────────────────────────────────┘
 
 Example to find yolo named model for the detection task:
@@ -258,17 +259,17 @@ Example to find yolo named model for the detection task:
 .. code-block:: shell
 
     (otx) ...$ otx find --task DETECTION --pattern 'yolo*'
-    ┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓                                        
-    ┃ Task      ┃ Model Name      ┃ Recipe Path                           ┃                                        
-    ┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩                                        
-    │ DETECTION │ yolox_tiny      │ recipe/detection/yolox_tiny.yaml      │                                        
-    │ DETECTION │ yolox_x         │ recipe/detection/yolox_x.yaml         │                                        
-    │ DETECTION │ yolox_l_tile    │ recipe/detection/yolox_l_tile.yaml    │                                        
-    │ DETECTION │ yolox_s         │ recipe/detection/yolox_s.yaml         │                                        
-    │ DETECTION │ yolox_l         │ recipe/detection/yolox_l.yaml         │                                        
-    │ DETECTION │ yolox_x_tile    │ recipe/detection/yolox_x_tile.yaml    │                                        
-    │ DETECTION │ yolox_s_tile    │ recipe/detection/yolox_s_tile.yaml    │                                        
-    │ DETECTION │ yolox_tiny_tile │ recipe/detection/yolox_tiny_tile.yaml │                                        
+    ┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+    ┃ Task      ┃ Model Name      ┃ Recipe Path                           ┃
+    ┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+    │ DETECTION │ yolox_tiny      │ recipe/detection/yolox_tiny.yaml      │
+    │ DETECTION │ yolox_x         │ recipe/detection/yolox_x.yaml         │
+    │ DETECTION │ yolox_l_tile    │ recipe/detection/yolox_l_tile.yaml    │
+    │ DETECTION │ yolox_s         │ recipe/detection/yolox_s.yaml         │
+    │ DETECTION │ yolox_l         │ recipe/detection/yolox_l.yaml         │
+    │ DETECTION │ yolox_x_tile    │ recipe/detection/yolox_x_tile.yaml    │
+    │ DETECTION │ yolox_s_tile    │ recipe/detection/yolox_s_tile.yaml    │
+    │ DETECTION │ yolox_tiny_tile │ recipe/detection/yolox_tiny_tile.yaml │
     └───────────┴─────────────────┴───────────────────────────────────────┘
 
 
@@ -338,22 +339,22 @@ The results will be saved in ``./otx-workspace/`` folder by default. The output 
 
             (otx) ...$ otx train --model <model-class-path-or-name> --task <task-type> --data_root <dataset-root>
 
-        For example, if you want to use the ``otx.algo.detection.atss.ATSS`` model class, you can train it as shown below.
+        For example, if you want to use the ``otx.algo.classification.torchvision_model.TVModelForMulticlassCls`` model class, you can train it as shown below.
 
         .. code-block:: shell
 
-            (otx) ...$ otx train --model otx.algo.detection.atss.ATSS --model.variant mobilenetv2 --task DETECTION ...
+            (otx) ...$ otx train --model otx.algo.classification.torchvision_model.TVModelForMulticlassCls --model.backbone mobilenet_v3_small ...
 
 .. note::
     You also can visualize the training using ``Tensorboard`` as these logs are located in ``<work_dir>/tensorboard``.
 
 .. note::
-    ``--data.config.mem_cache_size`` provides in-memory caching for decoded images in main memory.
+    ``--data.mem_cache_size`` provides in-memory caching for decoded images in main memory.
     If the batch size is large, such as for classification tasks, or if your dataset contains high-resolution images,
     image decoding can account for a non-negligible overhead in data pre-processing.
     This option can be useful for maximizing GPU utilization and reducing model training time in those cases.
     If your machine has enough main memory, we recommend increasing this value as much as possible.
-    For example, you can cache approximately 10,000 of ``500x375~500x439`` sized images with ``--data.config.mem_cache_size 8GB``.
+    For example, you can cache approximately 10,000 of ``500x375~500x439`` sized images with ``--data.mem_cache_size 8GB``.
 
 It is also possible to start training by omitting the recipe and just passing the paths to dataset roots, then the :doc:`auto-configuration <../explanation/additional_features/auto_configuration>` will be enabled. Based on the dataset, OpenVINO™ Training Extensions will choose the task type and recipe with the best accuracy/speed trade-off.
 
@@ -362,7 +363,7 @@ For example, that is how you can change the max epochs and the batch size for th
 
 .. code-block:: shell
 
-    (otx) ...$ otx train ... --data.config.train_subset.batch_size <batch-size> --max_epochs <max-epochs>
+    (otx) ...$ otx train ... --data.train_subset.batch_size <batch-size> --max_epochs <max-epochs>
 
 .. note::
 
@@ -476,7 +477,7 @@ The command below will generate saliency maps (heatmaps with red colored areas o
 
 .. note::
 
-    It is possible to pass both PyTorch weights ``.ckpt`` or OpenVINO™ IR ``exported_model.xml`` to ``--load-weights`` option.
+    It is possible to pass both PyTorch weights ``.ckpt`` or OpenVINO™ IR ``exported_model.xml`` to ``--checkpoint`` option.
 
 By default, the model is exported to the OpenVINO™ IR format without extra feature information needed for the ``explain`` function. To use OpenVINO™ IR model in ``otx explain``, please first export it with ``--explain`` parameter:
 
@@ -486,6 +487,24 @@ By default, the model is exported to the OpenVINO™ IR format without extra fea
                               --explain True
     (otx) ...$ otx explain ... --checkpoint outputs/openvino/with_features \
 
+*******************
+Micro-benchmarking
+*******************
+
+``otx benchmark`` tool allows performing a fast in-place benchmarking on randomly generated data. The benchmark excludes data loading cost, but takes into account extra burden of OTX API and ModelAPI (in case of OpenVINO™ IR models).
+
+The command requires checkpoint path for OpenVINO™ IR models. In case of torch models, this parameter is optional. Also, for torch model number of trainable parameters and theoretical computational complexity are estimated when model's structure allows that.
+It worth noticing that the latency and throughput are depend on batch size. Varying the batch size parameter, one can quickly explore the trade-off for the considered model. For OpenVINO™ IR models batching is imitated by using async inference API.
+
+.. code-block:: shell
+
+    (otx) ...$ otx benchmark ... --data_root <path/to/test/root> \
+                                 --checkpoint <path/to/model_weights> \
+                                 --batch_size 1
+
+.. note::
+
+    It is possible to pass both PyTorch weights ``.ckpt`` or OpenVINO™ IR ``exported_model.xml`` to ``--checkpoint`` option.
 
 ***********
 Workspace

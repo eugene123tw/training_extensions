@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
 import numpy as np
 import pytest
 import torch
@@ -20,6 +23,29 @@ class MockNNModule(torch.nn.Module):
 
 
 class TestOTXModel:
+    def test_init(self, monkeypatch):
+        monkeypatch.setattr(OTXModel, "input_size_multiplier", 10, raising=False)
+        with pytest.raises(ValueError, match="Input size should be a multiple"):
+            OTXModel(label_info=2, input_size=(1024, 1024))
+
+    def test_training_step_none_loss(self, mocker: MockerFixture) -> None:
+        mock_trainer = mocker.create_autospec(spec=Trainer)
+        mock_trainer.world_size = 1
+        with mocker.patch.object(OTXModel, "_create_model", return_value=MockNNModule(3)) and mocker.patch.object(
+            OTXModel,
+            "forward",
+            return_value=None,
+        ):
+            current_model = OTXModel(label_info=3)
+            current_model.trainer = mock_trainer
+
+        batch = {"input": torch.randn(2, 3)}
+        batch_idx = 0
+
+        results = current_model.training_step(batch, batch_idx)
+
+        assert results is None
+
     def test_smart_weight_loading(self, mocker) -> None:
         with mocker.patch.object(OTXModel, "_create_model", return_value=MockNNModule(2)):
             prev_model = OTXModel(label_info=2)
@@ -124,3 +150,8 @@ class TestOVModel:
         assert isinstance(outputs, list)
         assert len(outputs) == 3
         assert isinstance(outputs[2], ClassificationResult)
+
+    def test_dummy_input(self, model: OVModel):
+        batch_size = 2
+        batch = model.get_dummy_input(batch_size)
+        assert batch.batch_size == batch_size

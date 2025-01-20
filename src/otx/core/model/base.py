@@ -1,6 +1,5 @@
 # Copyright (C) 2023-2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
-#
 """Class definition for base model entity used in OTX."""
 
 # mypy: disable-error-code="arg-type"
@@ -13,8 +12,7 @@ import json
 import logging
 import warnings
 from abc import abstractmethod
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, NamedTuple
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Sequence
 
 import numpy as np
 import openvino
@@ -32,6 +30,8 @@ from torchmetrics import Metric, MetricCollection
 from otx import __version__
 from otx.core.config.data import TileConfig
 from otx.core.data.entity.base import (
+    ImageInfo,
+    OTXBatchDataEntity,
     OTXBatchLossEntity,
     T_OTXBatchDataEntity,
     T_OTXBatchPredEntity,
@@ -49,6 +49,7 @@ from otx.core.schedulers import (
 from otx.core.types.export import OTXExportFormatType, TaskLevelExportParameters
 from otx.core.types.label import LabelInfo, LabelInfoTypes, NullLabelInfo
 from otx.core.types.precision import OTXPrecisionType
+from otx.core.types.task import OTXTrainType
 from otx.core.utils.build import get_default_num_async_infer_requests
 from otx.core.utils.miscellaneous import ensure_callable
 from otx.core.utils.utils import is_ckpt_for_finetuning, is_ckpt_from_otx_v1, remove_state_dict_prefix
@@ -96,25 +97,33 @@ class OTXModel(LightningModule, Generic[T_OTXBatchDataEntity, T_OTXBatchPredEnti
 
     Attributes:
         explain_mode: If true, `self.predict_step()` will produce a XAI output as well
+        input_size_multiplier (int):
+            multiplier value for input size a model requires. If input_size isn't multiple of this value,
+            error is raised.
     """
 
     _OPTIMIZED_MODEL_BASE_NAME: str = "optimized_model"
+    input_size_multiplier: int = 1
 
     def __init__(
         self,
         label_info: LabelInfoTypes,
+        input_size: tuple[int, int] | None = None,
         optimizer: OptimizerCallable = DefaultOptimizerCallable,
         scheduler: LRSchedulerCallable | LRSchedulerListCallable = DefaultSchedulerCallable,
         metric: MetricCallable = NullMetricCallable,
         torch_compile: bool = False,
         tile_config: TileConfig = TileConfig(enable_tiler=False),
+        train_type: Literal[OTXTrainType.SUPERVISED, OTXTrainType.SEMI_SUPERVISED] = OTXTrainType.SUPERVISED,
     ) -> None:
         super().__init__()
 
         self._label_info = self._dispatch_label_info(label_info)
+        self.train_type = train_type
+        self._check_input_size(input_size)
+        self.input_size = input_size
         self.classification_layers: dict[str, dict[str, Any]] = {}
         self.model = self._create_model()
-        self._explain_mode = False
         self.optimizer_callable = ensure_callable(optimizer)
         self.scheduler_callable = ensure_callable(scheduler)
         self.metric_callable = ensure_callable(metric)
@@ -131,9 +140,13 @@ class OTXModel(LightningModule, Generic[T_OTXBatchDataEntity, T_OTXBatchPredEnti
         # so that it can retrieve it from the checkpoint
         self.save_hyperparameters(logger=False, ignore=["optimizer", "scheduler", "metric"])
 
-    def training_step(self, batch: T_OTXBatchDataEntity, batch_idx: int) -> Tensor:
+    def training_step(self, batch: T_OTXBatchDataEntity, batch_idx: int) -> Tensor | None:
         """Step for model training."""
         train_loss = self.forward(inputs=batch)
+        if train_loss is None:
+            # to skip current iteration
+            # TODO (sungchul): check this in distributed training
+            return None if self.trainer.world_size == 1 else torch.tensor(0.0, device=self.device)
 
         if isinstance(train_loss, Tensor):
             self.log(
@@ -154,9 +167,9 @@ class OTXModel(LightningModule, Generic[T_OTXBatchDataEntity, T_OTXBatchPredEnti
                     prog_bar=True,
                 )
 
-            total_train_loss = sum(train_loss.values())
+            total_train_loss = train_loss.get("total_loss", sum(train_loss.values()))
             self.log(
-                "train/loss",
+                "train/total_loss",
                 total_train_loss,
                 on_step=True,
                 on_epoch=False,
@@ -266,7 +279,16 @@ class OTXModel(LightningModule, Generic[T_OTXBatchDataEntity, T_OTXBatchPredEnti
         :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
         """
         if self.torch_compile and stage == "fit":
+            # Set the log_level of this to error due to the numerous warning messages from compile.
+            torch._logging.set_logs(dynamo=logging.ERROR)  # noqa: SLF001
             self.model = torch.compile(self.model)
+            warnings.warn(
+                (
+                    "torch model compile has been applied. It may be slower than usual because "
+                    "it builds the graph in the initial training."
+                ),
+                stacklevel=1,
+            )
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         """Configure an optimizer and learning-rate schedulers.
@@ -381,6 +403,11 @@ class OTXModel(LightningModule, Generic[T_OTXBatchDataEntity, T_OTXBatchPredEnti
         if ckpt_label_info is None:
             msg = "Checkpoint should have `label_info`."
             raise ValueError(msg, ckpt_label_info)
+
+        if not hasattr(ckpt_label_info, "label_ids"):
+            msg = "Loading checkpoint from OTX < 2.2.1, label_ids are assigned automatically"
+            logger.info(msg)
+            ckpt_label_info.label_ids = [str(i) for i, _ in enumerate(ckpt_label_info.label_names)]
 
         if ckpt_label_info != self.label_info:
             msg = (
@@ -735,7 +762,7 @@ class OTXModel(LightningModule, Generic[T_OTXBatchDataEntity, T_OTXBatchPredEnti
             return super().lr_scheduler_step(scheduler=scheduler, metric=metric)
 
         if len(warmup_schedulers) != 1:
-            msg = "No more than two warmup schedulers coexist."
+            msg = "No more than one warmup schedulers coexist."
             raise RuntimeError(msg)
 
         warmup_scheduler = next(iter(warmup_schedulers))
@@ -784,16 +811,38 @@ class OTXModel(LightningModule, Generic[T_OTXBatchDataEntity, T_OTXBatchPredEnti
 
         self._tile_config = tile_config
 
+    def get_dummy_input(self, batch_size: int = 1) -> OTXBatchDataEntity[Any]:
+        """Generates a dummy input, suitable for launching forward() on it.
+
+        Args:
+            batch_size (int, optional): number of elements in a dummy input sequence. Defaults to 1.
+
+        Returns:
+            OTXBatchDataEntity[Any]: An entity containing randomly generated inference data.
+        """
+        raise NotImplementedError
+
     @staticmethod
     def _dispatch_label_info(label_info: LabelInfoTypes) -> LabelInfo:
         if isinstance(label_info, int):
             return LabelInfo.from_num_classes(num_classes=label_info)
         if isinstance(label_info, Sequence) and all(isinstance(name, str) for name in label_info):
-            return LabelInfo(label_names=label_info, label_groups=[label_info])
+            return LabelInfo(
+                label_names=label_info,
+                label_groups=[label_info],
+                label_ids=[str(i) for i in range(len(label_info))],
+            )
         if isinstance(label_info, LabelInfo):
             return label_info
 
         raise TypeError(label_info)
+
+    def _check_input_size(self, input_size: tuple[int, int] | None = None) -> None:
+        if input_size is not None and (
+            input_size[0] % self.input_size_multiplier != 0 or input_size[1] % self.input_size_multiplier != 0
+        ):
+            msg = f"Input size should be a multiple of {self.input_size_multiplier}, but got {input_size} instead."
+            raise ValueError(msg)
 
 
 class OVModel(OTXModel, Generic[T_OTXBatchDataEntity, T_OTXBatchPredEntity]):
@@ -896,20 +945,9 @@ class OVModel(OTXModel, Generic[T_OTXBatchDataEntity, T_OTXBatchPredEntity]):
 
     def _forward(self, inputs: T_OTXBatchDataEntity) -> T_OTXBatchPredEntity:
         """Model forward function."""
-
-        def _callback(result: NamedTuple, idx: int) -> None:
-            output_dict[idx] = result
-
         numpy_inputs = self._customize_inputs(inputs)["inputs"]
         if self.async_inference:
-            output_dict: dict[int, NamedTuple] = {}
-            self.model.set_callback(_callback)
-            for idx, im in enumerate(numpy_inputs):
-                if not self.model.is_ready():
-                    self.model.await_any()
-                self.model.infer_async(im, user_data=idx)
-            self.model.await_all()
-            outputs = [out[1] for out in sorted(output_dict.items())]
+            outputs = self.model.infer_batch(numpy_inputs)
         else:
             outputs = [self.model(im) for im in numpy_inputs]
 
@@ -1067,11 +1105,6 @@ class OVModel(OTXModel, Generic[T_OTXBatchDataEntity, T_OTXBatchPredEntity]):
     def _set_label_info(self, label_info: LabelInfoTypes) -> None:
         """Set this model label information."""
         new_label_info = self._dispatch_label_info(label_info)
-
-        if self._label_info != new_label_info:
-            msg = "OVModel strictly does not allow overwrite label_info if they are different each other."
-            raise ValueError(msg)
-
         self._label_info = new_label_info
 
     def _create_label_info_from_ov_ir(self) -> LabelInfo:
@@ -1091,7 +1124,22 @@ class OVModel(OTXModel, Generic[T_OTXBatchDataEntity, T_OTXBatchPredEntity]):
             )
 
             logger.warning(msg)
-            return LabelInfo(label_names=label_names, label_groups=[label_names])
+            return LabelInfo(label_names=label_names, label_groups=[label_names], label_ids=[])
 
         msg = "Cannot construct LabelInfo from OpenVINO IR. Please check this model is trained by OTX."
         raise ValueError(msg)
+
+    def get_dummy_input(self, batch_size: int = 1) -> OTXBatchDataEntity:
+        """Returns a dummy input for base OV model."""
+        # Resize is embedded to the OV model, which means we don't need to know the actual size
+        images = [torch.rand(3, 224, 224) for _ in range(batch_size)]
+        infos = []
+        for i, img in enumerate(images):
+            infos.append(
+                ImageInfo(
+                    img_idx=i,
+                    img_shape=img.shape,
+                    ori_shape=img.shape,
+                ),
+            )
+        return OTXBatchDataEntity(batch_size=batch_size, images=images, imgs_info=infos)

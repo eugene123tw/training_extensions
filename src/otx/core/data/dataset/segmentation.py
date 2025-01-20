@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2023-2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 #
 """Module for OTXSegmentationDataset."""
@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING, Callable
 
 import cv2
 import numpy as np
-from datumaro.components.annotation import Ellipse, Image, Mask, Polygon
+import torch
+from datumaro.components.annotation import Bbox, Ellipse, Image, Mask, Polygon, RotatedBbox
 from torchvision import tv_tensors
 
-from otx.core.data.dataset.base import Transforms
 from otx.core.data.entity.base import ImageInfo
 from otx.core.data.entity.segmentation import SegBatchDataEntity, SegDataEntity
 from otx.core.data.mem_cache import NULL_MEM_CACHE_HANDLER, MemCacheHandlerBase
@@ -25,6 +25,8 @@ from .base import OTXDataset
 if TYPE_CHECKING:
     from datumaro import Dataset as DmDataset
     from datumaro import DatasetItem
+
+    from otx.core.data.dataset.base import Transforms
 
 
 # NOTE: It is copied from https://github.com/openvinotoolkit/datumaro/pull/1409
@@ -97,12 +99,12 @@ def _extract_class_mask(item: DatasetItem, img_shape: tuple[int, int], ignore_in
         msg = "It is not currently support an ignore index which is more than 255."
         raise ValueError(msg, ignore_index)
 
-    # fill mask with background label if we have Polygon/Ellipse annotations
-    fill_value = 0 if isinstance(item.annotations[0], (Ellipse, Polygon)) else ignore_index
+    # fill mask with background label if we have Polygon/Ellipse/Bbox annotations
+    fill_value = 0 if isinstance(item.annotations[0], (Ellipse, Polygon, Bbox, RotatedBbox)) else ignore_index
     class_mask = np.full(shape=img_shape[:2], fill_value=fill_value, dtype=np.uint8)
 
     for mask in sorted(
-        [ann for ann in item.annotations if isinstance(ann, (Mask, Ellipse, Polygon))],
+        [ann for ann in item.annotations if isinstance(ann, (Mask, Ellipse, Polygon, Bbox, RotatedBbox))],
         key=lambda ann: ann.z_order,
     ):
         index = mask.label
@@ -111,7 +113,7 @@ def _extract_class_mask(item: DatasetItem, img_shape: tuple[int, int], ignore_in
             msg = "Mask's label index should not be None."
             raise ValueError(msg)
 
-        if isinstance(mask, (Ellipse, Polygon)):
+        if isinstance(mask, (Ellipse, Polygon, Bbox, RotatedBbox)):
             polygons = np.asarray(mask.as_polygon(), dtype=np.int32).reshape((-1, 1, 2))
             class_index = index + 1  # NOTE: disregard the background index. Objects start from index=1
             this_class_mask = cv2.drawContours(
@@ -166,6 +168,7 @@ class OTXSegmentationDataset(OTXDataset[SegDataEntity]):
         stack_images: bool = True,
         to_tv_image: bool = True,
         ignore_index: int = 255,
+        data_format: str = "",
     ) -> None:
         super().__init__(
             dm_subset,
@@ -176,24 +179,27 @@ class OTXSegmentationDataset(OTXDataset[SegDataEntity]):
             image_color_channel,
             stack_images,
             to_tv_image,
+            data_format=data_format,
         )
 
-        if self.has_polygons and "background" not in [label_name.lower() for label_name in self.label_info.label_names]:
+        if self.has_polygons:
             # insert background class at index 0 since polygons represent only objects
-            self.label_info.label_names.insert(0, "background")
+            self.label_info.label_names.insert(0, "otx_background_lbl")
+            self.label_info.label_ids.insert(0, "None")
 
         self.label_info = SegLabelInfo(
             label_names=self.label_info.label_names,
             label_groups=self.label_info.label_groups,
             ignore_index=ignore_index,
+            label_ids=self.label_info.label_ids,
         )
         self.ignore_index = ignore_index
 
     @property
     def has_polygons(self) -> bool:
         """Check if the dataset has polygons in annotations."""
-        ann_types = {str(ann_type).split(".")[-1] for ann_type in self.dm_subset.ann_types()}
-        if ann_types & {"polygon", "ellipse"}:
+        # all polygon-like format should be considered as polygons
+        if {ann_type.name for ann_type in self.dm_subset.ann_types()} & {"polygon", "ellipse", "bbox", "rotated_bbox"}:
             return True
         return False
 
@@ -201,8 +207,18 @@ class OTXSegmentationDataset(OTXDataset[SegDataEntity]):
         item = self.dm_subset[index]
         img = item.media_as(Image)
         ignored_labels: list[int] = []
-        img_data, img_shape = self._get_img_data_and_shape(img)
-        mask = _extract_class_mask(item=item, img_shape=img_shape, ignore_index=self.ignore_index)
+        roi = item.attributes.get("roi", None)
+        img_data, img_shape, roi_meta = self._get_img_data_and_shape(img, roi)
+        if item.annotations:
+            ori_shape = roi_meta["orig_image_shape"] if roi_meta else img_shape
+            extracted_mask = _extract_class_mask(item=item, img_shape=ori_shape, ignore_index=self.ignore_index)
+            if roi_meta:
+                extracted_mask = extracted_mask[roi_meta["y1"] : roi_meta["y2"], roi_meta["x1"] : roi_meta["x2"]]
+
+            masks = tv_tensors.Mask(extracted_mask[None])
+        else:
+            # semi-supervised learning, unlabeled dataset
+            masks = torch.tensor([[0]])
 
         entity = SegDataEntity(
             image=img_data,
@@ -213,7 +229,7 @@ class OTXSegmentationDataset(OTXDataset[SegDataEntity]):
                 image_color_channel=self.image_color_channel,
                 ignored_labels=ignored_labels,
             ),
-            masks=tv_tensors.Mask(mask[None]),
+            masks=masks,
         )
         transformed_entity = self._apply_transforms(entity)
         return transformed_entity.wrap(masks=transformed_entity.masks[0]) if transformed_entity else None

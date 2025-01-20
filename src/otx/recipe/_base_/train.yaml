@@ -28,6 +28,7 @@ callbacks:
       prog_bar: true
       on_step: false
       on_epoch: true
+  - class_path: otx.algo.callbacks.gpu_mem_monitor.GPUMemMonitor
   - class_path: lightning.pytorch.callbacks.RichModelSummary
     init_args:
       max_depth: 1
@@ -39,6 +40,8 @@ callbacks:
     init_args:
       max_interval: 5
       decay: -0.025
+      min_earlystop_patience: 5
+      min_lrschedule_patience: 3
 logger:
   - class_path: lightning.pytorch.loggers.csv_logs.CSVLogger
     init_args:

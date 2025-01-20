@@ -6,98 +6,22 @@
 from __future__ import annotations
 
 import copy
+from functools import partial
+from typing import Any, Callable, ClassVar
 
 import torch
 from torch import nn
 
+from otx.algo.common.layers.transformer_layers import TransformerEncoder, TransformerEncoderLayer
 from otx.algo.detection.layers import CSPRepLayer
-from otx.algo.modules import ConvModule, build_activation_layer
+from otx.algo.modules import Conv2dModule, build_activation_layer
 from otx.algo.modules.base_module import BaseModule
+from otx.algo.modules.norm import build_norm_layer
 
 __all__ = ["HybridEncoder"]
 
 
-# transformer
-class TransformerEncoderLayer(nn.Module):
-    def __init__(
-        self,
-        d_model: int,
-        nhead: int,
-        dim_feedforward: int = 2048,
-        dropout: float = 0.1,
-        act_cfg: dict[str, str] | None = None,
-        normalize_before: bool = False,
-    ) -> None:
-        super().__init__()
-        self.normalize_before = normalize_before
-
-        self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout, batch_first=True)
-
-        self.linear1 = nn.Linear(d_model, dim_feedforward)
-        self.dropout = nn.Dropout(dropout)
-        self.linear2 = nn.Linear(dim_feedforward, d_model)
-
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.dropout1 = nn.Dropout(dropout)
-        self.dropout2 = nn.Dropout(dropout)
-        act_cfg = act_cfg if act_cfg is not None else {"type": "GELU"}
-        self.activation = build_activation_layer(act_cfg)
-
-    @staticmethod
-    def with_pos_embed(tensor: torch.Tensor, pos_embed: torch.Tensor | None) -> torch.Tensor:
-        return tensor if pos_embed is None else tensor + pos_embed
-
-    def forward(
-        self,
-        src: torch.Tensor,
-        src_mask: torch.Tensor | None = None,
-        pos_embed: torch.Tensor | None = None,
-    ) -> torch.Tensor:
-        residual = src
-        if self.normalize_before:
-            src = self.norm1(src)
-        q = k = self.with_pos_embed(src, pos_embed)
-        src, _ = self.self_attn(q, k, value=src, attn_mask=src_mask)
-
-        src = residual + self.dropout1(src)
-        if not self.normalize_before:
-            src = self.norm1(src)
-
-        residual = src
-        if self.normalize_before:
-            src = self.norm2(src)
-        src = self.linear2(self.dropout(self.activation(self.linear1(src))))
-        src = residual + self.dropout2(src)
-        if not self.normalize_before:
-            src = self.norm2(src)
-        return src
-
-
-class TransformerEncoder(nn.Module):
-    def __init__(self, encoder_layer: nn.Module, num_layers: int, norm: nn.Module | None = None) -> None:
-        super().__init__()
-        self.layers = nn.ModuleList([copy.deepcopy(encoder_layer) for _ in range(num_layers)])
-        self.num_layers = num_layers
-        self.norm = norm
-
-    def forward(
-        self,
-        src: torch.Tensor,
-        src_mask: torch.Tensor | None = None,
-        pos_embed: torch.Tensor | None = None,
-    ) -> torch.Tensor:
-        output = src
-        for layer in self.layers:
-            output = layer(output, src_mask=src_mask, pos_embed=pos_embed)
-
-        if self.norm is not None:
-            output = self.norm(output)
-
-        return output
-
-
-class HybridEncoder(BaseModule):
+class HybridEncoderModule(BaseModule):
     """HybridEncoder for RTDetr.
 
     Args:
@@ -111,10 +35,10 @@ class HybridEncoder(BaseModule):
         dim_feedforward (int, optional): Dimension of the feedforward network
             in the transformer encoder. Defaults to 1024.
         dropout (float, optional): Dropout rate. Defaults to 0.0.
-        enc_act_cfg (dict[str, str] | None, optional): Activation configuration
-            for the encoder. Defaults to None.
-        norm_cfg (dict[str, str] | None, optional): Normalization configuration.
-            Defaults to None.
+        enc_activation (Callable[..., nn.Module]): Activation layer module.
+            Defaults to ``nn.GELU``.
+        normalization (Callable[..., nn.Module]): Normalization layer module.
+            Defaults to ``partial(build_norm_layer, nn.BatchNorm2d, layer_name="norm")``.
         use_encoder_idx (list[int], optional): List of indices of the encoder to use.
             Defaults to [2].
         num_encoder_layers (int, optional): Number of layers in the transformer encoder.
@@ -125,8 +49,8 @@ class HybridEncoder(BaseModule):
             Defaults to 1.0.
         depth_mult (float, optional): Depth multiplier for the CSPRepLayer.
             Defaults to 1.0.
-        act_cfg (dict[str, str] | None, optional): Activation configuration
-            for the CSPRepLayer. Defaults to None.
+        activation (Callable[..., nn.Module]): Activation layer module.
+            Defaults to ``nn.SiLU``.
         eval_spatial_size (tuple[int, int] | None, optional): Spatial size for
             evaluation. Defaults to None.
     """
@@ -139,14 +63,14 @@ class HybridEncoder(BaseModule):
         nhead: int = 8,
         dim_feedforward: int = 1024,
         dropout: float = 0.0,
-        enc_act_cfg: dict[str, str] | None = None,
-        norm_cfg: dict[str, str] | None = None,
+        enc_activation: Callable[..., nn.Module] = nn.GELU,
+        normalization: Callable[..., nn.Module] = partial(build_norm_layer, nn.BatchNorm2d, layer_name="norm"),
         use_encoder_idx: list[int] = [2],  # noqa: B006
         num_encoder_layers: int = 1,
         pe_temperature: float = 10000,
         expansion: float = 1.0,
         depth_mult: float = 1.0,
-        act_cfg: dict[str, str] | None = None,
+        activation: Callable[..., nn.Module] = nn.SiLU,
         eval_spatial_size: tuple[int, int] | None = None,
     ) -> None:
         """Initialize the HybridEncoder module."""
@@ -161,9 +85,6 @@ class HybridEncoder(BaseModule):
 
         self.out_channels = [hidden_dim for _ in range(len(in_channels))]
         self.out_strides = feat_strides
-        enc_act_cfg = enc_act_cfg if enc_act_cfg is not None else {"type": "GELU"}
-        act_cfg = act_cfg if act_cfg is not None else {"type": "SiLU"}
-        norm_cfg = norm_cfg if norm_cfg is not None else {"type": "BN", "name": "norm"}
         # channel projection
         self.input_proj = nn.ModuleList()
         for in_channel in in_channels:
@@ -180,7 +101,7 @@ class HybridEncoder(BaseModule):
             nhead=nhead,
             dim_feedforward=dim_feedforward,
             dropout=dropout,
-            act_cfg=enc_act_cfg,
+            activation=enc_activation,
         )
 
         self.encoder = nn.ModuleList(
@@ -191,15 +112,24 @@ class HybridEncoder(BaseModule):
         self.lateral_convs = nn.ModuleList()
         self.fpn_blocks = nn.ModuleList()
         for _ in range(len(in_channels) - 1, 0, -1):
-            self.lateral_convs.append(ConvModule(hidden_dim, hidden_dim, 1, 1, act_cfg=act_cfg, norm_cfg=norm_cfg))
+            self.lateral_convs.append(
+                Conv2dModule(
+                    hidden_dim,
+                    hidden_dim,
+                    1,
+                    1,
+                    normalization=build_norm_layer(normalization, num_features=hidden_dim),
+                    activation=build_activation_layer(activation),
+                ),
+            )
             self.fpn_blocks.append(
                 CSPRepLayer(
                     hidden_dim * 2,
                     hidden_dim,
                     round(3 * depth_mult),
-                    act_cfg=act_cfg,
+                    activation=activation,
                     expansion=expansion,
-                    norm_cfg=norm_cfg,
+                    normalization=normalization,
                 ),
             )
 
@@ -208,16 +138,24 @@ class HybridEncoder(BaseModule):
         self.pan_blocks = nn.ModuleList()
         for _ in range(len(in_channels) - 1):
             self.downsample_convs.append(
-                ConvModule(hidden_dim, hidden_dim, 3, 2, padding=1, act_cfg=act_cfg, norm_cfg=norm_cfg),
+                Conv2dModule(
+                    hidden_dim,
+                    hidden_dim,
+                    3,
+                    2,
+                    padding=1,
+                    normalization=build_norm_layer(normalization, num_features=hidden_dim),
+                    activation=build_activation_layer(activation),
+                ),
             )
             self.pan_blocks.append(
                 CSPRepLayer(
                     hidden_dim * 2,
                     hidden_dim,
                     round(3 * depth_mult),
-                    act_cfg=act_cfg,
+                    activation=activation,
                     expansion=expansion,
-                    norm_cfg=norm_cfg,
+                    normalization=normalization,
                 ),
             )
 
@@ -301,4 +239,29 @@ class HybridEncoder(BaseModule):
             out = self.pan_blocks[idx](torch.concat([downsample_feat, feat_high], dim=1))
             outs.append(out)
 
-        return outs, proj_feats[-1]
+        return outs
+
+
+class HybridEncoder:
+    """HybridEncoder factory for detection."""
+
+    HYBRIDENCODER_CFG: ClassVar[dict[str, Any]] = {
+        "rtdetr_18": {
+            "in_channels": [128, 256, 512],
+            "expansion": 0.5,
+        },
+        "rtdetr_50": {},
+        "rtdetr_101": {
+            "hidden_dim": 384,
+            "dim_feedforward": 2048,
+            "in_channels": [512, 1024, 2048],
+        },
+    }
+
+    def __new__(cls, model_name: str, eval_spatial_size: tuple[int, int] | None = None) -> HybridEncoderModule:
+        """Constructor for HybridEncoder."""
+        if model_name not in cls.HYBRIDENCODER_CFG:
+            msg = f"model type '{model_name}' is not supported"
+            raise KeyError(msg)
+
+        return HybridEncoderModule(**cls.HYBRIDENCODER_CFG[model_name], eval_spatial_size=eval_spatial_size)

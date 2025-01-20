@@ -12,6 +12,7 @@ import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from pathlib import Path
+from typing import Callable
 
 import torch
 import torch.nn.functional
@@ -19,10 +20,9 @@ import torch.utils.checkpoint as cp
 from timm.models.layers import DropPath, to_2tuple
 from torch import Tensor, nn
 
-from otx.algo.instance_segmentation.layers import PatchEmbed, PatchMerging
 from otx.algo.modules.base_module import BaseModule, ModuleList
 from otx.algo.modules.norm import build_norm_layer
-from otx.algo.modules.transformer import FFN
+from otx.algo.modules.transformer import FFN, PatchEmbed, PatchMerging
 from otx.algo.utils.mmengine_utils import load_from_http
 from otx.algo.utils.weight_init import constant_init, trunc_normal_, trunc_normal_init
 
@@ -317,10 +317,10 @@ class SwinBlock(BaseModule):
         drop_rate (float, optional): Dropout rate. Default: 0.
         attn_drop_rate (float, optional): Attention dropout rate. Default: 0.
         drop_path_rate (float, optional): Stochastic depth rate. Default: 0.
-        act_cfg (dict, optional): The config dict of activation function.
-            Default: dict(type='GELU').
-        norm_cfg (dict, optional): The config dict of normalization.
-            Default: dict(type='LN').
+        activation (Callable[..., nn.Module]): Activation layer module.
+            Defaults to ``nn.GELU``.
+        normalization (Callable[..., nn.Module]): Normalization layer module.
+            Defaults to ``nn.LayerNorm``.
         with_cp (bool, optional): Use checkpoint or not. Using checkpoint
             will save some memory while slowing down the training speed.
             Default: False.
@@ -340,8 +340,8 @@ class SwinBlock(BaseModule):
         drop_rate: float = 0.0,
         attn_drop_rate: float = 0.0,
         drop_path_rate: float = 0.0,
-        act_cfg: dict | None = None,
-        norm_cfg: dict | None = None,
+        activation: Callable[..., nn.Module] = nn.GELU,
+        normalization: Callable[..., nn.Module] = nn.LayerNorm,
         with_cp: bool = False,
         init_cfg: None = None,
     ):
@@ -350,10 +350,7 @@ class SwinBlock(BaseModule):
         self.init_cfg = init_cfg
         self.with_cp = with_cp
 
-        act_cfg = act_cfg if act_cfg is not None else {"type": "GELU"}
-        norm_cfg = norm_cfg if norm_cfg is not None else {"type": "LN"}
-
-        self.norm1 = build_norm_layer(norm_cfg, embed_dims)[1]
+        self.norm1 = build_norm_layer(normalization, embed_dims)[1]
         self.attn = ShiftWindowMSA(
             embed_dims=embed_dims,
             num_heads=num_heads,
@@ -367,14 +364,14 @@ class SwinBlock(BaseModule):
             init_cfg=None,
         )
 
-        self.norm2 = build_norm_layer(norm_cfg, embed_dims)[1]
+        self.norm2 = build_norm_layer(normalization, embed_dims)[1]
         self.ffn = FFN(
             embed_dims=embed_dims,
             feedforward_channels=feedforward_channels,
             num_fcs=2,
             ffn_drop=drop_rate,
             dropout_layer={"type": "DropPath", "drop_prob": drop_path_rate},
-            act_cfg=act_cfg,
+            activation=activation,
             add_identity=True,
             init_cfg=None,
         )
@@ -415,10 +412,10 @@ class SwinBlockSequence(BaseModule):
             rate. Default: 0.
         downsample (BaseModule | None, optional): The downsample operation
             module. Default: None.
-        act_cfg (dict, optional): The config dict of activation function.
-            Default: dict(type='GELU').
-        norm_cfg (dict, optional): The config dict of normalization.
-            Default: dict(type='LN').
+        activation (Callable[..., nn.Module]): Activation layer module.
+            Defaults to ``nn.GELU``.
+        normalization (Callable[..., nn.Module]): Normalization layer module.
+            Defaults to ``nn.LayerNorm``.
         with_cp (bool, optional): Use checkpoint or not. Using checkpoint
             will save some memory while slowing down the training speed.
             Default: False.
@@ -439,15 +436,12 @@ class SwinBlockSequence(BaseModule):
         attn_drop_rate: float = 0.0,
         drop_path_rate: list[float] | float = 0.0,
         downsample: BaseModule | None = None,
-        act_cfg: dict | None = None,
-        norm_cfg: dict | None = None,
+        activation: Callable[..., nn.Module] = nn.GELU,
+        normalization: Callable[..., nn.Module] = nn.LayerNorm,
         with_cp: bool = False,
         init_cfg: None = None,
     ):
         super().__init__(init_cfg=init_cfg)
-
-        act_cfg = act_cfg if act_cfg is not None else {"type": "GELU"}
-        norm_cfg = norm_cfg if norm_cfg is not None else {"type": "LN"}
 
         if isinstance(drop_path_rate, list):
             drop_path_rates = drop_path_rate
@@ -470,8 +464,8 @@ class SwinBlockSequence(BaseModule):
                 drop_rate=drop_rate,
                 attn_drop_rate=attn_drop_rate,
                 drop_path_rate=drop_path_rates[i],
-                act_cfg=act_cfg,
-                norm_cfg=norm_cfg,
+                activation=activation,
+                normalization=normalization,
                 with_cp=with_cp,
                 init_cfg=None,
             )
@@ -528,10 +522,10 @@ class SwinTransformer(BaseModule):
         drop_rate (float): Dropout rate. Defaults: 0.
         attn_drop_rate (float): Attention dropout rate. Default: 0.
         drop_path_rate (float): Stochastic depth rate. Defaults: 0.1.
-        act_cfg (dict): Config dict for activation layer.
-            Default: dict(type='GELU').
-        norm_cfg (dict): Config dict for normalization layer at
-            output of backone. Defaults: dict(type='LN').
+        activation (Callable[..., nn.Module]): Activation layer module.
+            Defaults to ``nn.GELU``.
+        normalization (Callable[..., nn.Module]): Normalization layer module.
+            Defaults to ``nn.LayerNorm``.
         with_cp (bool, optional): Use checkpoint or not. Using checkpoint
             will save some memory while slowing down the training speed.
             Default: False.
@@ -564,16 +558,14 @@ class SwinTransformer(BaseModule):
         drop_rate: float = 0.0,
         attn_drop_rate: float = 0.0,
         drop_path_rate: float = 0.1,
-        act_cfg: dict | None = None,
-        norm_cfg: dict | None = None,
+        activation: Callable[..., nn.Module] = nn.GELU,
+        normalization: Callable[..., nn.Module] = nn.LayerNorm,
         with_cp: bool = False,
         pretrained: str | None = None,
         convert_weights: bool = False,
         frozen_stages: int = -1,
         init_cfg: dict | None = None,
     ):
-        act_cfg = act_cfg if act_cfg is not None else {"type": "GELU"}
-        norm_cfg = norm_cfg if norm_cfg is not None else {"type": "LN"}
         self.convert_weights = convert_weights
         self.frozen_stages = frozen_stages
         if isinstance(pretrain_img_size, int):
@@ -612,10 +604,9 @@ class SwinTransformer(BaseModule):
         self.patch_embed = PatchEmbed(
             in_channels=in_channels,
             embed_dims=embed_dims,
-            conv_type="Conv2d",
             kernel_size=patch_size,
             stride=strides[0],
-            norm_cfg=norm_cfg if patch_norm else None,
+            normalization=normalization if patch_norm else None,
             init_cfg=None,
         )
 
@@ -633,7 +624,7 @@ class SwinTransformer(BaseModule):
                     in_channels=in_channels,
                     out_channels=2 * in_channels,
                     stride=strides[i + 1],
-                    norm_cfg=norm_cfg if patch_norm else None,
+                    normalization=normalization if patch_norm else None,
                     init_cfg=None,
                 )
             else:
@@ -651,8 +642,8 @@ class SwinTransformer(BaseModule):
                 attn_drop_rate=attn_drop_rate,
                 drop_path_rate=dpr[sum(depths[:i]) : sum(depths[: i + 1])],
                 downsample=downsample,
-                act_cfg=act_cfg,
-                norm_cfg=norm_cfg,
+                activation=activation,
+                normalization=normalization,
                 with_cp=with_cp,
                 init_cfg=None,
             )
@@ -663,7 +654,7 @@ class SwinTransformer(BaseModule):
         self.num_features = [int(embed_dims * 2**i) for i in range(num_layers)]
         # Add a norm layer for each output
         for i in out_indices:
-            layer = build_norm_layer(norm_cfg, self.num_features[i])[1]
+            layer = build_norm_layer(normalization, self.num_features[i])[1]
             layer_name = f"norm{i}"
             self.add_module(layer_name, layer)
 

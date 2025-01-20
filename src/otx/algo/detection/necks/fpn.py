@@ -10,13 +10,17 @@ Reference : https://github.com/open-mmlab/mmdetection/blob/v3.2.0/mmdet/models/n
 
 from __future__ import annotations
 
+from typing import Any, Callable, ClassVar
+
 from torch import Tensor, nn
 
+from otx.algo.modules import build_activation_layer
 from otx.algo.modules.base_module import BaseModule
-from otx.algo.modules.conv_module import ConvModule
+from otx.algo.modules.conv_module import Conv2dModule
+from otx.algo.modules.norm import build_norm_layer
 
 
-class FPN(BaseModule):
+class FPNModule(BaseModule):
     r"""Feature Pyramid Network.
 
     This is an implementation of paper `Feature Pyramid Networks for Object Detection <https://arxiv.org/abs/1612.03144>`_.
@@ -43,12 +47,10 @@ class FPN(BaseModule):
             conv. Defaults to False.
         no_norm_on_lateral (bool): Whether to apply norm on lateral.
             Defaults to False.
-        conv_cfg (dict, optional): Config dict for
-            convolution layer. Defaults to None.
-        norm_cfg (dict, optional): Config dict for
-            normalization layer. Defaults to None.
-        act_cfg (dict, optional): Config dict for
-            activation layer in ConvModule. Defaults to None.
+        normalization (Callable[..., nn.Module] | None): Normalization layer module.
+            Defaults to None.
+        activation (Callable[..., nn.Module] | None): Activation layer module.
+            Defaults to None.
         upsample_cfg (dict, optional): Config dict
             for interpolate layer. Defaults to dict(mode='nearest').
         init_cfg (dict, list[dict], optional): Initialization config dict.
@@ -64,9 +66,8 @@ class FPN(BaseModule):
         add_extra_convs: bool | str = False,
         relu_before_extra_convs: bool = False,
         no_norm_on_lateral: bool = False,
-        conv_cfg: dict | None = None,
-        norm_cfg: dict | None = None,
-        act_cfg: dict | None = None,
+        normalization: Callable[..., nn.Module] | None = None,
+        activation: Callable[..., nn.Module] | None = None,
         upsample_cfg: dict | None = None,
         init_cfg: dict | list[dict] | None = None,
     ) -> None:
@@ -83,9 +84,18 @@ class FPN(BaseModule):
 
         if end_level in (-1, self.num_ins - 1):
             self.backbone_end_level = self.num_ins
+            if num_outs < self.num_ins - start_level:
+                msg = "num_outs should not be less than the number of output levels"
+                raise ValueError(msg)
         else:
             # if end_level is not the last level, no extra level is allowed
             self.backbone_end_level = end_level + 1
+            if end_level >= self.num_ins:
+                msg = "end_level must be less than len(in_channels)"
+                raise ValueError(msg)
+            if num_outs != end_level - start_level + 1:
+                msg = "num_outs must be equal to end_level - start_level + 1"
+                raise ValueError(msg)
         self.start_level = start_level
         self.end_level = end_level
         self.add_extra_convs = add_extra_convs
@@ -101,23 +111,23 @@ class FPN(BaseModule):
         self.fpn_convs = nn.ModuleList()
 
         for i in range(self.start_level, self.backbone_end_level):
-            l_conv = ConvModule(
+            l_conv = Conv2dModule(
                 in_channels[i],
                 out_channels,
                 1,
-                conv_cfg=conv_cfg,
-                norm_cfg=norm_cfg if not self.no_norm_on_lateral else None,
-                act_cfg=act_cfg,
+                normalization=build_norm_layer(normalization, num_features=out_channels)
+                if not self.no_norm_on_lateral
+                else None,
+                activation=build_activation_layer(activation),
                 inplace=False,
             )
-            fpn_conv = ConvModule(
+            fpn_conv = Conv2dModule(
                 out_channels,
                 out_channels,
                 3,
                 padding=1,
-                conv_cfg=conv_cfg,
-                norm_cfg=norm_cfg,
-                act_cfg=act_cfg,
+                normalization=build_norm_layer(normalization, num_features=out_channels),
+                activation=build_activation_layer(activation),
                 inplace=False,
             )
 
@@ -132,15 +142,14 @@ class FPN(BaseModule):
                     conv_in_channels = self.in_channels[self.backbone_end_level - 1]
                 else:
                     conv_in_channels = out_channels
-                extra_fpn_conv = ConvModule(
+                extra_fpn_conv = Conv2dModule(
                     conv_in_channels,
                     out_channels,
                     3,
                     stride=2,
                     padding=1,
-                    conv_cfg=conv_cfg,
-                    norm_cfg=norm_cfg,
-                    act_cfg=act_cfg,
+                    normalization=build_norm_layer(normalization, num_features=out_channels),
+                    activation=build_activation_layer(activation),
                     inplace=False,
                 )
                 self.fpn_convs.append(extra_fpn_conv)
@@ -154,6 +163,10 @@ class FPN(BaseModule):
         Returns:
             tuple: Feature maps, each is a 4D-tensor.
         """
+        if len(inputs) != len(self.in_channels):
+            msg = f"len(inputs) is not equal to len(in_channels): {len(inputs)} != {len(self.in_channels)}"
+            raise ValueError(msg)
+
         # build laterals
         laterals = [lateral_conv(inputs[i + self.start_level]) for i, lateral_conv in enumerate(self.lateral_convs)]
 
@@ -200,3 +213,37 @@ class FPN(BaseModule):
                     else:
                         outs.append(self.fpn_convs[i](outs[-1]))
         return tuple(outs)
+
+
+class FPN:
+    """FPN factory for detection."""
+
+    FPN_CFG: ClassVar[dict[str, Any]] = {
+        "atss_mobilenetv2": {
+            "in_channels": [24, 32, 96, 320],
+            "out_channels": 64,
+            "num_outs": 5,
+            "start_level": 1,
+            "add_extra_convs": "on_output",
+            "relu_before_extra_convs": True,
+        },
+        "atss_resnext101": {
+            "in_channels": [256, 512, 1024, 2048],
+            "out_channels": 256,
+            "num_outs": 5,
+            "start_level": 1,
+            "add_extra_convs": "on_output",
+            "relu_before_extra_convs": True,
+        },
+        "maskrcnn_resnet_50": {"in_channels": [256, 512, 1024, 2048], "num_outs": 5, "out_channels": 256},
+        "maskrcnn_efficientnet_b2b": {"in_channels": [24, 48, 120, 352], "out_channels": 80, "num_outs": 5},
+        "maskrcnn_swin_tiny": {"in_channels": [96, 192, 384, 768], "out_channels": 256, "num_outs": 5},
+    }
+
+    def __new__(cls, model_name: str) -> FPNModule:
+        """Constructor for FPN."""
+        if model_name not in cls.FPN_CFG:
+            msg = f"model type '{model_name}' is not supported"
+            raise KeyError(msg)
+
+        return FPNModule(**cls.FPN_CFG[model_name])

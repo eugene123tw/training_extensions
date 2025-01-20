@@ -1,13 +1,16 @@
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2023-2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 #
 """Dataclasses for label information."""
 
 from __future__ import annotations
 
+import copy
 import json
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
+
+from datumaro.components.annotation import GroupType
 
 if TYPE_CHECKING:
     from datumaro import Label, LabelCategories
@@ -27,6 +30,7 @@ class LabelInfo:
     """Object to represent label information."""
 
     label_names: list[str]
+    label_ids: list[str]
     label_groups: list[list[str]]
 
     @property
@@ -51,10 +55,12 @@ class LabelInfo:
             return NullLabelInfo()
 
         label_names = [f"label_{idx}" for idx in range(num_classes)]
+        label_ids = [str(i) for i in range(num_classes)]
 
         return cls(
             label_names=label_names,
             label_groups=[label_names],
+            label_ids=label_ids,
         )
 
     @classmethod
@@ -79,11 +85,62 @@ class LabelInfo:
         return LabelInfo(
             label_names=label_names,
             label_groups=label_groups,
+            label_ids=[str(i) for i in range(len(label_names))],
         )
 
-    def as_dict(self) -> dict[str, Any]:
+    @classmethod
+    def from_dm_label_groups_arrow(cls, dm_label_categories: LabelCategories) -> LabelInfo:
+        """Overload to support datumaro's arrow format."""
+        label_names = []
+        for item in dm_label_categories.items:
+            for attr in item.attributes:
+                if attr.startswith("__name__"):
+                    label_names.append(attr[len("__name__") :])
+                    break
+
+        if len(label_names) != len(dm_label_categories.items):
+            msg = "Wrong arrow format: can not extract label names from attributes"
+            raise ValueError(msg)
+
+        id_to_name_mapping = {item.name: label_names[i] for i, item in enumerate(dm_label_categories.items)}
+
+        for label_group in dm_label_categories.label_groups:
+            label_group.labels = [id_to_name_mapping.get(label, label) for label in label_group.labels]
+
+        label_groups = [label_group.labels for label_group in dm_label_categories.label_groups]
+        if len(label_groups) == 0:  # Single-label classification
+            label_groups = [label_names]
+
+        label_ids = [item.name for item in dm_label_categories.items]
+
+        return LabelInfo(
+            label_names=label_names,
+            label_groups=label_groups,
+            label_ids=label_ids,
+        )
+
+    def as_dict(self, normalize_label_names: bool = False) -> dict[str, Any]:
         """Return a dictionary including all params."""
-        return asdict(self)
+        result = asdict(self)
+
+        if normalize_label_names:
+
+            def normalize_fn(node: str | list | tuple | dict | int) -> str | list | tuple | dict | int:
+                """Normalizes the label names stored in various nested structures."""
+                if isinstance(node, str):
+                    return node.replace(" ", "_")
+                if isinstance(node, list):
+                    return [normalize_fn(item) for item in node]
+                if isinstance(node, tuple):
+                    return tuple(normalize_fn(item) for item in node)
+                if isinstance(node, dict):
+                    return {normalize_fn(key): normalize_fn(value) for key, value in node.items()}
+                return node
+
+            for k in result:
+                result[k] = normalize_fn(result[k])
+
+        return result
 
     def to_json(self) -> str:
         """Return JSON serialized string."""
@@ -169,10 +226,8 @@ class HLabelInfo(LabelInfo):
             dm_label_categories (LabelCategories): the label categories of datumaro.
         """
 
-        def get_exclusive_group_info(all_groups: list[Label | list[Label]]) -> dict[str, Any]:
+        def get_exclusive_group_info(exclusive_groups: list[Label | list[Label]]) -> dict[str, Any]:
             """Get exclusive group information."""
-            exclusive_groups = [g for g in all_groups if len(g) > 1]
-
             last_logits_pos = 0
             num_single_label_classes = 0
             head_idx_to_logits_range = {}
@@ -193,12 +248,10 @@ class HLabelInfo(LabelInfo):
             }
 
         def get_single_label_group_info(
-            all_groups: list[Label | list[Label]],
+            single_label_groups: list[Label | list[Label]],
             num_exclusive_groups: int,
         ) -> dict[str, Any]:
             """Get single label group information."""
-            single_label_groups = [g for g in all_groups if len(g) == 1]
-
             class_to_idx = {}
 
             for i, group in enumerate(single_label_groups):
@@ -229,29 +282,113 @@ class HLabelInfo(LabelInfo):
             """Get label tree edges information. Each edges represent [child, parent]."""
             return [[item.name, item.parent] for item in dm_label_items if item.parent != ""]
 
-        all_groups = [label_group.labels for label_group in dm_label_categories.label_groups]
+        def convert_labels_if_needed(
+            dm_label_categories: LabelCategories,
+            label_names: list[str],
+        ) -> list[list[str]]:
+            # Check if the labels need conversion and create name to ID mapping if required
+            name_to_id_mapping = None
+            for label_group in dm_label_categories.label_groups:
+                if label_group.labels and label_group.labels[0] not in label_names:
+                    name_to_id_mapping = {
+                        attr[len("__name__") :]: category.name
+                        for category in dm_label_categories.items
+                        for attr in category.attributes
+                        if attr.startswith("__name__")
+                    }
+                    break
 
-        exclusive_group_info = get_exclusive_group_info(all_groups)
-        single_label_group_info = get_single_label_group_info(all_groups, exclusive_group_info["num_multiclass_heads"])
+            # If mapping exists, update the labels
+            if name_to_id_mapping:
+                for label_group in dm_label_categories.label_groups:
+                    label_group.labels = [name_to_id_mapping.get(label, label) for label in label_group.labels]
+
+            # Retrieve all label groups after conversion
+            return [group.labels for group in dm_label_categories.label_groups]
+
+        label_names = [item.name for item in dm_label_categories.items]
+        all_groups = convert_labels_if_needed(dm_label_categories, label_names)
+
+        exclusive_groups = [g for g in all_groups if len(g) > 1]
+        exclusive_group_info = get_exclusive_group_info(exclusive_groups)
+        single_label_groups = [g for g in all_groups if len(g) == 1]
+        single_label_group_info = get_single_label_group_info(
+            single_label_groups,
+            exclusive_group_info["num_multiclass_heads"],
+        )
 
         merged_class_to_idx = merge_class_to_idx(
             exclusive_group_info["class_to_idx"],
             single_label_group_info["class_to_idx"],
         )
 
+        label_to_idx = {lbl: i for i, lbl in enumerate(merged_class_to_idx.keys())}
+
         return HLabelInfo(
-            label_names=[item.name for item in dm_label_categories.items],
-            label_groups=all_groups,
+            label_names=label_names,
+            label_groups=exclusive_groups + single_label_groups,
             num_multiclass_heads=exclusive_group_info["num_multiclass_heads"],
             num_multilabel_classes=single_label_group_info["num_multilabel_classes"],
             head_idx_to_logits_range=exclusive_group_info["head_idx_to_logits_range"],
             num_single_label_classes=exclusive_group_info["num_single_label_classes"],
             class_to_group_idx=merged_class_to_idx,
-            all_groups=all_groups,
-            label_to_idx=dm_label_categories._indices,  # noqa: SLF001
+            all_groups=exclusive_groups + single_label_groups,
+            label_to_idx=label_to_idx,
             label_tree_edges=get_label_tree_edges(dm_label_categories.items),
             empty_multiclass_head_indices=[],  # consider the label removing case
+            label_ids=[str(i) for i in range(len(label_names))],
         )
+
+    @classmethod
+    def from_dm_label_groups_arrow(cls, dm_label_categories: LabelCategories) -> HLabelInfo:
+        """Generate HLabelData from the Datumaro LabelCategories. Arrow-specific implementation.
+
+        Args:
+            dm_label_categories (LabelCategories): the label categories of datumaro.
+        """
+        dm_label_categories = copy.deepcopy(dm_label_categories)
+
+        empty_label_name = None
+        for label_group in dm_label_categories.label_groups:
+            if label_group.group_type == GroupType.RESTRICTED:
+                empty_label_name = label_group.labels[0]
+
+        dm_label_categories.label_groups = [
+            group for group in dm_label_categories.label_groups if group.group_type != GroupType.RESTRICTED
+        ]
+
+        empty_label_id = None
+        label_names = []
+        for item in dm_label_categories.items:
+            for attr in item.attributes:
+                if attr.startswith("__name__"):
+                    name = attr[len("__name__") :]
+                    if name == empty_label_name:
+                        empty_label_id = item.name
+                    label_names.append(name)
+                    break
+
+        if len(label_names) != len(dm_label_categories.items):
+            msg = "Wrong arrow file: can not extract label names from attributes"
+            raise ValueError(msg)
+
+        if empty_label_name is not None:
+            label_names.remove(empty_label_name)
+        dm_label_categories.items = [item for item in dm_label_categories.items if item.name != empty_label_id]
+        label_ids = [item.name for item in dm_label_categories.items]
+
+        id_to_name_mapping = {item.name: label_names[i] for i, item in enumerate(dm_label_categories.items)}
+
+        for i, item in enumerate(dm_label_categories.items):
+            item.name = label_names[i]
+            item.parent = id_to_name_mapping.get(item.parent, item.parent)
+
+        for label_group in dm_label_categories.label_groups:
+            label_group.labels = [id_to_name_mapping.get(label, label) for label in label_group.labels]
+
+        obj = cls.from_dm_label_groups(dm_label_categories)
+        obj.label_ids = label_ids
+        return obj
 
     def as_head_config_dict(self) -> dict[str, Any]:
         """Return a dictionary including params needed to configure the HLabel MMPretrained head network."""
@@ -282,14 +419,6 @@ class SegLabelInfo(LabelInfo):
 
     ignore_index: int = 255
 
-    def __post_init__(self):
-        if len(self.label_names) <= 1:
-            msg = (
-                "The number of labels must be larger than 1. "
-                "Please, check dataset labels and add background label in case of binary segmentation."
-            )
-            raise ValueError(msg)
-
     @classmethod
     def from_num_classes(cls, num_classes: int) -> LabelInfo:
         """Create this object from the number of classes.
@@ -306,7 +435,7 @@ class SegLabelInfo(LabelInfo):
         if num_classes == 1:
             # binary segmentation
             label_names = ["background", "label_0"]
-            return SegLabelInfo(label_names=label_names, label_groups=[label_names])
+            return SegLabelInfo(label_names=label_names, label_groups=[label_names], label_ids=["0", "1"])
 
         return super().from_num_classes(num_classes)
 
@@ -316,7 +445,7 @@ class NullLabelInfo(LabelInfo):
     """Represent no label information. It is used for Visual Prompting tasks."""
 
     def __init__(self) -> None:
-        super().__init__(label_names=[], label_groups=[[]])
+        super().__init__(label_names=[], label_groups=[[]], label_ids=[])
 
     @classmethod
     def from_json(cls, _: str) -> LabelInfo:
@@ -329,7 +458,7 @@ class AnomalyLabelInfo(LabelInfo):
     """Represent no label information. It is used for Anomaly tasks."""
 
     def __init__(self) -> None:
-        super().__init__(label_names=["Normal", "Anomaly"], label_groups=[["Normal", "Anomaly"]])
+        super().__init__(label_names=["Normal", "Anomaly"], label_groups=[["Normal", "Anomaly"]], label_ids=["0", "1"])
 
 
 # Dispatching rules:

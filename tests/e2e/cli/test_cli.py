@@ -44,14 +44,21 @@ def test_otx_e2e_cli(
     Returns:
         None
     """
-    task = recipe.split("/")[-2].upper()
-    model_name = recipe.split("/")[-1].split(".")[0]
+    recipe_split = recipe.split("/")
+    model_name = recipe_split[-1].split(".")[0]
+    is_semisl = model_name.endswith("_semisl")
+    task = recipe_split[-2].upper() if not is_semisl else recipe_split[-3].upper()
 
     if task == OTXTaskType.INSTANCE_SEGMENTATION:
         is_tiling = "tile" in recipe
         dataset_path = fxt_target_dataset_per_task[task]["tiling" if is_tiling else "non_tiling"]
+    elif task == OTXTaskType.KEYPOINT_DETECTION:
+        dataset_path = fxt_target_dataset_per_task[task][model_name]
     else:
         dataset_path = fxt_target_dataset_per_task[task]
+
+    if isinstance(dataset_path, dict) and "supervised" in dataset_path:
+        dataset_path = dataset_path["supervised"]
 
     # 1) otx train
     tmp_path_train = tmp_path / f"otx_train_{model_name}"
@@ -71,6 +78,13 @@ def test_otx_e2e_cli(
         *fxt_cli_override_command_per_task[task],
     ]
 
+    if is_semisl:
+        command_cfg.extend(
+            [
+                "--data.unlabeled_subset.data_root",
+                str(fxt_target_dataset_per_task[task]["unlabeled"]),
+            ],
+        )
     run_main(command_cfg=command_cfg, open_subprocess=fxt_open_subprocess)
 
     outputs_dir = tmp_path_train / "outputs"
@@ -121,23 +135,16 @@ def test_otx_e2e_cli(
     assert (latest_dir / "csv").exists()
 
     # 3) otx export
-    if any(
-        task_name in recipe
-        for task_name in [
-            "dino_v2",
-        ]
-    ):
-        return
-    if task in ("visual_prompting", "zero_shot_visual_prompting"):
+    if task in (OTXTaskType.VISUAL_PROMPTING, OTXTaskType.ZERO_SHOT_VISUAL_PROMPTING):
         fxt_export_list = [
             ExportCase2Test("ONNX", False, "exported_model_decoder.onnx"),
             ExportCase2Test("OPENVINO", False, "exported_model_decoder.xml"),
-        ]  # TODO (sungchul): EXPORTABLE_CODE will be supported
-    elif "anomaly" in task:
+        ]
+    elif task in ("ANOMALY", OTXTaskType.KEYPOINT_DETECTION, OTXTaskType.OBJECT_DETECTION_3D):
         fxt_export_list = [
             ExportCase2Test("ONNX", False, "exported_model.onnx"),
             ExportCase2Test("OPENVINO", False, "exported_model.xml"),
-        ]  # anomaly doesn't support exportable code
+        ]
 
     overrides = fxt_cli_override_command_per_task[task]
     if "anomaly" in task:
@@ -173,6 +180,9 @@ def test_otx_e2e_cli(
         assert latest_dir.exists()
         assert (latest_dir / export_case.expected_output).exists()
 
+    if task == OTXTaskType.OBJECT_DETECTION_3D:
+        return  # "3D Object Detection is not supported for OV IR inference.
+
     # 4) infer of the exported models
     ov_output_dir = tmp_path_test / "outputs" / "OPENVINO"
     ov_files = list(ov_output_dir.rglob("exported*.xml"))
@@ -180,7 +190,7 @@ def test_otx_e2e_cli(
         msg = "There is no OV IR."
         raise RuntimeError(msg)
     exported_model_path = str(ov_files[0])
-    if task in ("visual_prompting", "zero_shot_visual_prompting"):
+    if task in (OTXTaskType.VISUAL_PROMPTING, OTXTaskType.ZERO_SHOT_VISUAL_PROMPTING):
         recipe = str(Path(recipe).parents[0] / "openvino_model.yaml")
 
     overrides = fxt_cli_override_command_per_task[task]
@@ -215,14 +225,12 @@ def test_otx_e2e_cli(
     # 5) otx export with XAI
     if "instance_segmentation/rtmdet_inst_tiny" in recipe:
         return
-    if ("_cls" not in task) and (task not in ["detection", "instance_segmentation"]):
-        return  # Supported only for classification, detection and instance segmentation task.
+    if ("_cls" not in task) and (task not in ["detection", "instance_segmentation", "semantic_segmentation"]):
+        return  # Supported only for classification, detection and segmentation tasks.
 
-    if "dino" in model_name:
-        return  # DINO is not supported.
-
-    if "rtdetr" in model_name:
-        return  # RT-DETR currently is not supported.
+    unsupported_models = ["dino", "rtdetr"]
+    if any(model in model_name for model in unsupported_models):
+        return  # The models are not supported.
 
     tmp_path_test = tmp_path / f"otx_export_xai_{model_name}"
     for export_case in fxt_export_list:
@@ -282,8 +290,13 @@ def test_otx_explain_e2e_cli(
     """
     import cv2
 
-    task = recipe.split("/")[-2].upper()
-    model_name = recipe.split("/")[-1].split(".")[0]
+    recipe_split = recipe.split("/")
+    model_name = recipe_split[-1].split(".")[0]
+    is_semisl = model_name.endswith("_semisl")
+    task = recipe_split[-2].upper() if not is_semisl else recipe_split[-3].upper()
+
+    if is_semisl:
+        pytest.skip("SEMI-SL is not supported for explain.")
 
     if task not in [
         OTXTaskType.MULTI_CLASS_CLS,
@@ -294,6 +307,24 @@ def test_otx_explain_e2e_cli(
     ]:
         pytest.skip("Supported only for classification, detection and instance segmentation task.")
 
+    models_not_supported = [
+        "dino",
+        "yolov9_s",
+        "yolov9_c",
+        "rtdetr_18",
+        "rtdetr_18_tile",
+        "rtdetr_50_tile",
+        "yolov9_m",
+        "rtdetr_101_tile",
+        "rtdetr_50",
+        "rtdetr_101",
+        "maskrcnn_r50_tv",
+        "maskrcnn_r50_tv_tile",
+    ]
+
+    if any(model in model_name for model in models_not_supported):
+        pytest.skip(f"{model_name} is not supported.")
+
     deterministic = "True"
     if task == OTXTaskType.INSTANCE_SEGMENTATION:
         # Determinism is not required for this test for instance_segmentation models.
@@ -303,8 +334,8 @@ def test_otx_explain_e2e_cli(
     else:
         dataset_path = fxt_target_dataset_per_task[task]
 
-    if "dino" in model_name:
-        pytest.skip("DINO is not supported.")
+    if isinstance(dataset_path, dict) and "supervised" in dataset_path:
+        dataset_path = dataset_path["supervised"]
 
     # otx explain
     tmp_path_explain = tmp_path / f"otx_explain_{model_name}"
@@ -411,6 +442,7 @@ def test_otx_hpo_e2e_cli(
     # Need to change model to stfpm because default anomaly model is 'padim' which doesn't support HPO
     model_cfg = []
     if task in {
+        OTXTaskType.ANOMALY,
         OTXTaskType.ANOMALY_CLASSIFICATION,
         OTXTaskType.ANOMALY_DETECTION,
         OTXTaskType.ANOMALY_SEGMENTATION,
@@ -419,8 +451,13 @@ def test_otx_hpo_e2e_cli(
 
     if task == OTXTaskType.INSTANCE_SEGMENTATION:
         dataset_path = fxt_target_dataset_per_task[task]["non_tiling"]
+    elif task == OTXTaskType.KEYPOINT_DETECTION:
+        dataset_path = fxt_target_dataset_per_task[task]["rtmpose_tiny"]
     else:
         dataset_path = fxt_target_dataset_per_task[task]
+
+    if isinstance(dataset_path, dict) and "supervised" in dataset_path:
+        dataset_path = dataset_path["supervised"]
 
     tmp_path_hpo = tmp_path / f"otx_hpo_{task.lower()}"
     tmp_path_hpo.mkdir(parents=True)

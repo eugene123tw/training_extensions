@@ -27,6 +27,7 @@ from otx.core.data.entity.segmentation import SegBatchDataEntity, SegBatchPredEn
 from otx.core.data.mem_cache import MemCacheHandlerSingleton
 from otx.core.types.label import HLabelInfo, LabelInfo, NullLabelInfo, SegLabelInfo
 from otx.core.types.task import OTXTaskType
+from otx.utils.device import is_xpu_available
 from torch import LongTensor
 from torchvision import tv_tensors
 from torchvision.tv_tensors import Image, Mask
@@ -41,7 +42,7 @@ def pytest_addoption(parser: pytest.Parser):
         action="store",
         default="all",
         choices=("speed", "balance", "accuracy", "default", "other", "all"),
-        help="Choose speed|balcence|accuracy|default|other|all. Defaults to all.",
+        help="Choose speed|balance|accuracy|default|other|all. Defaults to all.",
     )
     parser.addoption(
         "--data-group",
@@ -316,7 +317,7 @@ def fxt_seg_data_entity() -> tuple[tuple, SegDataEntity, SegBatchDataEntity]:
     single_data_entity = SegDataEntity(
         image=fake_image,
         img_info=fake_image_info,
-        gt_seg_map=fake_masks,
+        masks=fake_masks,
     )
     batch_data_entity = SegBatchDataEntity(
         batch_size=1,
@@ -348,10 +349,12 @@ def fxt_clean_up_mem_cache():
 
 @pytest.fixture(scope="session")
 def fxt_accelerator(request: pytest.FixtureRequest) -> str:
+    if is_xpu_available():
+        return "xpu"
     return request.config.getoption("--device", "gpu")
 
 
-@pytest.fixture(params=set(OTXTaskType) - {OTXTaskType.DETECTION_SEMI_SL})
+@pytest.fixture(params=set(OTXTaskType) - {OTXTaskType.DETECTION_SEMI_SL, OTXTaskType.DIFFUSION})
 def fxt_task(request: pytest.FixtureRequest) -> OTXTaskType:
     return request.param
 
@@ -370,6 +373,7 @@ def fxt_seg_label_info() -> SegLabelInfo:
             label_names,
             ["class2", "class3"],
         ],
+        label_ids=["0", "1", "2"],
     )
 
 
@@ -382,6 +386,7 @@ def fxt_multiclass_labelinfo() -> LabelInfo:
             label_names,
             ["class2", "class3"],
         ],
+        label_ids=["0", "1", "2"],
     )
 
 
@@ -395,6 +400,7 @@ def fxt_multilabel_labelinfo() -> LabelInfo:
             [label_names[1]],
             [label_names[2]],
         ],
+        label_ids=["0", "1", "2"],
     )
 
 
@@ -461,23 +467,8 @@ def fxt_hlabel_multilabel_info() -> HLabelInfo:
             ["Spade_A", "Spade"],
             ["Spade_King", "Spade"],
         ],
+        label_ids=[str(i) for i in range(9)],
     )
-
-
-@pytest.fixture()
-def fxt_xpu_support_task() -> list[OTXTaskType]:
-    return [
-        OTXTaskType.ANOMALY_CLASSIFICATION,
-        OTXTaskType.ANOMALY_DETECTION,
-        OTXTaskType.ANOMALY_SEGMENTATION,
-        OTXTaskType.MULTI_CLASS_CLS,
-        OTXTaskType.MULTI_LABEL_CLS,
-        OTXTaskType.H_LABEL_CLS,
-        OTXTaskType.DETECTION,
-        OTXTaskType.ROTATED_DETECTION,
-        OTXTaskType.DETECTION_SEMI_SL,
-        OTXTaskType.SEMANTIC_SEGMENTATION,
-    ]
 
 
 @pytest.fixture()

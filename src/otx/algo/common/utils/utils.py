@@ -9,16 +9,20 @@ Reference :
     - https://github.com/open-mmlab/mmdetection/blob/v3.2.0/mmdet/structures/bbox/transforms.
     - https://github.com/open-mmlab/mmdetection/blob/v3.2.0/mmdet/models/layers/transformer/utils.
     - https://github.com/open-mmlab/mmdeploy/blob/v1.3.1/mmdeploy/pytorch/functions/topk.
+    - https://github.com/facebookresearch/detectron2/blob/main/projects/PointRend/point_rend/point_features.py
+    - https://github.com/facebookresearch/detr/blob/master/models/detr.py
 """
 
 from __future__ import annotations
 
+import copy
 from functools import partial
 from typing import Callable
 
+import numpy as np
 import torch
 import torch.distributed as dist
-from torch import Tensor
+from torch import Tensor, nn
 
 
 def reduce_mean(tensor: Tensor) -> Tensor:
@@ -259,3 +263,161 @@ def inverse_sigmoid(x: Tensor, eps: float = 1e-5) -> Tensor:
     x1 = x.clamp(min=eps)
     x2 = (1 - x).clamp(min=eps)
     return torch.log(x1 / x2)
+
+
+def cut_mixer(images: Tensor, masks: Tensor) -> tuple[Tensor, Tensor]:
+    """Applies cut-mix augmentation to the input images and masks.
+
+    Args:
+        images (Tensor): The input images tensor.
+        masks (Tensor): The input masks tensor.
+
+    Returns:
+        tuple[Tensor, Tensor]: A tuple containing the augmented images and masks tensors.
+    """
+
+    def rand_bbox(size: tuple[int, ...], lam: float) -> tuple[list[int], ...]:
+        """Generates random bounding box coordinates.
+
+        Args:
+            size (tuple[int, ...]): The size of the input tensor.
+            lam (float): The lambda value for cut-mix augmentation.
+
+        Returns:
+            tuple[list[int, ...], ...]: The bounding box coordinates (bbx1, bby1, bbx2, bby2).
+        """
+        # past implementation
+        w = size[2]
+        h = size[3]
+        b = size[0]
+        cut_rat = np.sqrt(1.0 - lam)
+        cut_w = int(w * cut_rat)
+        cut_h = int(h * cut_rat)
+
+        cx = np.random.randint(size=[b], low=int(w / 8), high=w)
+        cy = np.random.randint(size=[b], low=int(h / 8), high=h)
+
+        bbx1 = np.clip(cx - cut_w // 2, 0, w)
+        bby1 = np.clip(cy - cut_h // 2, 0, h)
+
+        bbx2 = np.clip(cx + cut_w // 2, 0, w)
+        bby2 = np.clip(cy + cut_h // 2, 0, h)
+
+        return bbx1, bby1, bbx2, bby2
+
+    target_device = images.device
+    mix_data = images.clone()
+    mix_masks = masks.clone()
+    u_rand_index = torch.randperm(images.size()[0])[: images.size()[0]].to(target_device)
+    u_bbx1, u_bby1, u_bbx2, u_bby2 = rand_bbox(images.size(), lam=np.random.beta(4, 4))
+
+    for i in range(mix_data.shape[0]):
+        mix_data[i, :, u_bbx1[i] : u_bbx2[i], u_bby1[i] : u_bby2[i]] = images[
+            u_rand_index[i],
+            :,
+            u_bbx1[i] : u_bbx2[i],
+            u_bby1[i] : u_bby2[i],
+        ]
+
+        mix_masks[i, :, u_bbx1[i] : u_bbx2[i], u_bby1[i] : u_bby2[i]] = masks[
+            u_rand_index[i],
+            :,
+            u_bbx1[i] : u_bbx2[i],
+            u_bby1[i] : u_bby2[i],
+        ]
+
+    del images, masks
+
+    return mix_data, mix_masks.squeeze(dim=1)
+
+
+def get_clones(module: nn.Module, n: int) -> nn.ModuleList:
+    """Create a list of cloned modules.
+
+    Args:
+        module (nn.Module): The module to be cloned.
+        n (int): The number of clones to create.
+
+    Returns:
+        nn.ModuleList: The list of cloned modules.
+    """
+    return nn.ModuleList([copy.deepcopy(module) for _ in range(n)])
+
+
+def gen_encoder_output_proposals(
+    memory: Tensor,
+    memory_padding_mask: Tensor,
+    spatial_shapes: Tensor,
+) -> tuple[Tensor, Tensor]:
+    """Generate encoder output and proposals.
+
+    Source: https://github.com/facebookresearch/detr/blob/master/models/detr.py
+
+    Args:
+        memory (Tensor): Memory tensor of shape (N, S, C).
+        memory_padding_mask (Tensor): Memory padding mask tensor of shape (N, S).
+        spatial_shapes (Tensor): Spatial shapes tensor of shape (L, 2).
+
+    Returns:
+        Tuple[Tensor, Tensor]: Encoder output tensor of shape (N, S, C) and proposals tensor of shape (N, L, 6).
+    """
+    batch_size = memory.shape[0]
+    proposals = []
+    _cur = 0
+    for lvl, (height, width) in enumerate(spatial_shapes):
+        mask_flatten_ = memory_padding_mask[:, _cur : (_cur + height * width)].view(batch_size, height, width, 1)
+        valid_height = torch.sum(~mask_flatten_[:, :, 0, 0], 1)
+        valid_width = torch.sum(~mask_flatten_[:, 0, :, 0], 1)
+
+        grid_y, grid_x = torch.meshgrid(
+            torch.linspace(0, height - 1, height, device=memory.device),
+            torch.linspace(0, width - 1, width, device=memory.device),
+        )
+        grid = torch.cat([grid_x.unsqueeze(-1), grid_y.unsqueeze(-1)], -1)
+
+        scale = torch.cat([valid_width.unsqueeze(-1), valid_height.unsqueeze(-1)], 1).view(batch_size, 1, 1, 2)
+        grid = (grid.unsqueeze(0).expand(batch_size, -1, -1, -1) + 0.5) / scale
+        wh = torch.ones_like(grid) * 0.05 * (2.0**lvl)
+        proposal = torch.cat((grid, wh), -1).view(batch_size, -1, 4)
+        proposals.append(proposal)
+        _cur += height * width
+    output_proposals = torch.cat(proposals, 1)
+    output_proposals_valid = ((output_proposals > 0.01) & (output_proposals < 0.99)).all(-1, keepdim=True)
+    output_proposals = torch.log(output_proposals / (1 - output_proposals))
+    output_proposals = output_proposals.masked_fill(memory_padding_mask.unsqueeze(-1), float("inf"))
+    output_proposals = output_proposals.masked_fill(~output_proposals_valid, float("inf"))
+
+    output_memory = memory
+    output_memory = output_memory.masked_fill(memory_padding_mask.unsqueeze(-1), float(0))
+    output_memory = output_memory.masked_fill(~output_proposals_valid, float(0))
+    return output_memory, output_proposals
+
+
+def sample_point(
+    input_features: Tensor,
+    point_coordinates: Tensor,
+    add_dim: bool = False,
+    **kwargs,
+) -> Tensor:
+    """A wrapper around `torch.nn.functional.grid_sample` to support 3D point_coordinates tensors.
+
+    Source: https://github.com/facebookresearch/detectron2/blob/main/projects/PointRend/point_rend/point_features.py
+
+    Args:
+        input_features (Tensor): A tensor of shape (batch_size, channels, height, width) contains features map
+        point_coordinates (Tensor): A tensor that contains [0, 1] * [0, 1] normalized point coordinates
+        add_dim (bool): boolean value to keep track of added dimension
+
+    Returns:
+        point_features (Tensor): A tensor that contains features for points in `point_coordinates`.
+    """
+    if point_coordinates.dim() == 3:
+        add_dim = True
+        point_coordinates = point_coordinates.unsqueeze(2)
+
+    # use nn.function.grid_sample to get features for points in `point_coordinates` via bilinear interpolation
+    point_features = torch.nn.functional.grid_sample(input_features, 2.0 * point_coordinates - 1.0, **kwargs)
+    if add_dim:
+        point_features = point_features.squeeze(3)
+
+    return point_features

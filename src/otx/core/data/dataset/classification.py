@@ -32,9 +32,21 @@ class OTXMulticlassClsDataset(OTXDataset[MulticlassClsDataEntity]):
     def _get_item_impl(self, index: int) -> MulticlassClsDataEntity | None:
         item = self.dm_subset[index]
         img = item.media_as(Image)
-        img_data, img_shape = self._get_img_data_and_shape(img)
+        roi = item.attributes.get("roi", None)
+        img_data, img_shape, _ = self._get_img_data_and_shape(img, roi)
+        if roi:
+            # extract labels from ROI
+            labels_ids = [
+                label["label"]["_id"] for label in roi["labels"] if label["label"]["domain"] == "CLASSIFICATION"
+            ]
+            if self.data_format == "arrow":
+                label_anns = [self.label_info.label_ids.index(label_id) for label_id in labels_ids]
+            else:
+                label_anns = [self.label_info.label_names.index(label_id) for label_id in labels_ids]
+        else:
+            # extract labels from annotations
+            label_anns = [ann.label for ann in item.annotations if isinstance(ann, Label)]
 
-        label_anns = [ann for ann in item.annotations if isinstance(ann, Label)]
         if len(label_anns) > 1:
             msg = f"Multi-class Classification can't use the multi-label, currently len(labels) = {len(label_anns)}"
             raise ValueError(msg)
@@ -47,7 +59,7 @@ class OTXMulticlassClsDataset(OTXDataset[MulticlassClsDataEntity]):
                 ori_shape=img_shape,
                 image_color_channel=self.image_color_channel,
             ),
-            labels=torch.as_tensor([ann.label for ann in label_anns]),
+            labels=torch.as_tensor(label_anns),
         )
 
         return self._apply_transforms(entity)
@@ -69,10 +81,23 @@ class OTXMultilabelClsDataset(OTXDataset[MultilabelClsDataEntity]):
         item = self.dm_subset[index]
         img = item.media_as(Image)
         ignored_labels: list[int] = []  # This should be assigned form item
-        img_data, img_shape = self._get_img_data_and_shape(img)
+        img_data, img_shape, _ = self._get_img_data_and_shape(img)
 
-        label_anns = [ann for ann in item.annotations if isinstance(ann, Label)]
-        labels = torch.as_tensor([ann.label for ann in label_anns])
+        label_ids = set()
+        for ann in item.annotations:
+            # multilabel information stored in 'multi_label_ids' attribute when the source format is arrow
+            if "multi_label_ids" in ann.attributes:
+                for lbl_idx in ann.attributes["multi_label_ids"]:
+                    label_ids.add(lbl_idx)
+
+            if isinstance(ann, Label):
+                label_ids.add(ann.label)
+            else:
+                # If the annotation is not Label, it should be converted to Label.
+                # For Chained Task: Detection (Bbox) -> Classification (Label)
+                label = Label(label=ann.label)
+                label_ids.add(label.label)
+        labels = torch.as_tensor(list(label_ids))
 
         entity = MultilabelClsDataEntity(
             image=img_data,
@@ -110,13 +135,22 @@ class OTXHlabelClsDataset(OTXDataset[HlabelClsDataEntity]):
         self.dm_categories = self.dm_subset.categories()[AnnotationType.label]
 
         # Hlabel classification used HLabelInfo to insert the HLabelData.
-        self.label_info = HLabelInfo.from_dm_label_groups(self.dm_categories)
+        if self.data_format == "arrow":
+            # arrow format stores label IDs as names, have to deal with that here
+            self.label_info = HLabelInfo.from_dm_label_groups_arrow(self.dm_categories)
+        else:
+            self.label_info = HLabelInfo.from_dm_label_groups(self.dm_categories)
+
+        self.id_to_name_mapping = dict(zip(self.label_info.label_ids, self.label_info.label_names))
+        self.id_to_name_mapping[""] = ""
+
         if self.label_info.num_multiclass_heads == 0:
             msg = "The number of multiclass heads should be larger than 0."
             raise ValueError(msg)
 
-        for dm_item in self.dm_subset:
-            self._add_ancestors(dm_item.annotations)
+        if self.data_format != "arrow":
+            for dm_item in self.dm_subset:
+                self._add_ancestors(dm_item.annotations)
 
     def _add_ancestors(self, label_anns: list[Label]) -> None:
         """Add ancestors recursively if some label miss the ancestor information.
@@ -131,7 +165,7 @@ class OTXHlabelClsDataset(OTXDataset[HlabelClsDataEntity]):
         """
 
         def _label_idx_to_name(idx: int) -> str:
-            return self.label_info.label_names[idx]
+            return self.dm_categories[idx].name
 
         def _label_name_to_idx(name: str) -> int:
             indices = [idx for idx, val in enumerate(self.label_info.label_names) if val == name]
@@ -139,13 +173,15 @@ class OTXHlabelClsDataset(OTXDataset[HlabelClsDataEntity]):
 
         def _get_label_group_idx(label_name: str) -> int:
             if isinstance(self.label_info, HLabelInfo):
+                if self.data_format == "arrow":
+                    return self.label_info.class_to_group_idx[self.id_to_name_mapping[label_name]][0]
                 return self.label_info.class_to_group_idx[label_name][0]
             msg = f"self.label_info should have HLabelInfo type, got {type(self.label_info)}"
             raise ValueError(msg)
 
         def _find_ancestor_recursively(label_name: str, ancestors: list) -> list[str]:
             _, dm_label_category = self.dm_categories.find(label_name)
-            parent_name = dm_label_category.parent
+            parent_name = dm_label_category.parent if dm_label_category else ""
 
             if parent_name != "":
                 ancestors.append(parent_name)
@@ -177,10 +213,24 @@ class OTXHlabelClsDataset(OTXDataset[HlabelClsDataEntity]):
         item = self.dm_subset[index]
         img = item.media_as(Image)
         ignored_labels: list[int] = []  # This should be assigned form item
-        img_data, img_shape = self._get_img_data_and_shape(img)
+        img_data, img_shape, _ = self._get_img_data_and_shape(img)
 
-        label_anns = [ann for ann in item.annotations if isinstance(ann, Label)]
-        hlabel_labels = self._convert_label_to_hlabel_format(label_anns, ignored_labels)
+        label_ids = set()
+        for ann in item.annotations:
+            # in h-cls scenario multilabel information stored in 'multi_label_ids' attribute
+            if "multi_label_ids" in ann.attributes:
+                for lbl_idx in ann.attributes["multi_label_ids"]:
+                    label_ids.add(lbl_idx)
+
+            if isinstance(ann, Label):
+                label_ids.add(ann.label)
+            else:
+                # If the annotation is not Label, it should be converted to Label.
+                # For Chained Task: Detection (Bbox) -> Classification (Label)
+                label = Label(label=ann.label)
+                label_ids.add(label.label)
+
+        hlabel_labels = self._convert_label_to_hlabel_format([Label(label=idx) for idx in label_ids], ignored_labels)
 
         entity = HlabelClsDataEntity(
             image=img_data,
@@ -200,21 +250,22 @@ class OTXHlabelClsDataset(OTXDataset[HlabelClsDataEntity]):
         """Convert format of the label to the h-label.
 
         It converts the label format to h-label format.
+        Total length of result is sum of number of hierarchy and number of multilabel classes.
 
         i.e.
         Let's assume that we used the same dataset with example of the definition of HLabelData
-        and the original labels are ["Rigid", "Panda", "Lion"].
+        and the original labels are ["Rigid", "Triangle", "Lion"].
 
-        Then, h-label format will be [1, -1, 0, 1, 1].
+        Then, h-label format will be [0, 1, 1, 0].
         The first N-th indices represent the label index of multiclass heads (N=num_multiclass_heads),
         others represent the multilabel labels.
 
-        [Multiclass Heads: [1, -1]]
-        0-th index = 1 -> ["Non-Rigid"(X), "Rigid"(O)] <- First multiclass head
-        1-st index = -1 -> ["Rectangle"(X), "Triangle"(X)] <- Second multiclass head
+        [Multiclass Heads]
+        0-th index = 0 -> ["Rigid"(O), "Non-Rigid"(X)] <- First multiclass head
+        1-st index = 1 -> ["Rectangle"(O), "Triangle"(X), "Circle"(X)] <- Second multiclass head
 
-        [Multilabel Head: [0, 1, 1]]
-        2, 3, 4 indices = [0, 1, 1] -> ["Circle"(X), "Lion"(O), "Panda"(O)]
+        [Multilabel Head]
+        2, 3 indices = [1, 0] -> ["Lion"(O), "Panda"(X)]
         """
         if not isinstance(self.label_info, HLabelInfo):
             msg = f"The type of label_info should be HLabelInfo, got {type(self.label_info)}."
@@ -228,12 +279,18 @@ class OTXHlabelClsDataset(OTXDataset[HlabelClsDataEntity]):
             class_indices[i] = -1
 
         for ann in label_anns:
-            ann_name = self.dm_categories.items[ann.label].name
+            if self.data_format == "arrow":
+                # skips unknown labels for instance, the empty one
+                if self.dm_categories.items[ann.label].name not in self.id_to_name_mapping:
+                    continue
+                ann_name = self.id_to_name_mapping[self.dm_categories.items[ann.label].name]
+            else:
+                ann_name = self.dm_categories.items[ann.label].name
             group_idx, in_group_idx = self.label_info.class_to_group_idx[ann_name]
 
             if group_idx < num_multiclass_heads:
                 class_indices[group_idx] = in_group_idx
-            elif not ignored_labels or ann.label not in ignored_labels:
+            elif ann.label not in ignored_labels:
                 class_indices[num_multiclass_heads + in_group_idx] = 1
             else:
                 class_indices[num_multiclass_heads + in_group_idx] = -1

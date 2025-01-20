@@ -11,6 +11,7 @@ from otx.core.model.base import OTXModel
 from otx.core.types.label import LabelInfo, SegLabelInfo
 from otx.core.types.task import OTXTaskType
 from otx.core.types.transformer_libs import TransformLibType
+from otx.engine.utils import auto_configurator as target_file
 from otx.engine.utils.auto_configurator import (
     DEFAULT_CONFIG_PER_TASK,
     AutoConfigurator,
@@ -25,7 +26,7 @@ def fxt_data_root_per_task_type() -> dict:
         "tests/assets/classification_dataset": OTXTaskType.MULTI_CLASS_CLS,
         "tests/assets/multilabel_classification": OTXTaskType.MULTI_LABEL_CLS,
         "tests/assets/car_tree_bug": OTXTaskType.DETECTION,
-        "tests/assets/common_semantic_segmentation_dataset": OTXTaskType.SEMANTIC_SEGMENTATION,
+        "tests/assets/common_semantic_segmentation_dataset/supervised": OTXTaskType.SEMANTIC_SEGMENTATION,
     }
 
 
@@ -108,6 +109,19 @@ class TestAutoConfigurator:
         assert isinstance(datamodule, OTXDataModule)
         assert datamodule.task == task
 
+    def test_get_datamodule_set_input_size_multiplier(self, mocker) -> None:
+        mock_otxdatamodule = mocker.patch.object(target_file, "OTXDataModule")
+        auto_configurator = AutoConfigurator(
+            data_root="tests/assets/car_tree_bug",
+            task=OTXTaskType.DETECTION,
+            model_name="yolox_tiny",
+        )
+        auto_configurator.config["data"]["adaptive_input_size"] = "auto"
+
+        auto_configurator.get_datamodule()
+
+        assert mock_otxdatamodule.call_args.kwargs["input_size_multiplier"] == 32
+
     def test_get_model(self, fxt_task: OTXTaskType) -> None:
         if fxt_task is OTXTaskType.H_LABEL_CLS:
             pytest.xfail(reason="Not working")
@@ -117,9 +131,9 @@ class TestAutoConfigurator:
         # With label_info
         label_names = ["class1", "class2", "class3"]
         label_info = (
-            LabelInfo(label_names=label_names, label_groups=[label_names])
+            LabelInfo(label_names=label_names, label_groups=[label_names], label_ids=label_names)
             if fxt_task != OTXTaskType.SEMANTIC_SEGMENTATION
-            else SegLabelInfo(label_names=label_names, label_groups=[label_names])
+            else SegLabelInfo(label_names=label_names, label_groups=[label_names], label_ids=label_names)
         )
         model = auto_configurator.get_model(label_info=label_info)
         assert isinstance(model, OTXModel)
@@ -130,11 +144,22 @@ class TestAutoConfigurator:
             with pytest.raises(ValueError, match="Given model class (.*) requires a valid label_info to instantiate."):
                 _ = auto_configurator.get_model(label_info=None)
 
+    def test_get_model_set_input_size(self) -> None:
+        auto_configurator = AutoConfigurator(task=OTXTaskType.MULTI_CLASS_CLS)
+        label_names = ["class1", "class2", "class3"]
+        label_info = LabelInfo(label_names=label_names, label_groups=[label_names], label_ids=label_names)
+        input_size = 300
+
+        model = auto_configurator.get_model(label_info=label_info, input_size=input_size)
+
+        assert model.input_size == (input_size, input_size)
+
     def test_get_optimizer(self, fxt_task: OTXTaskType) -> None:
         if fxt_task in {
+            OTXTaskType.ANOMALY,
+            OTXTaskType.ANOMALY_CLASSIFICATION,
             OTXTaskType.ANOMALY_SEGMENTATION,
             OTXTaskType.ANOMALY_DETECTION,
-            OTXTaskType.ANOMALY_CLASSIFICATION,
         }:
             pytest.xfail(reason="Not working")
 
@@ -148,9 +173,10 @@ class TestAutoConfigurator:
 
     def test_get_scheduler(self, fxt_task: OTXTaskType) -> None:
         if fxt_task in {
+            OTXTaskType.ANOMALY,
+            OTXTaskType.ANOMALY_CLASSIFICATION,
             OTXTaskType.ANOMALY_SEGMENTATION,
             OTXTaskType.ANOMALY_DETECTION,
-            OTXTaskType.ANOMALY_CLASSIFICATION,
         }:
             pytest.xfail(reason="Not working")
 
@@ -188,3 +214,5 @@ class TestAutoConfigurator:
         assert updated_datamodule.test_subset.transforms == [{"class_path": "torchvision.transforms.v2.ToImage"}]
 
         assert updated_datamodule.test_subset.transform_lib_type == TransformLibType.TORCHVISION
+        assert not updated_datamodule.tile_config.enable_tiler
+        assert updated_datamodule.unlabeled_subset.data_root is None

@@ -5,11 +5,14 @@
 
 from __future__ import annotations
 
+from typing import Callable
+
 import torch
 from torch import nn
 from torch.nn import functional as f
 
-from otx.algo.modules import ConvModule, DepthwiseSeparableConvModule
+from otx.algo.modules import Conv2dModule, DepthwiseSeparableConvModule, build_activation_layer
+from otx.algo.modules.norm import build_norm_layer
 
 from .utils import normalize
 
@@ -18,35 +21,25 @@ class IterativeAggregator(nn.Module):
     """IterativeAggregator.
 
     Based on: https://github.com/HRNet/Lite-HRNet.
+
+    Args:
+        in_channels (list[int]): List of input channels for each branch.
+        min_channels (int | None): Minimum number of channels. Defaults to None.
+        normalization (Callable[..., nn.Module] | None): Normalization layer module.
+            Defaults to ``nn.BatchNorm2d``.
+        merge_norm (str | None): Whether to merge normalization layers. Defaults to None.
+        use_concat (bool): Whether to use concatenation. Defaults to False.
     """
 
     def __init__(
         self,
         in_channels: list[int],
         min_channels: int | None = None,
-        conv_cfg: dict | None = None,
-        norm_cfg: dict | None = None,
+        normalization: Callable[..., nn.Module] | None = nn.BatchNorm2d,
         merge_norm: str | None = None,
         use_concat: bool = False,
     ) -> None:
-        """IterativeAggregator for LiteHRNet.
-
-        Args:
-            in_channels (list[int]): List of input channels for each branch.
-            min_channels (int | None): Minimum number of channels. Defaults to None.
-            conv_cfg (dict | None): Config for convolution layers. Defaults to None.
-            norm_cfg (dict | None): Config for normalization layers. Defaults to None.
-            merge_norm (str | None): Whether to merge normalization layers. Defaults to None.
-            use_concat (bool): Whether to use concatenation. Defaults to False.
-
-        Returns:
-            None
-        """
-        if norm_cfg is None:
-            norm_cfg = {"type": "BN"}
-        if conv_cfg is None:
-            conv_cfg = {"type": "Conv2d"}
-
+        """IterativeAggregator for LiteHRNet."""
         super().__init__()
 
         self.use_concat = use_concat
@@ -57,8 +50,8 @@ class IterativeAggregator(nn.Module):
         min_channels = min_channels if min_channels is not None else 0
 
         projects: list[DepthwiseSeparableConvModule | None] = []
-        expanders: list[ConvModule | None] = []
-        fuse_layers: list[ConvModule | None] = []
+        expanders: list[Conv2dModule | None] = []
+        fuse_layers: list[Conv2dModule | None] = []
 
         for i in range(num_branches):
             if not self.use_concat or i == 0:
@@ -66,14 +59,13 @@ class IterativeAggregator(nn.Module):
             else:
                 out_channels = self.in_channels[i + 1]
                 fuse_layers.append(
-                    ConvModule(
+                    Conv2dModule(
                         in_channels=2 * out_channels,
                         out_channels=out_channels,
                         kernel_size=1,
                         stride=1,
-                        conv_cfg=conv_cfg,
-                        norm_cfg=norm_cfg,
-                        act_cfg={"type": "ReLU"},
+                        normalization=build_norm_layer(normalization, num_features=out_channels),
+                        activation=build_activation_layer(nn.ReLU),
                     ),
                 )
 
@@ -89,24 +81,22 @@ class IterativeAggregator(nn.Module):
                     kernel_size=3,
                     stride=1,
                     padding=1,
-                    conv_cfg=conv_cfg,
-                    norm_cfg=norm_cfg,
-                    act_cfg={"type": "ReLU"},
-                    dw_act_cfg=None,
-                    pw_act_cfg={"type": "ReLU"},
+                    normalization=build_norm_layer(normalization, num_features=out_channels),
+                    activation=build_activation_layer(nn.ReLU),
+                    dw_activation=None,
+                    pw_activation=build_activation_layer(nn.ReLU),
                 ),
             )
 
             if self.in_channels[i] < min_channels:
                 expanders.append(
-                    ConvModule(
+                    Conv2dModule(
                         in_channels=self.in_channels[i],
                         out_channels=min_channels,
                         kernel_size=1,
                         stride=1,
-                        conv_cfg=conv_cfg,
-                        norm_cfg=norm_cfg,
-                        act_cfg={"type": "ReLU"},
+                        normalization=build_norm_layer(normalization, num_features=min_channels),
+                        activation=build_activation_layer(nn.ReLU),
                     ),
                 )
             else:

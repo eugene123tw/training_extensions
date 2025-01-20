@@ -49,13 +49,6 @@ class OTXVisualPromptingModelExporter(OTXNativeModelExporter):
         Returns:
             dict[str, Path]: paths to the exported models
         """
-        # NOTE: Rather than using OTXModel.forward_for_tracing()
-        # Use the nested `image_encoder` and `decoder` models' forward functions directly
-        models: dict[str, torch.nn.Module] = {
-            "image_encoder": model.model.image_encoder,
-            "decoder": model.model,
-        }
-
         if export_format == OTXExportFormatType.OPENVINO:
             if to_exportable_code:
                 msg = "Exportable code option is not supported and will be ignored."
@@ -67,10 +60,28 @@ class OTXVisualPromptingModelExporter(OTXNativeModelExporter):
             msg = f"Unsupported export format: {export_format}"
             raise ValueError(msg)
 
-        return {  # type: ignore[return-value]
-            module: fn(models[module], output_dir, f"{base_model_name}_{module}", precision, model_type=f"sam_{module}")
-            for module in ["image_encoder", "decoder"]
+        models: dict[str, torch.nn.Module] = {
+            "image_encoder": model.model.image_encoder,
+            "decoder": model.model,
         }
+
+        orig_decoder_forward = models["decoder"].forward
+        try:
+            models["decoder"].forward = models["decoder"].forward_for_tracing
+
+            return {  # type: ignore[return-value]
+                module: fn(
+                    models[module],
+                    output_dir,
+                    f"{base_model_name}_{module}",
+                    precision,
+                    model_type=f"sam_{module}",
+                )
+                for module in ["image_encoder", "decoder"]
+            }
+
+        finally:
+            models["decoder"].forward = orig_decoder_forward
 
     def to_openvino(
         self,
@@ -170,18 +181,16 @@ class OTXVisualPromptingModelExporter(OTXNativeModelExporter):
             dummy_inputs = {
                 "image_embeddings": torch.zeros(
                     1,
-                    model.embed_dim,
-                    model.image_embedding_size,
-                    model.image_embedding_size,
+                    model.prompt_encoder.embed_dim,
+                    *model.prompt_encoder.image_embedding_size,
                     dtype=torch.float32,
                 ),
-                "point_coords": torch.randint(low=0, high=1024, size=(1, 2, 2), dtype=torch.float32),
+                "point_coords": torch.randint(low=0, high=self.input_size[0], size=(1, 2, 2), dtype=torch.float32),
                 "point_labels": torch.randint(low=0, high=4, size=(1, 2), dtype=torch.float32),
                 "mask_input": torch.randn(
                     1,
                     1,
-                    4 * model.image_embedding_size,
-                    4 * model.image_embedding_size,
+                    *(4 * size for size in model.prompt_encoder.image_embedding_size),
                     dtype=torch.float32,
                 ),
                 "has_mask_input": torch.tensor([[1]], dtype=torch.float32),

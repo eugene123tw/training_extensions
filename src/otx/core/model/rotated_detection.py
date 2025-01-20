@@ -1,6 +1,5 @@
 # Copyright (C) 2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
-#
 """Class definition for rotated detection model entity used in OTX."""
 
 from __future__ import annotations
@@ -10,15 +9,12 @@ import torch
 from datumaro import Polygon
 from torchvision import tv_tensors
 
+from otx.algo.instance_segmentation.maskrcnn import MaskRCNN
 from otx.core.data.entity.instance_segmentation import InstanceSegBatchPredEntity
-from otx.core.model.instance_segmentation import (
-    MMDetInstanceSegCompatibleModel,
-    OTXInstanceSegModel,
-    OVInstanceSegmentationModel,
-)
+from otx.core.model.instance_segmentation import OVInstanceSegmentationModel
 
 
-class OTXRotatedDetModel(OTXInstanceSegModel):
+class RotatedMaskRCNNModel(MaskRCNN):
     """Base class for the rotated detection models used in OTX."""
 
     def predict_step(self, *args: torch.Any, **kwargs: torch.Any) -> InstanceSegBatchPredEntity:
@@ -96,10 +92,6 @@ class OTXRotatedDetModel(OTXInstanceSegModel):
             polygons=batch_polygons,
             labels=batch_labels,
         )
-
-
-class MMDetRotatedDetModel(OTXRotatedDetModel, MMDetInstanceSegCompatibleModel):
-    """Rotated Detection model compaible for MMDet."""
 
 
 class OVRotatedDetectionModel(OVInstanceSegmentationModel):

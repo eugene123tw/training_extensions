@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import copy
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import torch
 from torch import Tensor, nn
@@ -15,23 +15,98 @@ from torchvision.ops import box_convert
 from torchvision.tv_tensors import BoundingBoxFormat
 
 from otx.algo.detection.backbones import PResNet
-from otx.algo.detection.base_models.detection_transformer import DETR
+from otx.algo.detection.detectors import DETR
 from otx.algo.detection.heads import RTDETRTransformer
 from otx.algo.detection.necks import HybridEncoder
+from otx.core.config.data import TileConfig
 from otx.core.data.entity.base import OTXBatchLossEntity
 from otx.core.data.entity.detection import DetBatchDataEntity, DetBatchPredEntity
 from otx.core.exporter.base import OTXModelExporter
 from otx.core.exporter.native import OTXNativeModelExporter
+from otx.core.metrics.fmeasure import MeanAveragePrecisionFMeasureCallable
+from otx.core.model.base import DefaultOptimizerCallable, DefaultSchedulerCallable
 from otx.core.model.detection import ExplainableOTXDetModel
+
+if TYPE_CHECKING:
+    from lightning.pytorch.cli import LRSchedulerCallable, OptimizerCallable
+
+    from otx.core.metrics import MetricCallable
+    from otx.core.schedulers import LRSchedulerListCallable
+    from otx.core.types.label import LabelInfoTypes
+
+
+PRETRAINED_ROOT: str = "https://github.com/lyuwenyu/storage/releases/download/v0.1/"
+
+PRETRAINED_WEIGHTS: dict[str, str] = {
+    "rtdetr_18": PRETRAINED_ROOT + "rtdetr_r18vd_5x_coco_objects365_from_paddle.pth",
+    "rtdetr_50": PRETRAINED_ROOT + "rtdetr_r50vd_2x_coco_objects365_from_paddle.pth",
+    "rtdetr_101": PRETRAINED_ROOT + "rtdetr_r101vd_2x_coco_objects365_from_paddle.pth",
+}
 
 
 class RTDETR(ExplainableOTXDetModel):
-    """RTDETR model."""
+    """OTX Detection model class for RTDETR.
 
-    image_size = (1, 3, 640, 640)
+    Default input size per model:
+        - ssd_mobilenetv2 : (640, 640)
+    """
+
+    input_size_multiplier = 32
     mean: tuple[float, float, float] = (0.0, 0.0, 0.0)
     std: tuple[float, float, float] = (255.0, 255.0, 255.0)
-    load_from: str | None = None
+
+    def __init__(
+        self,
+        model_name: Literal["rtdetr_18", "rtdetr_50", "rtdetr_101"],
+        label_info: LabelInfoTypes,
+        input_size: tuple[int, int] = (640, 640),
+        optimizer: OptimizerCallable = DefaultOptimizerCallable,
+        scheduler: LRSchedulerCallable | LRSchedulerListCallable = DefaultSchedulerCallable,
+        metric: MetricCallable = MeanAveragePrecisionFMeasureCallable,
+        torch_compile: bool = False,
+        tile_config: TileConfig = TileConfig(enable_tiler=False),
+    ) -> None:
+        self.load_from: str = PRETRAINED_WEIGHTS[model_name]
+        super().__init__(
+            model_name=model_name,
+            label_info=label_info,
+            input_size=input_size,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            metric=metric,
+            torch_compile=torch_compile,
+            tile_config=tile_config,
+        )
+
+    def _build_model(self, num_classes: int) -> DETR:
+        backbone = PResNet(model_name=self.model_name)
+        encoder = HybridEncoder(
+            model_name=self.model_name,
+            eval_spatial_size=self.input_size,
+        )
+        decoder = RTDETRTransformer(
+            model_name=self.model_name,
+            num_classes=num_classes,
+            eval_spatial_size=self.input_size,
+        )
+
+        optimizer_configuration = [
+            # no weight decay for norm layers in backbone
+            {"params": "^(?=.*backbone)(?=.*norm).*$", "weight_decay": 0.0, "lr": 0.00001},
+            # lr for the backbone, but not norm layers is 0.00001
+            {"params": "^(?=.*backbone)(?!.*norm).*$", "lr": 0.00001},
+            # no weight decay for norm layers and biases in encoder and decoder layers
+            {"params": "^(?=.*(?:encoder|decoder))(?=.*(?:norm|bias)).*$", "weight_decay": 0.0},
+        ]
+
+        return DETR(
+            backbone=backbone,
+            encoder=encoder,
+            decoder=decoder,
+            num_classes=num_classes,
+            optimizer_configuration=optimizer_configuration,
+            input_size=self.input_size[0],
+        )
 
     def _customize_inputs(
         self,
@@ -43,13 +118,14 @@ class RTDETR(ExplainableOTXDetModel):
         # prepare bboxes for the model
         for bb, ll in zip(entity.bboxes, entity.labels):
             # convert to cxcywh if needed
-            converted_bboxes = (
-                box_convert(bb, in_fmt="xyxy", out_fmt="cxcywh") if bb.format == BoundingBoxFormat.XYXY else bb
-            )
-            # normalize the bboxes
-            scaled_bboxes = converted_bboxes / torch.tensor(bb.canvas_size[::-1]).tile(2)[None].to(
-                converted_bboxes.device,
-            )
+            if len(scaled_bboxes := bb):
+                converted_bboxes = (
+                    box_convert(bb, in_fmt="xyxy", out_fmt="cxcywh") if bb.format == BoundingBoxFormat.XYXY else bb
+                )
+                # normalize the bboxes
+                scaled_bboxes = converted_bboxes / torch.tensor(bb.canvas_size[::-1]).tile(2)[None].to(
+                    converted_bboxes.device,
+                )
             targets.append({"boxes": scaled_bboxes, "labels": ll})
 
         return {
@@ -59,7 +135,7 @@ class RTDETR(ExplainableOTXDetModel):
 
     def _customize_outputs(
         self,
-        outputs: list[torch.Tensor] | dict,
+        outputs: list[torch.Tensor] | dict,  # type: ignore[override]
         inputs: DetBatchDataEntity,
     ) -> DetBatchPredEntity | OTXBatchLossEntity:
         if self.training:
@@ -77,7 +153,8 @@ class RTDETR(ExplainableOTXDetModel):
                     raise TypeError(msg)
             return losses
 
-        scores, bboxes, labels = self.model.postprocess(outputs, [img_info.img_shape for img_info in inputs.imgs_info])
+        original_sizes = [img_info.ori_shape for img_info in inputs.imgs_info]
+        scores, bboxes, labels = self.model.postprocess(outputs, original_sizes)
 
         return DetBatchPredEntity(
             batch_size=len(outputs),
@@ -163,12 +240,13 @@ class RTDETR(ExplainableOTXDetModel):
     @property
     def _exporter(self) -> OTXModelExporter:
         """Creates OTXModelExporter object that can export the model."""
-        if self.image_size is None:
-            raise ValueError(self.image_size)
+        if self.input_size is None:
+            msg = f"Input size attribute is not set for {self.__class__}"
+            raise ValueError(msg)
 
         return OTXNativeModelExporter(
             task_level_export_parameters=self._export_parameters,
-            input_size=self.image_size,
+            input_size=(1, 3, *self.input_size),
             mean=self.mean,
             std=self.std,
             resize_mode="standard",
@@ -193,138 +271,3 @@ class RTDETR(ExplainableOTXDetModel):
     def _optimization_config(self) -> dict[str, Any]:
         """PTQ config for RT-DETR."""
         return {"model_type": "transformer"}
-
-
-class RTDETR18(RTDETR):
-    """RT-DETR with ResNet-18 backbone."""
-
-    load_from = (
-        "https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r18vd_5x_coco_objects365_from_paddle.pth"
-    )
-
-    def _build_model(self, num_classes: int) -> nn.Module:
-        backbone = PResNet(
-            depth=18,
-            pretrained=True,
-            return_idx=[1, 2, 3],
-        )
-        encoder = HybridEncoder(
-            in_channels=[128, 256, 512],
-            expansion=0.5,
-            eval_spatial_size=self.image_size[2:],
-        )
-        decoder = RTDETRTransformer(
-            num_classes=num_classes,
-            num_decoder_layers=3,
-            feat_channels=[256, 256, 256],
-            eval_spatial_size=self.image_size[2:],
-        )
-
-        optimizer_configuration = [
-            # no weight decay for norm layers in backbone
-            {"params": "^(?=.*backbone)(?=.*norm).*$", "weight_decay": 0.0, "lr": 0.00001},
-            # lr for the backbone, but not norm layers is 0.00001
-            {"params": "^(?=.*backbone)(?!.*norm).*$", "lr": 0.00001},
-            # no weight decay for norm layers and biases in encoder and decoder layers
-            {"params": "^(?=.*(?:encoder|decoder))(?=.*(?:norm|bias)).*$", "weight_decay": 0.0},
-        ]
-
-        return DETR(
-            backbone=backbone,
-            encoder=encoder,
-            decoder=decoder,
-            num_classes=num_classes,
-            optimizer_configuration=optimizer_configuration,
-        )
-
-
-class RTDETR50(RTDETR):
-    """RT-DETR with ResNet-50 backbone."""
-
-    load_from = (
-        "https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r50vd_2x_coco_objects365_from_paddle.pth"
-    )
-
-    def _build_model(self, num_classes: int) -> nn.Module:
-        backbone = PResNet(
-            depth=50,
-            return_idx=[1, 2, 3],
-            pretrained=True,
-            freeze_at=0,
-            norm_cfg={"type": "FBN", "name": "norm"},
-        )
-        encoder = HybridEncoder(
-            eval_spatial_size=self.image_size[2:],
-        )
-        decoder = RTDETRTransformer(
-            num_classes=num_classes,
-            feat_channels=[256, 256, 256],
-            eval_spatial_size=self.image_size[2:],
-            num_decoder_layers=6,
-        )
-
-        optimizer_configuration = [
-            # lr for all layers in backbone is 0.00001
-            {"params": "backbone", "lr": 0.00001},
-            # no weight decay for norm layers and biases in decoder
-            {"params": "^(?=.*decoder(?=.*bias|.*norm.*weight)).*$", "weight_decay": 0.0},
-            # no weight decay for norm layers and biases in encoder
-            {"params": "^(?=.*encoder(?=.*bias|.*norm.*weight)).*$", "weight_decay": 0.0},
-        ]
-
-        return DETR(
-            backbone=backbone,
-            encoder=encoder,
-            decoder=decoder,
-            num_classes=num_classes,
-            optimizer_configuration=optimizer_configuration,
-        )
-
-
-class RTDETR101(RTDETR):
-    """RT-DETR with ResNet-101 backbone."""
-
-    load_from = (
-        "https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetr_r101vd_2x_coco_objects365_from_paddle.pth"
-    )
-
-    def _build_model(self, num_classes: int) -> nn.Module:
-        backbone = PResNet(
-            depth=101,
-            return_idx=[1, 2, 3],
-            norm_cfg={"type": "FBN", "name": "norm"},
-            pretrained=True,
-            freeze_at=0,
-        )
-
-        encoder = HybridEncoder(
-            hidden_dim=384,
-            dim_feedforward=2048,
-            in_channels=[512, 1024, 2048],
-            eval_spatial_size=self.image_size[2:],
-        )
-
-        decoder = RTDETRTransformer(
-            num_classes=num_classes,
-            feat_channels=[384, 384, 384],
-            eval_spatial_size=self.image_size[2:],
-        )
-
-        # no bias decay and learning rate correction for the backbone.
-        # Without this correction gradients explosion will take place.
-        optimizer_configuration = [
-            # lr for all layers in backbone is 0.000001
-            {"params": "backbone", "lr": 0.000001},
-            # no weight decay for norm layers and biases in encoder
-            {"params": "^(?=.*encoder(?=.*bias|.*norm.*weight)).*$", "weight_decay": 0.0},
-            # no weight decay for norm layers and biases in decoder
-            {"params": "^(?=.*decoder(?=.*bias|.*norm.*weight)).*$", "weight_decay": 0.0},
-        ]
-
-        return DETR(
-            backbone=backbone,
-            encoder=encoder,
-            decoder=decoder,
-            num_classes=num_classes,
-            optimizer_configuration=optimizer_configuration,
-        )

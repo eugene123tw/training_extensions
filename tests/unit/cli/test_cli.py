@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import sys
+from unittest.mock import MagicMock
 
 import pytest
+import torch
 import yaml
 from otx.cli import OTXCLI, main
+from rich.console import Console
 
 
 class TestOTXCLI:
@@ -76,8 +79,8 @@ class TestOTXCLI:
         assert cli._subcommand_method_arguments.keys() == cli.engine_subcommands().keys()
 
     @pytest.fixture()
-    def fxt_train_command(self, monkeypatch, tmpdir) -> list[str]:
-        argv = [
+    def fxt_train_argv(self, tmpdir) -> list[str]:
+        return [
             "otx",
             "train",
             "--config",
@@ -89,8 +92,11 @@ class TestOTXCLI:
             "--work_dir",
             str(tmpdir),
         ]
-        monkeypatch.setattr("sys.argv", argv)
-        return argv
+
+    @pytest.fixture()
+    def fxt_train_command(self, monkeypatch, fxt_train_argv) -> list[str]:
+        monkeypatch.setattr("sys.argv", fxt_train_argv)
+        return fxt_train_argv
 
     def test_instantiate_classes(self, fxt_train_command, mocker) -> None:
         mock_run = mocker.patch("otx.cli.OTXCLI.run")
@@ -112,6 +118,41 @@ class TestOTXCLI:
 
         assert cli.datamodule == cli.engine.datamodule
         assert cli.model == cli.engine.model
+
+    @pytest.mark.parametrize("input_size", [512, 1024])
+    def test_instantiate_classes_set_input_size(self, input_size, fxt_train_argv, monkeypatch, mocker) -> None:
+        mocker.patch("otx.cli.OTXCLI.run")
+        fxt_train_argv.extend(["--data.input_size", str(input_size)])
+        monkeypatch.setattr("sys.argv", fxt_train_argv)
+
+        cli = OTXCLI()
+        cli.instantiate_classes()
+
+        assert cli.model.input_size == (input_size, input_size)
+
+    @pytest.fixture()
+    def mock_model_cls(self) -> MagicMock:
+        model_cls = MagicMock()
+        model_cls.input_size_multiplier = 12345
+        return model_cls
+
+    def test_instantiate_classes_set_adaptive_input_size(
+        self,
+        fxt_train_argv,
+        monkeypatch,
+        mocker,
+        mock_model_cls,
+    ) -> None:
+        mocker.patch("otx.cli.OTXCLI.run")
+        mocker.patch("otx.utils.utils.get_model_cls_from_config", return_value=mock_model_cls)
+        fxt_train_argv.extend(["--data.adaptive_input_size", "auto"])
+        monkeypatch.setattr("sys.argv", fxt_train_argv)
+        mock_data_module = mocker.patch("otx.core.data.module.adapt_input_size_to_dataset", return_value=1024)
+
+        cli = OTXCLI()
+        cli.instantiate_classes()
+
+        assert mock_data_module.call_args.args[-1] == 12345
 
     def test_raise_error_correctly(self, fxt_train_command, mocker) -> None:
         mock_engine = mocker.patch("otx.cli.OTXCLI.instantiate_engine")
@@ -147,7 +188,7 @@ class TestOTXCLI:
         scheduler:
           class_path: otx.core.schedulers.LinearWarmupSchedulerCallable
           init_args:
-            num_warmup_steps: 3
+            num_warmup_steps: 0
             monitor: val/test_f1
             warmup_interval: step
             main_scheduler_callable:
@@ -162,7 +203,7 @@ class TestOTXCLI:
                 cooldown: 0
                 min_lr: 0.0
                 eps: 1.0e-08
-                verbose: false
+                verbose: deprecated
         """
         expected_config = yaml.safe_load(expected_str)
         assert expected_config["scheduler"] == result_config["model"]["init_args"]["scheduler"]
@@ -189,3 +230,20 @@ class TestOTXCLI:
         out, _ = capfd.readouterr()
         result_config = yaml.safe_load(out)
         assert result_config["metric"] == "otx.core.metrics.fmeasure._f_measure_callable"
+
+    def test_print_results(self, mocker, capfd):
+        mocker.patch("otx.cli.cli.OTXCLI.__init__", return_value=None)
+        cli = OTXCLI()
+        cli.console = Console()
+        cli.engine = mocker.MagicMock()
+        cli.engine.work_dir.return_value = "work_dir"
+
+        cli.subcommand = "train"
+        output = {"loss": torch.tensor(0.1), "metric": torch.tensor(0.9)}
+        cli._print_results(output)
+        out, _ = capfd.readouterr()
+        assert "Train metric" in out
+        assert "Value" in out
+        assert "loss" in out
+        assert "metric" in out
+        assert "Work Directory:" in out

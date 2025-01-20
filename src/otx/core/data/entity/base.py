@@ -47,8 +47,12 @@ def custom_wrap(wrappee: Tensor, *, like: tv_tensors.TVTensor, **kwargs) -> tv_t
         )
     elif isinstance(like, Points):  # noqa: RET505
         return Points._wrap(wrappee, canvas_size=kwargs.get("canvas_size", like.canvas_size))  # noqa: SLF001
-    else:
-        return wrappee.as_subclass(type(like))
+
+    # TODO(Vlad): remove this after torch upgrade. This workaround prevents a failure when like is also a Tensor
+    if type(like) == type(wrappee):
+        return wrappee
+
+    return wrappee.as_subclass(type(like))
 
 
 tv_tensors.wrap = custom_wrap
@@ -338,6 +342,82 @@ class VideoInfo(tv_tensors.TVTensor):
             f"start_index={self.start_index}, "
             f"frame_inds={self.frame_inds})"
         )
+
+
+class BboxInfo(tv_tensors.TVTensor):
+    """`torch.Tensor` subclass for bbox info, e.g., center, scale, and rotation.
+
+    Attributes:
+        data: Any data that can be turned into a tensor with `torch.as_tensor`.
+        center (np.ndarray): Bbox center coordinates.
+        scale (np.ndarray): Bbox scales for width and height.
+        rotation (float): Bbox rotation for bbox augmentations.
+    """
+
+    center: np.ndarray
+    scale: np.ndarray
+    rotation: float
+
+    @classmethod
+    def _wrap(
+        cls,
+        dummy_tensor: Tensor,
+        *,
+        center: np.ndarray | None = None,
+        scale: np.ndarray | None = None,
+        rotation: float | None = None,
+    ) -> BboxInfo:
+        bbox_info = dummy_tensor.as_subclass(cls)
+        bbox_info.center = center
+        bbox_info.scale = scale
+        bbox_info.rotation = rotation
+        return bbox_info
+
+    def __new__(  # noqa: D102
+        cls,
+        center: np.ndarray | None = None,
+        scale: np.ndarray | None = None,
+        rotation: float | None = None,
+    ) -> BboxInfo:
+        return cls._wrap(
+            dummy_tensor=Tensor(),
+            center=center,
+            scale=scale,
+            rotation=rotation,
+        )
+
+    @classmethod
+    def _wrap_output(
+        cls,
+        output: Tensor,
+        args: tuple[()] = (),
+        kwargs: Mapping[str, Any] | None = None,
+    ) -> BboxInfo:
+        flat_params, _ = tree_flatten(args + (tuple(kwargs.values()) if kwargs else ()))
+
+        if isinstance(output, Tensor) and not isinstance(output, BboxInfo):
+            bbox_info = next(x for x in flat_params if isinstance(x, BboxInfo))
+            output = BboxInfo._wrap(
+                dummy_tensor=output,
+                center=bbox_info.center,
+                scale=bbox_info.scale,
+                rotation=bbox_info.rotation,
+            )
+        elif isinstance(output, (tuple, list)):
+            bbox_infos = [x for x in flat_params if isinstance(x, BboxInfo)]
+            output = type(output)(
+                BboxInfo._wrap(
+                    dummy_tensor=dummy_tensor,
+                    center=bbox_info.center,
+                    scale=bbox_info.scale,
+                    rotation=bbox_info.rotation,
+                )
+                for dummy_tensor, bbox_info in zip(output, bbox_infos)
+            )
+        return output
+
+    def __repr__(self, *, tensor_contents: Any = None) -> str:  # noqa: ANN401
+        return f"BboxInfo(center={self.center}, scale={self.scale}, rotation={self.rotation})"
 
 
 @F.register_kernel(functional=F.resize, tv_tensor_cls=ImageInfo)

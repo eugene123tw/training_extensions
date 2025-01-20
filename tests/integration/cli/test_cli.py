@@ -7,6 +7,7 @@ from pathlib import Path
 
 import cv2
 import pytest
+import torch
 import yaml
 from otx.core.types.task import OTXTaskType
 from otx.engine.utils.auto_configurator import DEFAULT_CONFIG_PER_TASK
@@ -27,8 +28,10 @@ def fxt_trained_model(
     tmp_path,
 ):
     recipe = request.param
-    task = recipe.split("/")[-2]
-    model_name = recipe.split("/")[-1].split(".")[0]
+    recipe_split = recipe.split("/")
+    model_name = recipe_split[-1].split(".")[0]
+    is_semisl = model_name.endswith("_semisl")
+    task = recipe_split[-2] if not is_semisl else recipe_split[-3]
 
     # 1) otx train
     tmp_path_train = tmp_path / f"otx_train_{model_name}"
@@ -48,11 +51,11 @@ def fxt_trained_model(
         *fxt_cli_override_command_per_task[task],
     ]
 
-    if model_name.endswith("_semisl") and "multi_class_cls" in recipe:
+    if is_semisl:
         command_cfg.extend(
             [
                 "--data.unlabeled_subset.data_root",
-                fxt_target_dataset_per_task["multi_class_cls_semisl"],
+                fxt_target_dataset_per_task[f"{task}_semisl"],
             ],
         )
 
@@ -155,15 +158,12 @@ def test_otx_e2e(
             ExportCase2Test("ONNX", False, "exported_model_decoder.onnx"),
             ExportCase2Test("OPENVINO", False, "exported_model_decoder.xml"),
         ]  # TODO (sungchul): EXPORTABLE_CODE will be supported
-    elif "anomaly" in task:
-        fxt_export_list = [
-            ExportCase2Test("ONNX", False, "exported_model.onnx"),
-            ExportCase2Test("OPENVINO", False, "exported_model.xml"),
-        ]  # anomaly doesn't support exportable code
+
+    if task == "object_detection_3d":
+        # exportable code and demo package are not supported for OD 3D
+        fxt_export_list.pop(-1)
 
     overrides = fxt_cli_override_command_per_task[task]
-    if "anomaly" in task:
-        overrides = {}  # Overrides are not needed in export
 
     tmp_path_test = tmp_path / f"otx_test_{model_name}"
     for export_case in fxt_export_list:
@@ -246,14 +246,28 @@ def test_otx_e2e(
     # 5) otx export with XAI
     if "instance_segmentation/rtmdet_inst_tiny" in recipe:
         return
-    if ("_cls" not in task) and (task not in ["detection", "instance_segmentation"]):
-        return  # Supported only for classification, detection and instance segmentation task.
+    if ("_cls" not in task) and (task not in ["detection", "instance_segmentation", "semantic_segmentation"]):
+        return  # Supported only for classification, detection and segmentation tasks.
 
     if "dino" in model_name:
         return  # DINO is not supported.
 
+    if "dfine" in model_name:
+        return  # DFine is not supported.
+
     if "rtdetr" in model_name:
         return  # RT-DETR currently is not supported.
+
+    if "yolov9" in model_name:
+        return  # RT-DETR currently is not supported.
+
+    if "keypoint" in recipe:
+        print("Explain is not supported for keypoint detection")
+        return
+
+    if "monodetr3d" in recipe:
+        print("Explain is not supported for object detection 3d")
+        return
 
     tmp_path_test = tmp_path / f"otx_export_xai_{model_name}"
     for export_case in fxt_export_list:
@@ -320,11 +334,17 @@ def test_otx_explain_e2e(
     if "dino" in model_name:
         pytest.skip("DINO is not supported.")
 
+    if "dfine" in model_name:
+        pytest.skip("DFine is not supported.")
+
     if "maskrcnn_r50_tv" in model_name:
         pytest.skip("MaskRCNN R50 Torchvision model doesn't support explain.")
-
-    if "rtdetr" in recipe:
+    elif "rtdetr" in recipe:
         pytest.skip("rtdetr model is not supported yet with explain.")
+    elif "keypoint" in recipe:
+        pytest.skip("keypoint detection models don't support explain.")
+    elif "yolov9" in recipe:
+        pytest.skip("yolov9 model is not supported yet with explain.")
 
     # otx explain
     tmp_path_explain = tmp_path / f"otx_explain_{model_name}"
@@ -394,6 +414,7 @@ def test_otx_ov_test(
         "h_label_cls",
         "visual_prompting",
         "zero_shot_visual_prompting",
+        "anomaly",
         "anomaly_classification",
         "anomaly_detection",
         "anomaly_segmentation",
@@ -434,9 +455,8 @@ def test_otx_ov_test(
     assert len(metric_result) > 0
 
 
-@pytest.mark.parametrize("recipe", pytest.RECIPE_LIST, ids=lambda x: "/".join(Path(x).parts[-2:]))
 def test_otx_hpo_e2e(
-    recipe: str,
+    fxt_trained_model,
     tmp_path: Path,
     fxt_accelerator: str,
     fxt_target_dataset_per_task: dict,
@@ -453,13 +473,14 @@ def test_otx_hpo_e2e(
     Returns:
         None
     """
-    task = recipe.split("/")[-2]
-    model_name = recipe.split("/")[-1].split(".")[0]
+    recipe, task, model_name, _ = fxt_trained_model
 
     if task.upper() == OTXTaskType.ZERO_SHOT_VISUAL_PROMPTING:
         pytest.skip("ZERO_SHOT_VISUAL_PROMPTING doesn't support HPO.")
     if "padim" in recipe:
         pytest.skip("padim model doesn't support HPO.")
+    if model_name.endswith("_semisl"):
+        pytest.skip("Semi-supervised learning model doesn't support HPO.")
 
     tmp_path_hpo = tmp_path / f"otx_hpo_{model_name}"
     tmp_path_hpo.mkdir(parents=True)
@@ -510,7 +531,6 @@ def test_otx_adaptive_bs_e2e(
     fxt_target_dataset_per_task: dict,
     fxt_cli_override_command_per_task: dict,
     fxt_open_subprocess: bool,
-    fxt_xpu_support_task: list[OTXTaskType],
     bs_adapt_type: str,
 ) -> None:
     """
@@ -525,8 +545,6 @@ def test_otx_adaptive_bs_e2e(
     """
     if fxt_accelerator not in ["gpu", "xpu"]:
         pytest.skip("Adaptive batch size only supports GPU and XPU.")
-    if fxt_accelerator == "xpu" and task not in fxt_xpu_support_task:
-        pytest.skip(f"{task} doesn't support XPU.")
     if task not in DEFAULT_CONFIG_PER_TASK:
         pytest.skip(f"Task {task} is not supported in the auto-configuration.")
     if task == OTXTaskType.ZERO_SHOT_VISUAL_PROMPTING:
@@ -555,3 +573,62 @@ def test_otx_adaptive_bs_e2e(
     ]
 
     run_main(command_cfg=command_cfg, open_subprocess=fxt_open_subprocess)
+
+
+@pytest.mark.parametrize("task", pytest.TASK_LIST)
+def test_otx_configurable_input_size_e2e(
+    task: OTXTaskType,
+    tmp_path: Path,
+    fxt_accelerator: str,
+    fxt_target_dataset_per_task: dict,
+    fxt_cli_override_command_per_task: dict,
+    fxt_open_subprocess: bool,
+) -> None:
+    """
+    Test adaptive batch size e2e commands with default template of each task.
+
+    Args:
+        task (OTXTaskType): The task to run adaptive batch size with.
+        tmp_path (Path): The temporary path for storing the training outputs.
+
+    Returns:
+        None
+    """
+    if task not in DEFAULT_CONFIG_PER_TASK:
+        pytest.skip(f"Task {task} is not supported in the auto-configuration.")
+    if task == OTXTaskType.ZERO_SHOT_VISUAL_PROMPTING:
+        pytest.skip(f"{task} doesn't support configurable input size.")
+    if task == OTXTaskType.KEYPOINT_DETECTION:
+        pytest.skip(f"{task} doesn't support configurable input size.")
+
+    task = task.lower()
+    tmp_path_cfg_ipt_size = tmp_path / f"otx_configurable_input_size_{task}"
+    tmp_path_cfg_ipt_size.mkdir(parents=True)
+
+    command_cfg = [
+        "otx",
+        "train",
+        "--task",
+        task.upper(),
+        "--data_root",
+        fxt_target_dataset_per_task[task],
+        "--work_dir",
+        str(tmp_path_cfg_ipt_size),
+        "--engine.device",
+        fxt_accelerator,
+        "--data.input_size",
+        str(448),
+        "--max_epoch",
+        "1",
+        *fxt_cli_override_command_per_task[task],
+    ]
+
+    run_main(command_cfg=command_cfg, open_subprocess=fxt_open_subprocess)
+
+    best_ckpt_files = list(tmp_path_cfg_ipt_size.rglob("best_checkpoint.ckpt"))
+    assert len(best_ckpt_files) != 0
+    best_ckpt = torch.load(best_ckpt_files[0])
+    assert best_ckpt["hyper_parameters"]["input_size"] == (448, 448)
+    for param_name in best_ckpt["datamodule_hyper_parameters"]:
+        if "subset" in param_name:
+            assert best_ckpt["datamodule_hyper_parameters"][param_name].input_size == 448

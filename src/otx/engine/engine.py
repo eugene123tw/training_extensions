@@ -5,9 +5,12 @@
 
 from __future__ import annotations
 
+import copy
+import csv
 import inspect
 import logging
 import tempfile
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Iterable, Iterator, Literal
@@ -15,8 +18,8 @@ from warnings import warn
 
 import torch
 from lightning import Trainer, seed_everything
+from lightning.pytorch.plugins.precision import MixedPrecision
 
-from otx.algo.plugins import MixedPrecisionXPUPlugin
 from otx.core.config.device import DeviceConfig
 from otx.core.config.explain import ExplainConfig
 from otx.core.config.hpo import HpoConfig
@@ -28,7 +31,8 @@ from otx.core.types.export import OTXExportFormatType
 from otx.core.types.precision import OTXPrecisionType
 from otx.core.types.task import OTXTaskType
 from otx.core.utils.cache import TrainerArgumentsCache
-from otx.utils.utils import is_xpu_available
+from otx.utils.device import is_xpu_available
+from otx.utils.utils import measure_flops
 
 from .adaptive_bs import adapt_batch_size
 from .hpo import execute_hpo, update_hyper_parameter
@@ -41,20 +45,6 @@ if TYPE_CHECKING:
     from pytorch_lightning.trainer.connectors.accelerator_connector import _PRECISION_INPUT
 
     from otx.core.metrics import MetricCallable
-
-
-LITMODULE_PER_TASK = {
-    OTXTaskType.MULTI_CLASS_CLS: "otx.core.model.module.classification.OTXMulticlassClsLitModule",
-    OTXTaskType.MULTI_LABEL_CLS: "otx.core.model.module.classification.OTXMultilabelClsLitModule",
-    OTXTaskType.H_LABEL_CLS: "otx.core.model.module.classification.OTXHlabelClsLitModule",
-    OTXTaskType.DETECTION: "otx.core.model.module.detection.OTXDetectionLitModule",
-    OTXTaskType.ROTATED_DETECTION: "otx.core.model.module.rotated_detection.OTXRotatedDetLitModule",
-    OTXTaskType.INSTANCE_SEGMENTATION: "otx.core.model.module.instance_segmentation.OTXInstanceSegLitModule",
-    OTXTaskType.SEMANTIC_SEGMENTATION: "otx.core.model.module.segmentation.OTXSegmentationLitModule",
-    OTXTaskType.ACTION_CLASSIFICATION: "otx.core.model.module.action_classification.OTXActionClsLitModule",
-    OTXTaskType.VISUAL_PROMPTING: "otx.core.model.module.visual_prompting.OTXVisualPromptingLitModule",
-    OTXTaskType.ZERO_SHOT_VISUAL_PROMPTING: "otx.core.model.module.visual_prompting.OTXZeroShotVisualPromptingLitModule",  # noqa: E501
-}
 
 
 @contextmanager
@@ -119,6 +109,7 @@ class Engine:
         model: OTXModel | str | None = None,
         checkpoint: PathLike | None = None,
         device: DeviceType = DeviceType.auto,
+        num_devices: int = 1,
         **kwargs,
     ):
         """Initializes the OTX Engine.
@@ -131,12 +122,14 @@ class Engine:
             model (OTXModel | str | None, optional): The model for the engine. Defaults to None.
             checkpoint (PathLike | None, optional): Path to the checkpoint file. Defaults to None.
             device (DeviceType, optional): The device type to use. Defaults to DeviceType.auto.
+            num_devices (int, optional): The number of devices to use. If it is 2 or more, it will behave as multi-gpu.
             **kwargs: Additional keyword arguments for pl.Trainer.
         """
         self._cache = TrainerArgumentsCache(**kwargs)
         self.checkpoint = checkpoint
         self.work_dir = work_dir
         self.device = device  # type: ignore[assignment]
+        self.num_devices = num_devices
         self._auto_configurator = AutoConfigurator(
             data_root=data_root,
             task=datamodule.task if datamodule is not None else task,
@@ -149,12 +142,13 @@ class Engine:
         self.task = task if task is not None else self._auto_configurator.task
 
         self._trainer: Trainer | None = None
+        get_model_args: dict[str, Any] = {}
+        if self._datamodule is not None:
+            get_model_args["label_info"] = self._datamodule.label_info
+            if (input_size := self._datamodule.input_size) is not None:
+                get_model_args["input_size"] = (input_size, input_size) if isinstance(input_size, int) else input_size
         self._model: OTXModel = (
-            model
-            if isinstance(model, OTXModel)
-            else self._auto_configurator.get_model(
-                label_info=self._datamodule.label_info if self._datamodule is not None else None,
-            )
+            model if isinstance(model, OTXModel) else self._auto_configurator.get_model(**get_model_args)
         )
 
     # ------------------------------------------------------------------------ #
@@ -374,18 +368,32 @@ class Engine:
         # NOTE, trainer.test takes only lightning based checkpoint.
         # So, it can't take the OTX1.x checkpoint.
         if checkpoint is not None and not is_ir_ckpt:
+            kwargs_user_input: dict[str, Any] = {}
+            if self.task == OTXTaskType.ZERO_SHOT_VISUAL_PROMPTING:
+                # to update user's custom infer_reference_info_root through cli for zero-shot learning
+                # TODO (sungchul): revisit for better solution
+                kwargs_user_input.update(infer_reference_info_root=self.model.infer_reference_info_root)
+
             model_cls = model.__class__
-            model = model_cls.load_from_checkpoint(checkpoint_path=checkpoint, **model.hparams)
+            model = model_cls.load_from_checkpoint(checkpoint_path=checkpoint, **kwargs_user_input)
 
         if model.label_info != self.datamodule.label_info:
-            msg = (
-                "To launch a test pipeline, the label information should be same "
-                "between the training and testing datasets. "
-                "Please check whether you use the same dataset: "
-                f"model.label_info={model.label_info}, "
-                f"datamodule.label_info={self.datamodule.label_info}"
-            )
-            raise ValueError(msg)
+            if (
+                self.task == "SEMANTIC_SEGMENTATION"
+                and "otx_background_lbl" in self.datamodule.label_info.label_names
+                and (len(self.datamodule.label_info.label_names) - len(model.label_info.label_names) == 1)
+            ):
+                # workaround for background label
+                model.label_info = copy.deepcopy(self.datamodule.label_info)
+            else:
+                msg = (
+                    "To launch a test pipeline, the label information should be same "
+                    "between the training and testing datasets. "
+                    "Please check whether you use the same dataset: "
+                    f"model.label_info={model.label_info}, "
+                    f"datamodule.label_info={self.datamodule.label_info}"
+                )
+                raise ValueError(msg)
 
         self._build_trainer(**kwargs)
 
@@ -461,8 +469,14 @@ class Engine:
             datamodule = self._auto_configurator.update_ov_subset_pipeline(datamodule=datamodule, subset="test")
 
         if checkpoint is not None and not is_ir_ckpt:
+            kwargs_user_input: dict[str, Any] = {}
+            if self.task == OTXTaskType.ZERO_SHOT_VISUAL_PROMPTING:
+                # to update user's custom infer_reference_info_root through cli for zero-shot learning
+                # TODO (sungchul): revisit for better solution
+                kwargs_user_input.update(infer_reference_info_root=self.model.infer_reference_info_root)
+
             model_cls = model.__class__
-            model = model_cls.load_from_checkpoint(checkpoint_path=checkpoint, **model.hparams)
+            model = model_cls.load_from_checkpoint(checkpoint_path=checkpoint, **kwargs_user_input)
 
         if model.label_info != self.datamodule.label_info:
             msg = (
@@ -561,7 +575,7 @@ class Engine:
             export_demo_package = False
 
         if is_ir_ckpt and not export_demo_package:
-            msg = "IR model is passed as a checkpoint, export automaticaly switched to exportable code."
+            msg = "IR model is passed as a checkpoint, export automatically switched to exportable code."
             warn(msg, stacklevel=1)
             export_demo_package = True
 
@@ -573,11 +587,17 @@ class Engine:
             )
 
         if not is_ir_ckpt:
+            kwargs_user_input: dict[str, Any] = {}
+            if self.task == OTXTaskType.ZERO_SHOT_VISUAL_PROMPTING:
+                # to update user's custom infer_reference_info_root through cli for zero-shot learning
+                # TODO (sungchul): revisit for better solution
+                kwargs_user_input.update(infer_reference_info_root=self.model.infer_reference_info_root)
+
             model_cls = self.model.__class__
             self.model = model_cls.load_from_checkpoint(
                 checkpoint_path=checkpoint,
                 map_location="cpu",
-                **self.model.hparams,
+                **kwargs_user_input,
             )
             self.model.eval()
 
@@ -741,8 +761,14 @@ class Engine:
             model = self._auto_configurator.get_ov_model(model_name=str(checkpoint), label_info=datamodule.label_info)
 
         if checkpoint is not None and not is_ir_ckpt:
+            kwargs_user_input: dict[str, Any] = {}
+            if self.task == OTXTaskType.ZERO_SHOT_VISUAL_PROMPTING:
+                # to update user's custom infer_reference_info_root through cli for zero-shot learning
+                # TODO (sungchul): revisit for better solution
+                kwargs_user_input.update(infer_reference_info_root=self.model.infer_reference_info_root)
+
             model_cls = model.__class__
-            model = model_cls.load_from_checkpoint(checkpoint_path=checkpoint, **model.hparams)
+            model = model_cls.load_from_checkpoint(checkpoint_path=checkpoint, **kwargs_user_input)
 
         if model.label_info != self.datamodule.label_info:
             msg = (
@@ -777,6 +803,146 @@ class Engine:
             )
         model.explain_mode = False
         return predict_result
+
+    def benchmark(
+        self,
+        checkpoint: PathLike | None = None,
+        batch_size: int = 1,
+        n_iters: int = 10,
+        extended_stats: bool = False,
+        print_table: bool = True,
+    ) -> dict[str, str]:
+        r"""Executes model micro benchmarking on random data.
+
+        Benchmark can provide latency, throughput, number of parameters,
+        and theoretical computational complexity with batch size 1.
+        The latter two characteristics are available for torch model recipes only.
+        Before the measurements, a warm-up is done.
+
+        Args:
+            checkpoint (PathLike | None, optional): Path to checkpoint. Optional for torch models. Defaults to None.
+            batch_size (int, optional): Batch size for benchmarking. Defaults to 1.
+            n_iters (int, optional): Number of iterations to average on. Defaults to 10.
+            extended_stats (bool, optional): Flag that enables printing of per module complexity for torch model.
+                Defaults to False.
+            print_table (bool, optional): Flag that enables printing the benchmark results in a rich table.
+                Defaults to True.
+
+        Returns:
+            dict[str, str]: a dict with the benchmark results.
+
+        Example:
+            >>> engine.benchmark(
+            ...     checkpoint=<checkpoint-path>,
+            ...     batch_size=1,
+            ...     n_iters=20,
+            ...     extended_stats=True,
+            ... )
+
+        CLI Usage:
+            1. To run benchmark by specifying the work_dir where did the training, run
+                ```shell
+                >>> otx benchmark --work_dir <WORK_DIR_PATH, str>
+                ```
+            2. To run benchmark by specifying the checkpoint, run
+                ```shell
+                >>> otx benchmark \
+                ...     --work_dir <WORK_DIR_PATH, str> \
+                ...     --checkpoint <CKPT_PATH, str>
+                ```
+            3. To run benchmark using the configuration, launch
+                ```shell
+                >>> otx benchmark \
+                ...     --config <CONFIG_PATH> \
+                ...     --data_root <DATASET_PATH, str> \
+                ...     --checkpoint <CKPT_PATH, str>
+                ```
+        """
+        checkpoint = checkpoint if checkpoint is not None else self.checkpoint
+
+        if checkpoint is not None:
+            is_ir_ckpt = Path(checkpoint).suffix in [".xml"]
+            if is_ir_ckpt and not isinstance(self.model, OVModel):
+                # create OVModel
+                self.model = self._auto_configurator.get_ov_model(
+                    model_name=str(checkpoint),
+                    label_info=self.datamodule.label_info,
+                )
+
+            if not is_ir_ckpt:
+                kwargs_user_input: dict[str, Any] = {}
+                if self.task == OTXTaskType.ZERO_SHOT_VISUAL_PROMPTING:
+                    # to update user's custom infer_reference_info_root through cli for zero-shot learning
+                    # TODO (sungchul): revisit for better solution
+                    kwargs_user_input.update(infer_reference_info_root=self.model.infer_reference_info_root)
+
+                model_cls = self.model.__class__
+                self.model = model_cls.load_from_checkpoint(
+                    checkpoint_path=checkpoint,
+                    map_location="cpu",
+                    **kwargs_user_input,
+                )
+        elif isinstance(self.model, OVModel):
+            msg = "To run benchmark on OV model, checkpoint must be specified."
+            raise RuntimeError(msg)
+
+        self.model.eval()
+
+        def dummy_infer(model: OTXModel, batch_size: int = 1) -> float:
+            input_batch = model.get_dummy_input(batch_size)
+            start = time.perf_counter()
+            model.forward(input_batch)
+            end = time.perf_counter()
+            return end - start
+
+        warmup_iters = max(1, int(n_iters / 10))
+        for _ in range(warmup_iters):
+            dummy_infer(self.model, batch_size)
+
+        total_time = 0.0
+        for _ in range(n_iters):
+            total_time += dummy_infer(self.model, batch_size)
+        latency = total_time / n_iters
+        fps = batch_size / latency
+
+        final_stats = {"latency": f"{latency:.3f} s", "throughput": f"{(fps):.3f} FPS"}
+
+        if not isinstance(self.model, OVModel):
+            try:
+                from torch.utils.flop_counter import convert_num_with_suffix, get_suffix_str
+
+                input_batch = self.model.get_dummy_input(1)
+                model_fwd = lambda: self.model.forward(input_batch)
+                depth = 3 if extended_stats else 0
+                fwd_flops = measure_flops(model_fwd, print_stats_depth=depth)
+                flops_str = convert_num_with_suffix(fwd_flops, get_suffix_str(fwd_flops * 10**3))
+                final_stats["complexity"] = flops_str + " MACs"
+            except Exception as e:
+                logging.warning(f"Failed to complete complexity estimation: {e}")
+
+            params_num = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+            params_num_str = convert_num_with_suffix(params_num, get_suffix_str(params_num * 100))
+            final_stats["parameters_number"] = params_num_str
+
+        if print_table:
+            from rich.console import Console
+            from rich.table import Column, Table
+
+            console = Console()
+            table_headers = ["Benchmark", "Value"]
+            columns = [Column(h, justify="center", style="magenta", width=console.width) for h in table_headers]
+            columns[0].style = "cyan"
+            table = Table(*columns)
+            for name, val in final_stats.items():
+                table.add_row(*[f"{name:<20}", f"{val}"])
+            console.print(table)
+
+        with (Path(self.work_dir) / "benchmark_report.csv").open("w") as f:
+            writer = csv.writer(f)
+            writer.writerow(list(final_stats))
+            writer.writerow(list(final_stats.values()))
+
+        return final_stats
 
     @classmethod
     def from_config(
@@ -947,6 +1113,18 @@ class Engine:
         self._cache.is_trainer_args_identical = False
 
     @property
+    def num_devices(self) -> int:
+        """Number of devices for Engine use."""
+        return self._device.devices
+
+    @num_devices.setter
+    def num_devices(self, num_devices: int) -> None:
+        """Setter function for multi-gpu."""
+        self._device.devices = num_devices
+        self._cache.update(devices=self._device.devices)
+        self._cache.is_trainer_args_identical = False
+
+    @property
     def trainer(self) -> Trainer:
         """Returns the trainer object associated with the engine.
 
@@ -969,7 +1147,14 @@ class Engine:
                 self._cache.update(strategy="xpu_single")
                 # add plugin for Automatic Mixed Precision on XPU
                 if self._cache.args.get("precision", 32) == 16:
-                    self._cache.update(plugins=[MixedPrecisionXPUPlugin()])
+                    self._cache.update(
+                        plugins=[
+                            MixedPrecision(
+                                precision="bf16-mixed",
+                                device="xpu",
+                            ),
+                        ],
+                    )
                     self._cache.args["precision"] = None
 
             kwargs = self._cache.args

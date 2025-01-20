@@ -1,8 +1,14 @@
+#!.tox/fuzzing/bin/python
+
+# Copyright (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
 import sys
 
 import atheris
-from helper import FuzzingHelper
 from otx.cli import main as cli_main
+
+from .helper import FuzzingHelper
 
 
 @atheris.instrument_func
@@ -17,8 +23,8 @@ def fuzz_otx(input_bytes):
     try:
         _ = cli_main()
     except SystemExit as e:
-        # argparser will throw SystemExit with code 2 when some required arguments are missing
-        if e.code != 2:
+        # argparser will throw SystemExit with code 0 or 2 when completed successfuly or some required arguments are missing
+        if e.code not in [0, 2]:
             raise
     finally:
         sys.argv = backup_argv

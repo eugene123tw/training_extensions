@@ -9,9 +9,11 @@ from otx.core.metrics.accuracy import (
     HlabelAccuracy,
     MixedHLabelAccuracy,
     MulticlassAccuracywithLabelGroup,
+    MultiClassClsMetricCallable,
     MultilabelAccuracywithLabelGroup,
 )
 from otx.core.types.label import HLabelInfo, LabelInfo
+from torchmetrics.classification.accuracy import BinaryAccuracy, MulticlassAccuracy, MultilabelAccuracy
 
 
 class TestAccuracy:
@@ -44,6 +46,16 @@ class TestAccuracy:
         result = metric.compute()
         acc = result["accuracy"]
         assert round(acc.item(), 3) == 0.792
+
+    def test_default_multi_class_cls_metric_callable(self, fxt_multiclass_labelinfo: LabelInfo) -> None:
+        assert fxt_multiclass_labelinfo.num_classes > 1
+        metric = MultiClassClsMetricCallable(fxt_multiclass_labelinfo)
+        assert isinstance(metric.accuracy, MulticlassAccuracy)
+
+        one_class_label_info = LabelInfo(label_names=["class1"], label_groups=[["class1"]], label_ids=["0"])
+        assert one_class_label_info.num_classes == 1
+        binary_metric = MultiClassClsMetricCallable(one_class_label_info)
+        assert isinstance(binary_metric.accuracy, BinaryAccuracy)
 
     def test_multilabel_accuracy(self, fxt_multilabel_labelinfo: LabelInfo) -> None:
         """Check whether accuracy is same with OTX1.x version."""
@@ -108,3 +120,28 @@ class TestMixedHLabelAccuracy:
                 head_logits_info={"head1": (0, 5), "head2": (5, 10)},
                 threshold_multilabel=0.5,
             )
+
+    def test_multilabel_accuracy(self, hlabel_accuracy) -> None:
+        # Normal Case: num_multilabel_classes > 1 -> MultilabelAccuracy
+        assert hlabel_accuracy.num_multilabel_classes == 3
+        assert isinstance(hlabel_accuracy.multilabel_accuracy, MultilabelAccuracy)
+
+        # Edge Case: num_multilabel_classes = 1 -> BinaryAccuracy
+        acc = MixedHLabelAccuracy(
+            num_multiclass_heads=2,
+            num_multilabel_classes=1,
+            head_logits_info={"head1": (0, 5), "head2": (5, 10)},
+            threshold_multilabel=0.5,
+        )
+        assert acc.num_multilabel_classes == 1
+        assert isinstance(acc.multilabel_accuracy, BinaryAccuracy)
+
+        # None Case: num_multilabel_classes = 0 -> None
+        acc = MixedHLabelAccuracy(
+            num_multiclass_heads=2,
+            num_multilabel_classes=0,
+            head_logits_info={"head1": (0, 5), "head2": (5, 10)},
+            threshold_multilabel=0.5,
+        )
+        assert acc.num_multilabel_classes == 0
+        assert acc.multilabel_accuracy is None

@@ -40,13 +40,15 @@ def pre_filtering(
     dataset = DmDataset.filter(dataset, is_valid_annot, filter_annotations=True)
     dataset = remove_unused_labels(dataset, data_format, ignore_index)
     if unannotated_items_ratio > 0:
-        empty_items = [item.id for item in dataset if item.subset == "train" and len(item.annotations) == 0]
+        empty_items = [
+            item.id for item in dataset if item.subset in ("train", "TRAINING") and len(item.annotations) == 0
+        ]
         used_background_items = set(sample(empty_items, int(len(empty_items) * unannotated_items_ratio)))
 
     return DmDataset.filter(
         dataset,
         lambda item: not (
-            item.subset == "train" and len(item.annotations) == 0 and item.id not in used_background_items
+            item.subset in ("train", "TRAINING") and len(item.annotations) == 0 and item.id not in used_background_items
         ),
     )
 
@@ -72,23 +74,35 @@ def is_valid_annot(item: DatasetItem, annotation: Annotation) -> bool:  # noqa: 
     return True
 
 
-def remove_unused_labels(dataset: DmDataset, data_format: str, ignore_index: int | None) -> DmDataset:
+def remove_unused_labels(
+    dataset: DmDataset,
+    data_format: str,
+    ignore_index: int | None,
+) -> DmDataset:
     """Remove unused labels in Datumaro dataset."""
     original_categories: list[str] = dataset.get_label_cat_names()
-    used_labels: list[int] = list({ann.label for item in dataset for ann in item.annotations})
+    used_labels: list[int] = list({ann.label for item in dataset for ann in item.annotations if hasattr(ann, "label")})
     if ignore_index is not None:
         used_labels = list(filter(lambda x: x != ignore_index, used_labels))
     if data_format == "ava":
         used_labels = [0, *used_labels]
     if data_format == "common_semantic_segmentation_with_subset_dirs" and len(original_categories) < len(used_labels):
         msg = (
-            "There are labeles mismatch in dataset categories and actuall categories comes from semantic masks."
+            "There are labels mismatch in dataset categories and actual categories comes from semantic masks."
             "Please, check `dataset_meta.json` file."
         )
         raise ValueError(msg)
     if len(used_labels) == len(original_categories):
         return dataset
+    if data_format == "arrow" and max(used_labels) != len(original_categories) - 1:
+        # we assume that empty label is always the last one. If it is not explicitly added to the dataset,
+        # (not in the used labels) it will be filtered out.
+        mapping = {cat: cat for cat in original_categories[:-1]}
+    elif data_format == "arrow":
+        # this mean that some other class wasn't annotated, we don't need to filter the object classes
+        return dataset
+    else:
+        mapping = {original_categories[idx]: original_categories[idx] for idx in used_labels}
     msg = "There are unused labels in dataset, they will be filtered out before training."
     warnings.warn(msg, stacklevel=2)
-    mapping = {original_categories[idx]: original_categories[idx] for idx in used_labels}
     return dataset.transform("remap_labels", mapping=mapping, default="delete")

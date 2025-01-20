@@ -17,7 +17,6 @@ from model_api.models.utils import PredictedMask
 from otx.core.data.entity.base import Points
 from otx.core.data.entity.visual_prompting import (
     VisualPromptingBatchPredEntity,
-    ZeroShotVisualPromptingBatchDataEntity,
     ZeroShotVisualPromptingBatchPredEntity,
 )
 from otx.core.exporter.visual_prompting import OTXVisualPromptingModelExporter
@@ -27,7 +26,6 @@ from otx.core.model.visual_prompting import (
     OVVisualPromptingModel,
     OVZeroShotVisualPromptingModel,
     _inference_step,
-    _inference_step_for_zero_shot,
 )
 from otx.core.types.export import TaskLevelExportParameters
 from torchvision import tv_tensors
@@ -36,7 +34,7 @@ from torchvision import tv_tensors
 @pytest.fixture()
 def otx_visual_prompting_model(mocker) -> OTXVisualPromptingModel:
     mocker.patch.object(OTXVisualPromptingModel, "_create_model")
-    model = OTXVisualPromptingModel(label_info=1)
+    model = OTXVisualPromptingModel(label_info=1, input_size=(1024, 1024))
     model.model.image_size = 1024
     return model
 
@@ -44,7 +42,7 @@ def otx_visual_prompting_model(mocker) -> OTXVisualPromptingModel:
 @pytest.fixture()
 def otx_zero_shot_visual_prompting_model(mocker) -> OTXZeroShotVisualPromptingModel:
     mocker.patch.object(OTXZeroShotVisualPromptingModel, "_create_model")
-    model = OTXZeroShotVisualPromptingModel(label_info=1)
+    model = OTXZeroShotVisualPromptingModel(label_info=1, input_size=(1024, 1024))
     model.model.image_size = 1024
     return model
 
@@ -60,7 +58,7 @@ def test_inference_step(mocker, otx_visual_prompting_model, fxt_vpm_data_entity)
     _inference_step(otx_visual_prompting_model, otx_visual_prompting_model.metric, fxt_vpm_data_entity[1])
 
     for v in mocker_updates.values():
-        v.assert_called_once()
+        v.assert_called()
 
 
 def test_inference_step_for_zero_shot(mocker, otx_visual_prompting_model, fxt_zero_shot_vpm_data_entity) -> None:
@@ -73,70 +71,10 @@ def test_inference_step_for_zero_shot(mocker, otx_visual_prompting_model, fxt_ze
     for k, v in otx_visual_prompting_model.metric.items():
         mocker_updates[k] = mocker.patch.object(v, "update")
 
-    _inference_step_for_zero_shot(otx_visual_prompting_model, otx_visual_prompting_model.metric, entity)
+    _inference_step(otx_visual_prompting_model, otx_visual_prompting_model.metric, entity)
 
     for v in mocker_updates.values():
-        v.assert_called_once()
-
-
-def test_inference_step_for_zero_shot_with_more_preds(
-    mocker,
-    otx_visual_prompting_model,
-    fxt_zero_shot_vpm_data_entity,
-) -> None:
-    """Test _inference_step_for_zero_shot with more preds."""
-    otx_visual_prompting_model.configure_metric()
-    entity = deepcopy(fxt_zero_shot_vpm_data_entity[1])
-    pred_entity = deepcopy(fxt_zero_shot_vpm_data_entity[2])
-    preds = {}
-    for k, v in pred_entity.__dict__.items():
-        if k in ["batch_size", "polygons"]:
-            preds[k] = v
-        else:
-            preds[k] = v * 2
-    mocker.patch.object(
-        otx_visual_prompting_model,
-        "forward",
-        return_value=ZeroShotVisualPromptingBatchPredEntity(**preds),
-    )
-    mocker_updates = {}
-    for k, v in otx_visual_prompting_model.metric.items():
-        mocker_updates[k] = mocker.patch.object(v, "update")
-
-    _inference_step_for_zero_shot(otx_visual_prompting_model, otx_visual_prompting_model.metric, entity)
-
-    for v in mocker_updates.values():
-        v.assert_called_once()
-
-
-def test_inference_step_for_zero_shot_with_more_target(
-    mocker,
-    otx_visual_prompting_model,
-    fxt_zero_shot_vpm_data_entity,
-) -> None:
-    """Test _inference_step_for_zero_shot with more target."""
-    otx_visual_prompting_model.configure_metric()
-    entity = deepcopy(fxt_zero_shot_vpm_data_entity[1])
-    pred_entity = deepcopy(fxt_zero_shot_vpm_data_entity[2])
-    mocker.patch.object(otx_visual_prompting_model, "forward", return_value=pred_entity)
-    mocker_updates = {}
-    for k, v in otx_visual_prompting_model.metric.items():
-        mocker_updates[k] = mocker.patch.object(v, "update")
-    target = {}
-    for k, v in entity.__dict__.items():
-        if k in ["batch_size"]:
-            target[k] = v
-        else:
-            target[k] = v * 2
-
-    _inference_step_for_zero_shot(
-        otx_visual_prompting_model,
-        otx_visual_prompting_model.metric,
-        ZeroShotVisualPromptingBatchDataEntity(**target),
-    )
-
-    for v in mocker_updates.values():
-        v.assert_called_once()
+        v.assert_called()
 
 
 class TestOTXVisualPromptingModel:
@@ -178,6 +116,11 @@ class TestOTXVisualPromptingModel:
                 },
             },
         }
+
+    def test_dummy_input(self, otx_visual_prompting_model):
+        batch_size = 2
+        batch = otx_visual_prompting_model.get_dummy_input(batch_size)
+        assert batch.batch_size == batch_size
 
 
 class TestOTXZeroShotVisualPromptingModel:
@@ -264,6 +207,11 @@ class TestOTXZeroShotVisualPromptingModel:
         mocker.patch.object(otx_zero_shot_visual_prompting_model.trainer, "default_root_dir")
 
         otx_zero_shot_visual_prompting_model.on_train_epoch_end()
+
+    def test_dummy_input(self, otx_zero_shot_visual_prompting_model):
+        batch_size = 2
+        batch = otx_zero_shot_visual_prompting_model.get_dummy_input(batch_size)
+        assert batch.batch_size == batch_size
 
 
 class TestOVVisualPromptingModel:
@@ -367,6 +315,12 @@ class TestOVVisualPromptingModel:
         assert "image_encoder" in results
         assert "decoder" in results
 
+    def test_dummy_input(self, set_ov_visual_prompting_model):
+        batch_size = 2
+        ov_visual_prompting_model = set_ov_visual_prompting_model()
+        batch = ov_visual_prompting_model.get_dummy_input(batch_size)
+        assert batch.batch_size == batch_size
+
 
 class TestOVZeroShotVisualPromptingModel:
     @pytest.fixture()
@@ -440,6 +394,11 @@ class TestOVZeroShotVisualPromptingModel:
         mocker_fn.assert_called_once()
         mocker_customize_outputs.assert_called_once()
 
+    def test_dummy_input(self, ov_zero_shot_visual_prompting_model: OVZeroShotVisualPromptingModel):
+        batch_size = 2
+        batch = ov_zero_shot_visual_prompting_model.get_dummy_input(batch_size)
+        assert batch.batch_size == batch_size
+
     def test_learn(self, mocker, ov_zero_shot_visual_prompting_model, fxt_zero_shot_vpm_data_entity) -> None:
         """Test learn."""
         entity = deepcopy(fxt_zero_shot_vpm_data_entity[1])
@@ -459,9 +418,9 @@ class TestOVZeroShotVisualPromptingModel:
             reset_feat=False,
         )
 
-        assert reference_info["reference_feats"].shape == torch.Size((3, 1, 256))
+        assert reference_info["reference_feats"].shape == torch.Size((2, 1, 256))
         assert 1 in reference_info["used_indices"]
-        assert ref_masks[0].shape == torch.Size((3, 1024, 1024))
+        assert ref_masks[0].shape == torch.Size((2, 1024, 1024))
 
     def test_infer(self, mocker, ov_zero_shot_visual_prompting_model, fxt_zero_shot_vpm_data_entity) -> None:
         """Test infer."""
@@ -514,23 +473,35 @@ class TestOVZeroShotVisualPromptingModel:
         [
             [
                 {
-                    1: PredictedMask(mask=[[1, 2, 3], [4, 5, 6]], points=[[13, 14, 15], [16, 17, 18]]),
-                    2: PredictedMask(mask=[[7, 8, 9], [10, 11, 12]], points=[[19, 20, 21], [22, 23, 24]]),
+                    1: PredictedMask(mask=[[1, 2, 3], [4, 5, 6]], points=[[13, 14, 15], [16, 17, 18]], scores=[1, 1]),
+                    2: PredictedMask(
+                        mask=[[7, 8, 9], [10, 11, 12]],
+                        points=[[19, 20, 21], [22, 23, 24]],
+                        scores=[1, 1],
+                    ),
                 },
             ],
             [
                 {
-                    1: PredictedMask(mask=[], points=[]),
+                    1: PredictedMask(mask=[], points=[], scores=[]),
                 },
             ],
             [
                 {
-                    1: PredictedMask(mask=[[1, 2, 3], [4, 5, 6]], points=[[13, 14, 15], [16, 17, 18]]),
-                    2: PredictedMask(mask=[[7, 8, 9], [10, 11, 12]], points=[[19, 20, 21], [22, 23, 24]]),
+                    1: PredictedMask(mask=[[1, 2, 3], [4, 5, 6]], points=[[13, 14, 15], [16, 17, 18]], scores=[1, 1]),
+                    2: PredictedMask(
+                        mask=[[7, 8, 9], [10, 11, 12]],
+                        points=[[19, 20, 21], [22, 23, 24]],
+                        scores=[1, 1],
+                    ),
                 },
                 {
-                    1: PredictedMask(mask=[[1, 2, 3], [4, 5, 6]], points=[[13, 14, 15], [16, 17, 18]]),
-                    2: PredictedMask(mask=[[7, 8, 9], [10, 11, 12]], points=[[19, 20, 21], [22, 23, 24]]),
+                    1: PredictedMask(mask=[[1, 2, 3], [4, 5, 6]], points=[[13, 14, 15], [16, 17, 18]], scores=[1, 1]),
+                    2: PredictedMask(
+                        mask=[[7, 8, 9], [10, 11, 12]],
+                        points=[[19, 20, 21], [22, 23, 24]],
+                        scores=[1, 1],
+                    ),
                 },
             ],
         ],

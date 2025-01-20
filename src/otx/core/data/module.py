@@ -7,11 +7,10 @@ from __future__ import annotations
 
 import logging as log
 from copy import deepcopy
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterable, Literal
 
 import torch
 from datumaro import Dataset as DmDataset
-from datumaro import Environment
 from lightning import LightningDataModule
 from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import DataLoader, RandomSampler
@@ -24,7 +23,7 @@ from otx.core.data.mem_cache import (
     parse_mem_cache_size_to_int,
 )
 from otx.core.data.pre_filtering import pre_filtering
-from otx.core.data.tile_adaptor import adapt_tile_config
+from otx.core.data.utils import adapt_input_size_to_dataset, adapt_tile_config
 from otx.core.types.device import DeviceType
 from otx.core.types.image import ImageColorChannel
 from otx.core.types.label import LabelInfo
@@ -40,9 +39,22 @@ if TYPE_CHECKING:
 
 
 class OTXDataModule(LightningDataModule):
-    """LightningDataModule extension for OTX pipeline."""
+    """LightningDataModule extension for OTX pipeline.
 
-    def __init__(
+    Args:
+        input_size (int | tuple[int, int] | None, optional):
+            Final image or video shape of data after data transformation. It'll be applied to all subset configs
+            If it's not None. Defaults to None.
+        adaptive_input_size (Literal["auto", "downscale"] | None, optional):
+            The adaptive input size mode. If it's set, appropriate input size is found by analyzing dataset.
+            "auto" can find both bigger and smaller input size than current input size and "downscale" uses only
+            smaller size than default setting. Defaults to None.
+        input_size_multiplier (int, optional):
+            adaptive_input_size will finds multiple of input_size_multiplier value if it's set. It's usefull when
+            a model requries multiple of specific value as input_size. Defaults to 1.
+    """
+
+    def __init__(  # noqa: PLR0913
         self,
         task: OTXTaskType,
         data_format: str,
@@ -63,17 +75,14 @@ class OTXDataModule(LightningDataModule):
         auto_num_workers: bool = False,
         device: DeviceType = DeviceType.auto,
         input_size: int | tuple[int, int] | None = None,
+        adaptive_input_size: Literal["auto", "downscale"] | None = None,
+        input_size_multiplier: int = 1,
     ) -> None:
         """Constructor."""
         super().__init__()
         self.task = task
         self.data_format = data_format
         self.data_root = data_root
-
-        if input_size is not None:
-            for subset_cfg in [train_subset, val_subset, test_subset, unlabeled_subset]:
-                if subset_cfg.input_size is None:
-                    subset_cfg.input_size = input_size
 
         self.train_subset = train_subset
         self.val_subset = val_subset
@@ -96,26 +105,7 @@ class OTXDataModule(LightningDataModule):
         self.device = device
 
         self.subsets: dict[str, OTXDataset] = {}
-        self.save_hyperparameters()
-
-        # TODO (Jaeguk): This is workaround for a bug in Datumaro.
-        # These lines should be removed after next datumaro release.
-        # https://github.com/openvinotoolkit/datumaro/pull/1223/files
-        from datumaro.plugins.data_formats.video import VIDEO_EXTENSIONS
-
-        VIDEO_EXTENSIONS.append(".mp4")
-
-        # Data Format Check
-        available_data_formats = Environment().detect_dataset(str(self.data_root))
-        if not available_data_formats:
-            msg = f"Invalid data root: {self.data_root}. Please check if the data root is valid."
-            raise ValueError(msg)
-        if self.data_format not in available_data_formats:
-            log.warning(
-                f"Invalid data format: {self.data_format}. Available formats: {available_data_formats} "
-                f"Replace data_format: {self.data_format} -> {available_data_formats[0]}.",
-            )
-            self.data_format = available_data_formats[0]
+        self.save_hyperparameters(ignore=["input_size"])
 
         dataset = DmDataset.import_from(self.data_root, format=self.data_format)
         if self.task != "H_LABEL_CLS":
@@ -138,8 +128,22 @@ class OTXDataModule(LightningDataModule):
                 subset=self.unlabeled_subset.subset_name,
             )
 
+        if adaptive_input_size is not None:
+            input_size = adapt_input_size_to_dataset(
+                dataset,
+                self.task,
+                input_size,
+                adaptive_input_size == "downscale",
+                input_size_multiplier,
+            )
+        if input_size is not None:
+            for subset_cfg in [train_subset, val_subset, test_subset, unlabeled_subset]:
+                if subset_cfg.input_size is None:
+                    subset_cfg.input_size = input_size
+        self.input_size = input_size
+
         if self.tile_config.enable_tiler and self.tile_config.enable_adaptive_tiling:
-            adapt_tile_config(self.tile_config, dataset=dataset)
+            adapt_tile_config(self.tile_config, dataset=dataset, task=self.task)
 
         config_mapping = {
             self.train_subset.subset_name: self.train_subset,
@@ -174,6 +178,7 @@ class OTXDataModule(LightningDataModule):
 
         self.file_names = {}
         label_infos: list[LabelInfo] = []
+
         for name, dm_subset in dataset.subsets().items():
             if name not in config_mapping:
                 log.warning(f"{name} is not available. Skip it")
@@ -185,6 +190,7 @@ class OTXDataModule(LightningDataModule):
                 dm_subset=dm_subset.as_dataset(),
                 cfg_subset=config_mapping[name],
                 mem_cache_handler=mem_cache_handler,
+                data_format=self.data_format,
                 mem_cache_img_max_size=mem_cache_img_max_size,
                 image_color_channel=image_color_channel,
                 stack_images=stack_images,
@@ -200,7 +206,6 @@ class OTXDataModule(LightningDataModule):
                     tile_config=self.tile_config,
                 )
             self.subsets[name] = dataset
-
             label_infos += [self.subsets[name].label_info]
             log.info(f"Add name: {name}, self.subsets: {self.subsets}")
 
@@ -229,6 +234,7 @@ class OTXDataModule(LightningDataModule):
                         include_polygons=include_polygons,
                         ignore_index=ignore_index,
                         vpm_config=vpm_config,
+                        data_format=self.data_format,
                     )
                     self.subsets[transform_key] = unlabeled_dataset
             else:
@@ -243,6 +249,7 @@ class OTXDataModule(LightningDataModule):
                     include_polygons=include_polygons,
                     ignore_index=ignore_index,
                     vpm_config=vpm_config,
+                    data_format=self.data_format,
                 )
                 self.subsets[name] = unlabeled_dataset
 
@@ -456,5 +463,6 @@ class OTXDataModule(LightningDataModule):
                 self.unannotated_items_ratio,
                 self.auto_num_workers,
                 self.device,
+                self.input_size,
             ),
         )

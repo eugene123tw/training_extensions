@@ -6,8 +6,10 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import logging
 import time
+from copy import copy
 from functools import partial
 from pathlib import Path
 from threading import Thread
@@ -15,6 +17,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import torch
 import yaml
+from lightning import Callback
 
 from otx.core.config.hpo import HpoConfig
 from otx.core.optimizer.callable import OptimizerCallableSupportHPO
@@ -23,10 +26,10 @@ from otx.core.types.device import DeviceType
 from otx.core.types.task import OTXTaskType
 from otx.engine.adaptive_bs import adapt_batch_size
 from otx.hpo import HyperBand, run_hpo_loop
+from otx.utils.device import is_xpu_available
 from otx.utils.utils import (
     get_decimal_point,
     get_using_dot_delimited_key,
-    is_xpu_available,
     remove_matched_files,
 )
 
@@ -34,7 +37,6 @@ from .hpo_trial import run_hpo_trial
 from .utils import find_trial_file, get_best_hpo_weight, get_callable_args_name, get_hpo_weight_dir, get_metric
 
 if TYPE_CHECKING:
-    from lightning import Callback
     from lightning.pytorch.cli import OptimizerCallable
 
     from otx.engine.engine import Engine
@@ -47,7 +49,6 @@ def execute_hpo(
     engine: Engine,
     max_epochs: int,
     hpo_config: HpoConfig,
-    progress_update_callback: Callable[[int | float], None] | None = None,
     callbacks: list[Callback] | Callback | None = None,
     **train_args,
 ) -> tuple[dict[str, Any] | None, Path | None]:
@@ -57,8 +58,6 @@ def execute_hpo(
         engine (Engine): engine instnace.
         max_epochs (int): max epochs to train.
         hpo_config (HpoConfig): Configuration for HPO.
-        progress_update_callback (Callable[[int | float], None] | None, optional):
-            callback to update progress. If it's given, it's called with progress every second. Defaults to None.
         callbacks (list[Callback] | Callback | None, optional): callbacks used during training. Defaults to None.
 
     Returns:
@@ -96,8 +95,23 @@ def execute_hpo(
         logger.warning("HPO is skipped.")
         return None, None
 
-    if progress_update_callback is not None:
-        Thread(target=_update_hpo_progress, args=[progress_update_callback, hpo_algo], daemon=True).start()
+    if hpo_config.progress_update_callback is not None:
+        Thread(target=_update_hpo_progress, args=[hpo_config.progress_update_callback, hpo_algo], daemon=True).start()
+
+    if hpo_config.callbacks_to_exclude is not None and callbacks is not None:
+        if isinstance(hpo_config.callbacks_to_exclude, str):
+            hpo_config.callbacks_to_exclude = [hpo_config.callbacks_to_exclude]
+        if isinstance(callbacks, Callback):
+            callbacks = [callbacks]
+
+        callbacks = copy(callbacks)
+        callback_names = [callback.__class__.__name__ for callback in callbacks]
+        callback_idx_to_exclude = [
+            callback_names.index(cb_name) for cb_name in hpo_config.callbacks_to_exclude if cb_name in callback_names
+        ]
+        sorted(callback_idx_to_exclude, reverse=True)
+        for idx in callback_idx_to_exclude:
+            callbacks.pop(idx)
 
     run_hpo_loop(
         hpo_algo,
@@ -127,6 +141,10 @@ def execute_hpo(
 
     hpo_algo.print_result()
     _remove_unused_model_weights(hpo_workdir, best_hpo_weight)
+
+    if best_config is not None:
+        with (hpo_workdir / "best_hp.json").open("w") as f:
+            json.dump(best_config, f)
 
     return best_config, best_hpo_weight
 
@@ -336,8 +354,11 @@ class HPOConfigurator:
 
         self._engine.datamodule.train_subset.batch_size = origin_bs
         self._engine.model.optimizer_callable.optimizer_kwargs["lr"] = origin_lr  # type: ignore[attr-defined]
+        logger.info(
+            "Max value of batch size search space : "
+            f"{self._hpo_config['search_space']['datamodule.train_subset.batch_size']['max']} -> {adapted_bs}",
+        )
         self._hpo_config["search_space"]["datamodule.train_subset.batch_size"]["max"] = adapted_bs
-        logger.info(f"Max value of batch size search space : {origin_bs} -> {adapted_bs}")
 
     @staticmethod
     def _remove_wrong_search_space(search_space: dict[str, dict[str, Any]]) -> None:

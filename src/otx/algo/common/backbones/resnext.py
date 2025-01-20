@@ -12,8 +12,8 @@ import math
 from typing import ClassVar
 
 from otx.algo.common.layers import ResLayer
-from otx.algo.modules.conv import build_conv_layer
 from otx.algo.modules.norm import build_norm_layer
+from torch import nn
 
 from .resnet import Bottleneck as _Bottleneck
 from .resnet import ResNet
@@ -42,12 +42,11 @@ class Bottleneck(_Bottleneck):
 
         width = self.planes if groups == 1 else math.floor(self.planes * (base_width / base_channels)) * groups
 
-        self.norm1_name, norm1 = build_norm_layer(self.norm_cfg, width, postfix=1)
-        self.norm2_name, norm2 = build_norm_layer(self.norm_cfg, width, postfix=2)
-        self.norm3_name, norm3 = build_norm_layer(self.norm_cfg, self.planes * self.expansion, postfix=3)
+        self.norm1_name, norm1 = build_norm_layer(self.normalization, width, postfix=1)
+        self.norm2_name, norm2 = build_norm_layer(self.normalization, width, postfix=2)
+        self.norm3_name, norm3 = build_norm_layer(self.normalization, self.planes * self.expansion, postfix=3)
 
-        self.conv1 = build_conv_layer(
-            self.conv_cfg,
+        self.conv1 = nn.Conv2d(
             self.inplanes,
             width,
             kernel_size=1,
@@ -55,8 +54,7 @@ class Bottleneck(_Bottleneck):
             bias=False,
         )
         self.add_module(self.norm1_name, norm1)
-        self.conv2 = build_conv_layer(
-            self.conv_cfg,
+        self.conv2 = nn.Conv2d(
             width,
             width,
             kernel_size=3,
@@ -67,7 +65,7 @@ class Bottleneck(_Bottleneck):
             bias=False,
         )
         self.add_module(self.norm2_name, norm2)
-        self.conv3 = build_conv_layer(self.conv_cfg, width, self.planes * self.expansion, kernel_size=1, bias=False)
+        self.conv3 = nn.Conv2d(width, self.planes * self.expansion, kernel_size=1, bias=False)
         self.add_module(self.norm3_name, norm3)
 
     def _del_block_plugins(self, plugin_names: list[str]) -> None:
@@ -97,7 +95,7 @@ class ResNeXt(ResNet):
             the first 1x1 conv layer.
         frozen_stages (int): Stages to be frozen (all param fixed). -1 means
             not freezing any parameters.
-        norm_cfg (dict): dictionary to construct and config norm layer.
+        normalization (Callable[..., nn.Module] | None): Normalization layer module.
         norm_eval (bool): Whether to set norm layers to eval mode, namely,
             freeze running stats (mean and var). Note: Effect on Batch Norm
             and its variants only.

@@ -1,6 +1,7 @@
 model:
-  class_path: otx.algo.detection.atss.MobileNetV2ATSS
+  class_path: otx.algo.detection.atss.ATSS
   init_args:
+    model_name: atss_mobilenetv2
     label_info: 80
 
     optimizer:
@@ -13,7 +14,7 @@ model:
     scheduler:
       class_path: otx.core.schedulers.LinearWarmupSchedulerCallable
       init_args:
-        num_warmup_steps: 3
+        num_warmup_steps: 0
         main_scheduler_callable:
           class_path: lightning.pytorch.cli.ReduceLROnPlateau
           init_args:
@@ -28,14 +29,10 @@ engine:
 
 callback_monitor: val/map_50
 
-data: ../_base_/data/detection.yaml
+data: ../_base_/data/detection_tile.yaml
 overrides:
   gradient_clip_val: 35.0
   data:
-    tile_config:
-      enable_tiler: true
-      enable_adaptive_tiling: true
-
     train_subset:
       batch_size: 8
       sampler:

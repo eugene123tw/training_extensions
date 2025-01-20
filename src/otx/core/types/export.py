@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Intel Corporation
+# Copyright (C) 2024-2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 #
 """OTX export-related types definition."""
@@ -9,6 +9,7 @@ import json
 from dataclasses import dataclass, fields
 from enum import Enum
 
+import otx
 from otx.core.config.data import TileConfig
 from otx.core.types.label import HLabelInfo, LabelInfo
 
@@ -33,6 +34,8 @@ class TaskLevelExportParameters:
         multilabel (bool | None): Whether it is multilabel or not.
             Only specified for the classification task.
         hierarchical (bool | None): Whether it is hierarchical or not.
+            Only specified for the classification task.
+        output_raw_scores (bool | None): Whether to output raw scores.
             Only specified for the classification task.
         confidence_threshold (float | None): Confidence threshold for model prediction probability.
             It is used only for classification tasks, detection and instance segmentation tasks.
@@ -60,6 +63,7 @@ class TaskLevelExportParameters:
     # (Optional) Classification tasks
     multilabel: bool | None = None
     hierarchical: bool | None = None
+    output_raw_scores: bool | None = None
 
     # (Optional) Classification tasks, detection and instance segmentation task
     confidence_threshold: float | None = None
@@ -95,19 +99,17 @@ class TaskLevelExportParameters:
             dict[tuple[str, str], str]: It will be directly delivered to
             OpenVINO IR's `rt_info` or ONNX metadata slot.
         """
-        if self.task_type == "instance_segmentation":
-            # Instance segmentation needs to add empty label
-            all_labels = "otx_empty_lbl "
-            all_label_ids = "None "
-            for lbl in self.label_info.label_names:
-                all_labels += lbl.replace(" ", "_") + " "
-                all_label_ids += lbl.replace(" ", "_") + " "
-        else:
-            all_labels = ""
-            all_label_ids = ""
-            for lbl in self.label_info.label_names:
-                all_labels += lbl.replace(" ", "_") + " "
-                all_label_ids += lbl.replace(" ", "_") + " "
+        all_labels = ""
+        all_label_ids = ""
+
+        if len(self.label_info.label_names) != len(self.label_info.label_ids):
+            msg = "Label info is incorrect: label names and IDs do not match"
+            raise RuntimeError(msg)
+
+        for lbl in self.label_info.label_names:
+            all_labels += lbl.replace(" ", "_") + " "
+        for lbl_id in self.label_info.label_ids:
+            all_label_ids += lbl_id + " "
 
         metadata = {
             # Common
@@ -117,13 +119,15 @@ class TaskLevelExportParameters:
             ("model_info", "labels"): all_labels.strip(),
             ("model_info", "label_ids"): all_label_ids.strip(),
             ("model_info", "optimization_config"): json.dumps(self.optimization_config),
+            ("model_info", "otx_version"): otx.__version__,
         }
 
         if isinstance(self.label_info, HLabelInfo):
+            dict_info = self.label_info.as_dict(normalize_label_names=True)
             metadata[("model_info", "hierarchical_config")] = json.dumps(
                 {
-                    "cls_heads_info": self.label_info.as_dict(),
-                    "label_tree_edges": self.label_info.label_tree_edges,
+                    "cls_heads_info": dict_info,
+                    "label_tree_edges": dict_info["label_tree_edges"],
                 },
             )
 
@@ -132,6 +136,9 @@ class TaskLevelExportParameters:
 
         if self.hierarchical is not None:
             metadata[("model_info", "hierarchical")] = str(self.hierarchical)
+
+        if self.output_raw_scores is not None:
+            metadata[("model_info", "output_raw_scores")] = str(self.output_raw_scores)
 
         if self.confidence_threshold is not None:
             metadata[("model_info", "confidence_threshold")] = str(self.confidence_threshold)

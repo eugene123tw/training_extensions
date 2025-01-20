@@ -190,7 +190,11 @@ class OTXCLI:
         if "logger" in added_arguments:
             parser.link_arguments("workspace.work_dir", "logger.init_args.save_dir", apply_on="instantiate")
             parser.link_arguments("workspace.work_dir", "logger.init_args.log_dir", apply_on="instantiate")
-        if "checkpoint" in added_arguments and "--checkpoint" in sys.argv:
+        if (
+            "checkpoint" in added_arguments
+            and "--checkpoint" in sys.argv
+            and any("openvino_model.yaml" in arg for arg in sys.argv)
+        ):
             # This is code for an OVModel that uses checkpoint in model.model_name.
             parser.link_arguments("checkpoint", "model.init_args.model_name")
 
@@ -220,6 +224,7 @@ class OTXCLI:
             "export": device_kwargs,
             "optimize": {"datamodule"}.union(device_kwargs),
             "explain": {"datamodule"}.union(device_kwargs),
+            "benchmark": device_kwargs,
         }
 
     def add_subcommands(self) -> None:
@@ -330,10 +335,23 @@ class OTXCLI:
             # For num_classes update, Model and Metric are instantiated separately.
             model_config = self.config[self.subcommand].pop("model")
 
+            # if adaptive_input_size will be executed and the model has input_size_multiplier, pass it to OTXDataModule
+            if self.config[self.subcommand].data.get("adaptive_input_size") is not None:
+                from otx.utils.utils import get_model_cls_from_config
+
+                model_cls = get_model_cls_from_config(model_config)
+                self.config[self.subcommand].data.input_size_multiplier = model_cls.input_size_multiplier
+
             # Instantiate the things that don't need to special handling
             self.config_init = self.parser.instantiate_classes(self.config)
             self.workspace = self.get_config_value(self.config_init, "workspace")
             self.datamodule = self.get_config_value(self.config_init, "data")
+
+            # pass OTXDataModule input size to the model
+            if (input_size := self.datamodule.input_size) is not None and "input_size" in model_config["init_args"]:
+                model_config["init_args"]["input_size"] = (
+                    (input_size, input_size) if isinstance(input_size, int) else tuple(input_size)
+                )
 
             # Instantiate the model and needed components
             self.model = self.instantiate_model(model_config=model_config)
@@ -406,12 +424,6 @@ class OTXCLI:
         model_parser.add_subclass_arguments(OTXModel, "model", skip=skip, required=False, fail_untyped=False)
         model: OTXModel = model_parser.instantiate_classes(Namespace(model=model_config)).get("model")
         self.config_init[self.subcommand]["model"] = model
-
-        # Update tile config due to adaptive tiling
-        if model.tile_config.enable_tiler:
-            # TODO(Eugene): Ticket no. 139000: Need to find a better way to configure image size for OV Models
-            # https://github.com/openvinotoolkit/training_extensions/pull/2925
-            model.image_size = model.tile_image_size
 
         # Update self.config with model
         self.config[self.subcommand].update(Namespace(model=model_config))
@@ -528,7 +540,8 @@ class OTXCLI:
             fn_kwargs = self.prepare_subcommand_kwargs(self.subcommand)
             fn = getattr(self.engine, self.subcommand)
             try:
-                fn(**fn_kwargs)
+                outputs = fn(**fn_kwargs)
+                self._print_results(outputs=outputs)
             except Exception:
                 self.console.print_exception(width=self.console.width)
                 raise
@@ -536,3 +549,25 @@ class OTXCLI:
         else:
             msg = f"Unrecognized subcommand: {self.subcommand}"
             raise ValueError(msg)
+
+    def _print_results(self, outputs: Any) -> None:  # noqa: ANN401
+        if outputs is None:
+            return
+        if self.subcommand == "train" and isinstance(outputs, dict):
+            # Print Metric like 'otx test'
+            from rich.table import Column, Table
+            from torch import Tensor
+
+            table_headers = ["Train metric", "Value"]
+            columns = [Column(h, justify="center", style="magenta", width=self.console.width) for h in table_headers]
+            columns[0].style = "cyan"
+            table = Table(*columns)
+            for metric, row in outputs.items():
+                if isinstance(row, Tensor):
+                    row = row.item() if row.numel() == 1 else row.tolist()  # noqa: PLW2901
+                table.add_row(*[metric, f"{row}"])
+            self.console.print(table)
+        elif self.subcommand in ("export", "optimize"):
+            # Print output model path
+            self.console.print(f"{self.subcommand} output: {outputs}")
+        self.console.print(f"Work Directory: {self.engine.work_dir}")

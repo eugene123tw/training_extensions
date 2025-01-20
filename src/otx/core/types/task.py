@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2023-2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 #
 """OTX task type definition."""
@@ -15,6 +15,8 @@ class OTXTaskType(str, Enum):
     ACTION_CLASSIFICATION = "ACTION_CLASSIFICATION"
 
     # Anomaly Detection
+    ANOMALY = "ANOMALY"
+    # TODO(ashwinvaidya17): Remove rest after greenlight from backend.
     ANOMALY_CLASSIFICATION = "ANOMALY_CLASSIFICATION"
     ANOMALY_DETECTION = "ANOMALY_DETECTION"
     ANOMALY_SEGMENTATION = "ANOMALY_SEGMENTATION"
@@ -28,6 +30,8 @@ class OTXTaskType(str, Enum):
     DETECTION = "DETECTION"
     ROTATED_DETECTION = "ROTATED_DETECTION"
     DETECTION_SEMI_SL = "DETECTION_SEMI_SL"
+    KEYPOINT_DETECTION = "KEYPOINT_DETECTION"
+    OBJECT_DETECTION_3D = "OBJECT_DETECTION_3D"
 
     # Segmentation
     INSTANCE_SEGMENTATION = "INSTANCE_SEGMENTATION"
@@ -36,3 +40,13 @@ class OTXTaskType(str, Enum):
     # Visual Promting Tasks.
     VISUAL_PROMPTING = "VISUAL_PROMPTING"
     ZERO_SHOT_VISUAL_PROMPTING = "ZERO_SHOT_VISUAL_PROMPTING"
+
+    # Diffusion
+    DIFFUSION = "DIFFUSION"
+
+
+class OTXTrainType(str, Enum):
+    """OTX train type definition."""
+
+    SUPERVISED = "SUPERVISED"
+    SEMI_SUPERVISED = "SEMI_SUPERVISED"

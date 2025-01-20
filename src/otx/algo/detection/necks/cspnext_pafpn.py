@@ -11,17 +11,20 @@ Reference : https://github.com/open-mmlab/mmdetection/blob/v3.2.0/mmdet/models/n
 from __future__ import annotations
 
 import math
+from functools import partial
+from typing import Any, Callable, ClassVar
 
 import torch
 from torch import Tensor, nn
 
 from otx.algo.detection.layers import CSPLayer
+from otx.algo.modules.activation import Swish, build_activation_layer
 from otx.algo.modules.base_module import BaseModule
-from otx.algo.modules.conv_module import ConvModule
-from otx.algo.modules.depthwise_separable_conv_module import DepthwiseSeparableConvModule
+from otx.algo.modules.conv_module import Conv2dModule, DepthwiseSeparableConvModule
+from otx.algo.modules.norm import build_norm_layer
 
 
-class CSPNeXtPAFPN(BaseModule):
+class CSPNeXtPAFPNModule(BaseModule):
     """Path Aggregation Network with CSPNeXt blocks.
 
     Args:
@@ -31,9 +34,10 @@ class CSPNeXtPAFPN(BaseModule):
         use_depthwise (bool): Whether to use depthwise separable convolution in blocks. Defaults to False.
         expand_ratio (float): Ratio to adjust the number of channels of the hidden layer. Default: 0.5
         upsample_cfg (dict): Config dict for interpolate layer. Default: `dict(scale_factor=2, mode='nearest')`
-        conv_cfg (dict, optional): Config dict for convolution layer. Default: None, which means using conv2d.
-        norm_cfg (dict): Config dict for normalization layer. Default: dict(type='BN')
-        act_cfg (dict): Config dict for activation layer. Default: dict(type='Swish')
+        normalization (Callable[..., nn.Module] | None): Normalization layer module.
+            Defaults to ``partial(nn.BatchNorm2d, momentum=0.03, eps=0.001)``.
+        activation (Callable[..., nn.Module]): Activation layer module.
+            Defaults to ``Swish``.
         init_cfg (dict or list[dict], optional): Initialization config dict. Default: None.
     """
 
@@ -45,14 +49,11 @@ class CSPNeXtPAFPN(BaseModule):
         use_depthwise: bool = False,
         expand_ratio: float = 0.5,
         upsample_cfg: dict | None = None,
-        conv_cfg: dict | None = None,
-        norm_cfg: dict | None = None,
-        act_cfg: dict | None = None,
+        normalization: Callable[..., nn.Module] = partial(nn.BatchNorm2d, momentum=0.03, eps=0.001),
+        activation: Callable[..., nn.Module] = Swish,
         init_cfg: dict | None = None,
     ) -> None:
         upsample_cfg = upsample_cfg or {"scale_factor": 2, "mode": "nearest"}
-        norm_cfg = norm_cfg or {"type": "BN", "momentum": 0.03, "eps": 0.001}
-        act_cfg = act_cfg or {"type": "Swish"}
         init_cfg = init_cfg or {
             "type": "Kaiming",
             "layer": "Conv2d",
@@ -66,7 +67,7 @@ class CSPNeXtPAFPN(BaseModule):
         self.in_channels = in_channels
         self.out_channels = out_channels
 
-        conv = DepthwiseSeparableConvModule if use_depthwise else ConvModule
+        conv = DepthwiseSeparableConvModule if use_depthwise else Conv2dModule
 
         # build top-down blocks
         self.upsample = nn.Upsample(**upsample_cfg)
@@ -74,13 +75,12 @@ class CSPNeXtPAFPN(BaseModule):
         self.top_down_blocks = nn.ModuleList()
         for idx in range(len(in_channels) - 1, 0, -1):
             self.reduce_layers.append(
-                ConvModule(
+                Conv2dModule(
                     in_channels[idx],
                     in_channels[idx - 1],
                     1,
-                    conv_cfg=conv_cfg,
-                    norm_cfg=norm_cfg,
-                    act_cfg=act_cfg,
+                    normalization=build_norm_layer(normalization, num_features=in_channels[idx - 1]),
+                    activation=build_activation_layer(activation),
                 ),
             )
             self.top_down_blocks.append(
@@ -92,9 +92,8 @@ class CSPNeXtPAFPN(BaseModule):
                     use_depthwise=use_depthwise,
                     use_cspnext_block=True,
                     expand_ratio=expand_ratio,
-                    conv_cfg=conv_cfg,
-                    norm_cfg=norm_cfg,
-                    act_cfg=act_cfg,
+                    normalization=normalization,
+                    activation=activation,
                 ),
             )
 
@@ -109,9 +108,8 @@ class CSPNeXtPAFPN(BaseModule):
                     3,
                     stride=2,
                     padding=1,
-                    conv_cfg=conv_cfg,
-                    norm_cfg=norm_cfg,
-                    act_cfg=act_cfg,
+                    normalization=build_norm_layer(normalization, num_features=in_channels[idx]),
+                    activation=build_activation_layer(activation),
                 ),
             )
             self.bottom_up_blocks.append(
@@ -123,16 +121,22 @@ class CSPNeXtPAFPN(BaseModule):
                     use_depthwise=use_depthwise,
                     use_cspnext_block=True,
                     expand_ratio=expand_ratio,
-                    conv_cfg=conv_cfg,
-                    norm_cfg=norm_cfg,
-                    act_cfg=act_cfg,
+                    normalization=normalization,
+                    activation=activation,
                 ),
             )
 
         self.out_convs = nn.ModuleList()
         for i in range(len(in_channels)):
             self.out_convs.append(
-                conv(in_channels[i], out_channels, 3, padding=1, conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg),
+                conv(
+                    in_channels[i],
+                    out_channels,
+                    3,
+                    padding=1,
+                    normalization=build_norm_layer(normalization, num_features=out_channels),
+                    activation=build_activation_layer(activation),
+                ),
             )
 
     def forward(self, inputs: tuple[Tensor, ...]) -> tuple[Tensor, ...]:
@@ -175,3 +179,33 @@ class CSPNeXtPAFPN(BaseModule):
             outs[idx] = conv(outs[idx])
 
         return tuple(outs)
+
+
+class CSPNeXtPAFPN:
+    """CSPNeXtPAFPN factory for detection."""
+
+    CSPNEXTPAFPN_CFG: ClassVar[dict[str, Any]] = {
+        "rtmdet_tiny": {
+            "in_channels": (96, 192, 384),
+            "out_channels": 96,
+            "num_csp_blocks": 1,
+            "normalization": nn.BatchNorm2d,
+            "activation": partial(nn.SiLU, inplace=True),
+        },
+        "rtmdet_inst_tiny": {
+            "in_channels": (96, 192, 384),
+            "out_channels": 96,
+            "num_csp_blocks": 1,
+            "expand_ratio": 0.5,
+            "normalization": nn.BatchNorm2d,
+            "activation": partial(nn.SiLU, inplace=True),
+        },
+    }
+
+    def __new__(cls, model_name: str) -> CSPNeXtPAFPNModule:
+        """Constructor for CSPNeXtPAFPN."""
+        if model_name not in cls.CSPNEXTPAFPN_CFG:
+            msg = f"model type '{model_name}' is not supported"
+            raise KeyError(msg)
+
+        return CSPNeXtPAFPNModule(**cls.CSPNEXTPAFPN_CFG[model_name])

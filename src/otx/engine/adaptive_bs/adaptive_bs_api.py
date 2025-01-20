@@ -1,6 +1,6 @@
 # Copyright (C) 2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
-"""Algorithm to find a proper batch size which is fit to current GPU device for tasks using mmcv."""
+"""Algorithm to find a proper batch size which is fit to current GPU device."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from lightning.pytorch.loggers.logger import DummyLogger
 from torch.cuda import is_available as is_cuda_available
 
 from otx.core.types.task import OTXTaskType
-from otx.utils.utils import is_xpu_available
+from otx.utils.device import is_xpu_available
 
 from .bs_search_algo import BsSearchAlgo
 

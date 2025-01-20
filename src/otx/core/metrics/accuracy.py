@@ -18,6 +18,8 @@ from torchmetrics.collections import MetricCollection
 
 from otx.core.metrics.types import MetricCallable
 
+from .mlc_map import MultilabelmAP
+
 if TYPE_CHECKING:
     from torch import Tensor
 
@@ -288,12 +290,17 @@ class MixedHLabelAccuracy(Metric):
         ]
 
         # Multilabel classification accuracy metrics
-        if self.num_multilabel_classes > 0:
+        # https://github.com/Lightning-AI/torchmetrics/blob/6377aa5b6fe2863761839e6b8b5a857ef1b8acfa/src/torchmetrics/functional/classification/stat_scores.py#L583-L584
+        # MultilabelAccuracy is available when num_multilabel_classes is greater than 2.
+        self.multilabel_accuracy = None
+        if self.num_multilabel_classes > 1:
             self.multilabel_accuracy = TorchmetricMultilabelAcc(
                 num_labels=self.num_multilabel_classes,
                 threshold=0.5,
                 average="macro",
             )
+        elif self.num_multilabel_classes == 1:
+            self.multilabel_accuracy = TorchmetricAcc(task="binary", num_classes=self.num_multilabel_classes)
 
     def _apply(self, fn: Callable, exclude_state: Sequence[str] = "") -> nn.Module:
         self.multiclass_head_accuracy = [
@@ -303,7 +310,7 @@ class MixedHLabelAccuracy(Metric):
             )
             for acc in self.multiclass_head_accuracy
         ]
-        if self.num_multilabel_classes > 0:
+        if self.multilabel_accuracy is not None:
             self.multilabel_accuracy = self.multilabel_accuracy._apply(fn, exclude_state)  # noqa: SLF001
         return self
 
@@ -322,7 +329,7 @@ class MixedHLabelAccuracy(Metric):
                     target_multiclass[multiclass_mask],
                 )
 
-        if self.num_multilabel_classes > 0:
+        if self.multilabel_accuracy is not None:
             # Split preds into multiclass and multilabel parts
             preds_multilabel = preds[:, self.num_multiclass_heads :]
             target_multilabel = target[:, self.num_multiclass_heads :]
@@ -337,7 +344,7 @@ class MixedHLabelAccuracy(Metric):
             ),
         )
 
-        if self.num_multilabel_classes > 0:
+        if self.multilabel_accuracy is not None:
             multilabel_acc = self.multilabel_accuracy.compute()
 
             return (multiclass_accs + multilabel_acc) / 2
@@ -346,8 +353,10 @@ class MixedHLabelAccuracy(Metric):
 
 
 def _multi_class_cls_metric_callable(label_info: LabelInfo) -> MetricCollection:
+    num_classes = label_info.num_classes
+    task = "binary" if num_classes == 1 else "multiclass"
     return MetricCollection(
-        {"accuracy": TorchmetricAcc(task="multiclass", num_classes=label_info.num_classes)},
+        {"accuracy": TorchmetricAcc(task=task, num_classes=num_classes)},
     )
 
 
@@ -358,6 +367,7 @@ def _multi_label_cls_metric_callable(label_info: LabelInfo) -> MetricCollection:
     return MetricCollection(
         {
             "accuracy": MultilabelAccuracywithLabelGroup(label_info=label_info),
+            "mAP": MultilabelmAP(label_info=label_info),
         },
     )
 
@@ -377,4 +387,4 @@ def _mixed_hlabel_accuracy(label_info: HLabelInfo) -> MetricCollection:
     )
 
 
-HLabelClsMetricCallble: MetricCallable = _mixed_hlabel_accuracy  # type: ignore[assignment]
+HLabelClsMetricCallable: MetricCallable = _mixed_hlabel_accuracy  # type: ignore[assignment]

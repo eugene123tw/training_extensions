@@ -15,10 +15,10 @@ from otx.core.data.dataset.tile import OTXTileTransform
 
 
 def test_tile_transform_consistency(mocker):
-    # Test that the tiler and tile transform are consistent
+    # Test that OV tiler and PyTorch tile transform are consistent
     rng = np.random.default_rng()
     rnd_tile_size = rng.integers(low=100, high=500)
-    rnd_tile_overlap = rng.random()
+    rnd_tile_overlap = min(rng.random(), 0.9)
     image_size = rng.integers(low=1000, high=5000)
     np_image = np.zeros((image_size, image_size, 3), dtype=np.uint8)
     dm_image = Image.from_numpy(np_image)
@@ -39,5 +39,8 @@ def test_tile_transform_consistency(mocker):
     tile_transform.with_full_img = True
 
     dm_rois = [xywh_to_x1y1x2y2(*roi) for roi in tile_transform._extract_rois(dm_image)]
-    # 0 index in tiler is the full image so we skip it
-    assert np.allclose(dm_rois, tiler._tile(np_image))
+    ov_tiler_rois = tiler._tile(np_image)
+
+    assert len(dm_rois) == len(ov_tiler_rois)
+    for dm_roi in dm_rois:
+        assert list(dm_roi) in ov_tiler_rois

@@ -72,7 +72,7 @@ def load_checkpoint(
 def load_from_http(
     filename: str,
     map_location: str | None = None,
-    model_dir: str | None = None,
+    model_dir: Path | str | None = None,
     progress: bool = os.isatty(0),
 ) -> dict[str, Any]:
     """Loads a checkpoint from an HTTP URL.
@@ -205,6 +205,9 @@ def load_checkpoint_to_model(
     # get state_dict from checkpoint
     # TODO(Kirill): remove this when RTDETR weights is updloaded to openvino storage.
     state_dict = checkpoint["ema"]["module"] if "ema" in checkpoint else checkpoint.get("state_dict", checkpoint)
+
+    # TODO(Eugene): remove this when MaskDINO weights is updloaded to openvino storage.
+    state_dict = state_dict.get("model", state_dict)
 
     # strip prefix of state_dict
     metadata = getattr(state_dict, "_metadata", OrderedDict())

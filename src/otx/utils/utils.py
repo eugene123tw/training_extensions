@@ -11,23 +11,15 @@ import pickle  # nosec B403 used pickle for internal state dump/load
 from decimal import Decimal
 from functools import partial
 from types import LambdaType
-from typing import TYPE_CHECKING, Any
-
-import torch
+from typing import TYPE_CHECKING, Any, Callable
 
 from otx.core.model.base import OTXModel
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import torch
     from jsonargparse import Namespace
-
-
-XPU_AVAILABLE = None
-try:
-    import intel_extension_for_pytorch  # noqa: F401
-except ImportError:
-    XPU_AVAILABLE = False
 
 
 def get_using_dot_delimited_key(key: str, target: Any) -> Any:  # noqa: ANN401
@@ -132,14 +124,6 @@ def remove_matched_files(directory: Path, pattern: str, file_to_leave: Path | No
     for weight in directory.rglob(pattern):
         if weight != file_to_leave:
             weight.unlink()
-
-
-def is_xpu_available() -> bool:
-    """Checks if XPU device is available."""
-    global XPU_AVAILABLE  # noqa: PLW0603
-    if XPU_AVAILABLE is None:
-        XPU_AVAILABLE = hasattr(torch, "xpu") and torch.xpu.is_available()
-    return XPU_AVAILABLE
 
 
 def get_model_cls_from_config(model_config: Namespace) -> type[OTXModel]:
@@ -260,3 +244,20 @@ def check_pickleable(obj: Any) -> bool:  # noqa: ANN401
     except Exception:
         return False
     return True
+
+
+def measure_flops(
+    forward_fn: Callable[[], torch.Tensor],
+    loss_fn: Callable[[torch.Tensor], torch.Tensor] | None = None,
+    print_stats_depth: int = 0,
+) -> int:
+    """Utility to compute the total number of FLOPs used by a module during training or during inference."""
+    from torch.utils.flop_counter import FlopCounterMode
+
+    flop_counter = FlopCounterMode(display=print_stats_depth > 0, depth=print_stats_depth)
+    with flop_counter:
+        if loss_fn is None:
+            forward_fn()
+        else:
+            loss_fn(forward_fn()).backward()
+    return flop_counter.get_total_flops()

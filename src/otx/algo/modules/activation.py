@@ -2,13 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OpenMMLab. All rights reserved.
 
-"""This implementation replaces the functionality of mmcv.cnn.bricks.activation.build_activation_layer."""
+"""Custom activation implementation copied from mmcv.cnn.bricks.swish.py."""
+
 from __future__ import annotations
 
-import copy
+from functools import partial
+from typing import Callable
 
 import torch
-from torch import nn
+from torch import Tensor, nn
 
 
 class Swish(nn.Module):
@@ -23,52 +25,81 @@ class Swish(nn.Module):
         Tensor: The output tensor.
     """
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """Forward function.
 
         Args:
-            x (torch.Tensor): The input tensor.
+            x (Tensor): The input tensor.
 
         Returns:
-            torch.Tensor: The output tensor.
+            Tensor: The output tensor.
         """
         return x * torch.sigmoid(x)
 
 
-ACTIVATION_DICT = {
-    "ReLU": nn.ReLU,
-    "LeakyReLU": nn.LeakyReLU,
-    "PReLU": nn.PReLU,
-    "RReLU": nn.RReLU,
-    "ReLU6": nn.ReLU6,
-    "ELU": nn.ELU,
-    "Sigmoid": nn.Sigmoid,
-    "Tanh": nn.Tanh,
-    "SiLU": nn.SiLU,
-    "GELU": nn.GELU,
-    "Swish": Swish,
-}
+AVAILABLE_ACTIVATION_LIST: list[nn.Module] = [
+    nn.ReLU,
+    nn.LeakyReLU,
+    nn.PReLU,
+    nn.RReLU,
+    nn.ReLU6,
+    nn.ELU,
+    nn.Sigmoid,
+    nn.Tanh,
+    nn.SiLU,
+    nn.GELU,
+    Swish,
+]
+
+ACTIVATION_LIST_NOT_SUPPORTING_INPLACE: list[nn.Module] = [
+    nn.Tanh,
+    nn.PReLU,
+    nn.Sigmoid,
+    Swish,
+    nn.GELU,
+]
 
 
-def build_activation_layer(cfg: dict) -> nn.Module:
+def _get_act_type(activation: Callable[..., nn.Module]) -> type:
+    """Get class type or name of given activation callable.
+
+    Args:
+        activation (Callable[..., nn.Module]): Activation layer module.
+
+    Returns:
+        (type): Class type of given activation callable.
+
+    """
+    return activation.func if isinstance(activation, partial) else activation  # type: ignore[return-value]
+
+
+def build_activation_layer(
+    activation: Callable[..., nn.Module] | nn.Module | None,
+    inplace: bool = True,
+) -> nn.Module | None:
     """Build activation layer.
 
     Args:
-        cfg (dict): The activation layer config, which should contain:
-
-            - type (str): Layer type.
-            - layer args: Args needed to instantiate an activation layer.
+        activation (Callable[..., nn.Module] | nn.Module | None): Activation layer module.
+            If None or pre-instanstiated module is given, return it as is.
+            If callable is given, create the layer.
+        inplace (bool): Whether to use inplace mode for activation.
+            Default: True.
 
     Returns:
         nn.Module: Created activation layer.
     """
-    _cfg = copy.deepcopy(cfg)
-    activation_type = _cfg.pop("type", None)
-    if activation_type is None:
-        msg = "The cfg dict must contain the key 'type'"
-        raise KeyError(msg)
-    if activation_type not in ACTIVATION_DICT:
-        msg = f"Cannot find {activation_type} in {ACTIVATION_DICT.keys()}"
-        raise KeyError(msg)
+    if activation is None or isinstance(activation, nn.Module):
+        return activation
 
-    return ACTIVATION_DICT[activation_type](**_cfg)
+    if (layer_type := _get_act_type(activation)) not in AVAILABLE_ACTIVATION_LIST:
+        msg = f"Unsupported activation: {layer_type.__name__}."
+        raise ValueError(msg)
+
+    layer = activation()
+
+    # update inplace
+    if layer.__class__ not in ACTIVATION_LIST_NOT_SUPPORTING_INPLACE:
+        layer.inplace = inplace
+
+    return layer

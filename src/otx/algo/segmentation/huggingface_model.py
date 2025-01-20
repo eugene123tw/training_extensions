@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 import torch
@@ -13,6 +14,7 @@ from transformers import (
     AutoImageProcessor,
     AutoModelForSemanticSegmentation,
 )
+from transformers.configuration_utils import PretrainedConfig
 
 from otx.core.data.entity.base import OTXBatchLossEntity
 from otx.core.data.entity.segmentation import SegBatchDataEntity, SegBatchPredEntity
@@ -30,12 +32,14 @@ if TYPE_CHECKING:
 
     from otx.core.metrics import MetricCallable
 
+logger = logging.getLogger(__name__)
+
 
 class HuggingFaceModelForSegmentation(OTXSegmentationModel):
     """A class representing a Hugging Face model for segmentation.
 
     Args:
-        model_name_or_path (str): The name or path of the pre-trained model.
+        model_name (str): The name or path of the pre-trained model.
         label_info (LabelInfoTypes): The label information for the model.
         optimizer (OptimizerCallable, optional): The optimizer for training the model.
             Defaults to DefaultOptimizerCallable.
@@ -48,29 +52,31 @@ class HuggingFaceModelForSegmentation(OTXSegmentationModel):
     Example:
         1. API
             >>> model = HuggingFaceModelForSegmentation(
-            ...     model_name_or_path="nvidia/segformer-b0-finetuned-ade-512-512",
+            ...     model_name="nvidia/segformer-b0-finetuned-ade-512-512",
             ...     label_info=<Number-of-classes>,
             ... )
         2. CLI
             >>> otx train \
             ... --model otx.algo.segmentation.huggingface_model.HuggingFaceModelForSegmentation \
-            ... --model.model_name_or_path nvidia/segformer-b0-finetuned-ade-512-512
+            ... --model.model_name nvidia/segformer-b0-finetuned-ade-512-512
     """
 
     def __init__(
         self,
-        model_name_or_path: str,  # https://huggingface.co/models?pipeline_tag=image-segmentation
         label_info: LabelInfoTypes,
+        model_name: str,  # https://huggingface.co/models?pipeline_tag=image-segmentation
+        input_size: tuple[int, int] = (512, 512),  # input size of default semantic segmentation data recipe
         optimizer: OptimizerCallable = DefaultOptimizerCallable,
         scheduler: LRSchedulerCallable | LRSchedulerListCallable = DefaultSchedulerCallable,
         metric: MetricCallable = SegmCallable,  # type: ignore[assignment]
         torch_compile: bool = False,
     ) -> None:
-        self.model_name = model_name_or_path
         self.load_from = None
 
         super().__init__(
             label_info=label_info,
+            model_name=model_name,
+            input_size=input_size,
             optimizer=optimizer,
             scheduler=scheduler,
             metric=metric,
@@ -79,10 +85,27 @@ class HuggingFaceModelForSegmentation(OTXSegmentationModel):
         self.image_processor = AutoImageProcessor.from_pretrained(self.model_name)
 
     def _create_model(self) -> nn.Module:
+        model_config, _ = PretrainedConfig.get_config_dict(self.model_name)
+        kwargs = {}
+
+        if "image_size" in model_config:
+            kwargs["image_size"] = self.input_size[-1]
+
+        if (patch_size := model_config.get("patch_sizes")) is not None:
+            if isinstance(patch_size, (list, tuple)):
+                patch_size = patch_size[0]
+            if self.input_size[0] % patch_size != 0 or self.input_size[1] % patch_size != 0:
+                msg = (
+                    f"It's recommended to set the input size to multiple of patch size({patch_size}). "
+                    "If not, score can decrease or model may not work."
+                )
+                logger.warning(msg)
+
         return AutoModelForSemanticSegmentation.from_pretrained(
             pretrained_model_name_or_path=self.model_name,
             num_labels=self.label_info.num_classes,
             ignore_mismatched_sizes=True,
+            **kwargs,
         )
 
     def _customize_inputs(self, entity: SegBatchDataEntity) -> dict[str, Any]:
@@ -121,15 +144,12 @@ class HuggingFaceModelForSegmentation(OTXSegmentationModel):
     @property
     def _exporter(self) -> OTXModelExporter:
         """Creates OTXModelExporter object that can export the model."""
-        size = self.image_processor.size.values()
-        size = (*size, *size) if len(size) == 1 else size
-        image_size = (1, 3, *size)
         image_mean = (123.675, 116.28, 103.53)
         image_std = (58.395, 57.12, 57.375)
 
         return OTXNativeModelExporter(
             task_level_export_parameters=self._export_parameters,
-            input_size=image_size,
+            input_size=(1, 3, *self.input_size),
             mean=image_mean,
             std=image_std,
             resize_mode="standard",
@@ -142,4 +162,8 @@ class HuggingFaceModelForSegmentation(OTXSegmentationModel):
 
     def forward_for_tracing(self, image: torch.Tensor) -> torch.Tensor | dict[str, torch.Tensor]:
         """Model forward function used for the model tracing during model exportation."""
+        if self.explain_mode:
+            msg = "Explain mode is not supported for this model."
+            raise NotImplementedError(msg)
+
         return self.model(image)

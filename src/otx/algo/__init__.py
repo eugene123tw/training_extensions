@@ -5,12 +5,26 @@
 
 from . import (
     accelerators,
-    plugins,
     strategies,
 )
 
 __all__ = [
-    "strategies",
     "accelerators",
+    "action_classification",
+    "anomaly",
+    "callbacks",
+    "classification",
+    "common",
+    "detection",
+    "diffusion",
+    "keypoint_detection",
+    "modules",
+    "object_detection_3d",
     "plugins",
+    "samplers",
+    "segmentation",
+    "strategies",
+    "strategies",
+    "utils",
+    "visual_prompting",
 ]

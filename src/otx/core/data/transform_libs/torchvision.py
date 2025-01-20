@@ -1,6 +1,5 @@
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2023-2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
-#
 """Helper to support TorchVision data transform functions."""
 
 from __future__ import annotations
@@ -27,6 +26,7 @@ from datumaro.components.media import Video
 from lightning.pytorch.cli import instantiate_class
 from numpy import random
 from omegaconf import DictConfig
+from scipy.stats import truncnorm
 from torchvision import tv_tensors
 from torchvision._utils import sequence_to_str
 from torchvision.transforms.v2 import functional as F  # noqa: N812
@@ -1377,7 +1377,7 @@ class RandomAffine(tvt_v2.Transform, NumpytoTVTensorMixin):
         inputs.image = img
         inputs.img_info = _resize_image_info(inputs.img_info, img.shape[:2])
 
-        bboxes = inputs.bboxes
+        bboxes = getattr(inputs, "bboxes", [])
         num_bboxes = len(bboxes)
         if num_bboxes:
             bboxes = project_bboxes(bboxes, warp_matrix)
@@ -2050,8 +2050,7 @@ class YOLOXHSVRandomAug(tvt_v2.Transform, NumpytoTVTensorMixin):
         img_hsv[..., 0] = (img_hsv[..., 0] + hsv_gains[0]) % 180
         img_hsv[..., 1] = np.clip(img_hsv[..., 1] + hsv_gains[1], 0, 255)
         img_hsv[..., 2] = np.clip(img_hsv[..., 2] + hsv_gains[2], 0, 255)
-        cv2.cvtColor(img_hsv.astype(img.dtype), cv2.COLOR_HSV2BGR, dst=img)
-
+        img = cv2.cvtColor(img_hsv.astype(img.dtype), cv2.COLOR_HSV2BGR)
         inputs.image = img
         return self.convert(inputs)
 
@@ -2651,6 +2650,7 @@ class FilterAnnotations(tvt_v2.Transform, NumpytoTVTensorMixin):
         if not keep.any() and self.keep_empty:
             return self.convert(inputs)
 
+        keep = list(keep)
         keys = ("bboxes", "labels", "masks", "polygons")
         for key in keys:
             if hasattr(inputs, key):
@@ -3109,6 +3109,675 @@ class Normalize3D(tvt_v2.Normalize):
         return inputs
 
 
+class GetBBoxCenterScale(tvt_v2.Transform):
+    """Convert bboxes from [x, y, w, h] to center and scale.
+
+    The center is the coordinates of the bbox center, and the scale is the
+    bbox width and height normalized by a scale factor.
+    Required Keys:
+        - bbox
+    Modified Keys:
+        - bbox_center
+        - bbox_scale
+    Args:
+        padding (float): The bbox padding scale that will be multilied to
+            `bbox_scale`. Defaults to 1.25
+    """
+
+    def __init__(self, padding: float = 1.25) -> None:
+        super().__init__()
+
+        self.padding = padding
+
+    def __call__(self, *_inputs: T_OTXDataEntity) -> T_OTXDataEntity | None:
+        """Transform function to add bbox_infos from bboxes for keypoint detection task."""
+        assert len(_inputs) == 1, "[tmp] Multiple entity is not supported yet."  # noqa: S101
+        inputs = _inputs[0]
+
+        bbox = inputs.bboxes[0].numpy()
+        inputs.bbox_info.center = (bbox[2:] + bbox[:2]) * 0.5
+        inputs.bbox_info.scale = (bbox[2:] - bbox[:2]) * self.padding
+
+        return inputs
+
+    def __repr__(self) -> str:
+        """Print the basic information of the transform.
+
+        Returns:
+            str: Formatted string.
+        """
+        return self.__class__.__name__ + f"(padding={self.padding})"
+
+
+class RandomBBoxTransform(tvt_v2.Transform):
+    r"""Rnadomly shift, resize and rotate the bounding boxes.
+
+    Required Keys:
+
+        - bbox_center
+        - bbox_scale
+
+    Modified Keys:
+
+        - bbox_center
+        - bbox_scale
+
+    Added Keys:
+        - bbox_rotation
+
+    Args:
+        shift_factor (float): Randomly shift the bbox in range
+            :math:`[-dx, dx]` and :math:`[-dy, dy]` in X and Y directions,
+            where :math:`dx(y) = x(y)_scale \cdot shift_factor` in pixels.
+            Defaults to 0.16
+        shift_prob (float): Probability of applying random shift. Defaults to
+            0.3
+        scale_factor (Tuple[float, float]): Randomly resize the bbox in range
+            :math:`[scale_factor[0], scale_factor[1]]`. Defaults to (0.5, 1.5)
+        scale_prob (float): Probability of applying random resizing. Defaults
+            to 1.0
+        rotate_factor (float): Randomly rotate the bbox in
+            :math:`[-rotate_factor, rotate_factor]` in degrees. Defaults
+            to 80.0
+        rotate_prob (float): Probability of applying random rotation. Defaults
+            to 0.6
+    """
+
+    def __init__(
+        self,
+        shift_factor: float = 0.16,
+        shift_prob: float = 0.3,
+        scale_factor: tuple[float, float] = (0.5, 1.5),
+        scale_prob: float = 1.0,
+        rotate_factor: float = 80.0,
+        rotate_prob: float = 0.6,
+    ) -> None:
+        super().__init__()
+
+        self.shift_factor = shift_factor
+        self.shift_prob = shift_prob
+        self.scale_factor = scale_factor
+        self.scale_prob = scale_prob
+        self.rotate_factor = rotate_factor
+        self.rotate_prob = rotate_prob
+
+    @staticmethod
+    def _truncnorm(low: float = -1.0, high: float = 1.0, size: int = 4) -> torch.Tensor:
+        """Sample from a truncated normal distribution."""
+        return truncnorm.rvs(low, high, size=(size)).astype(np.float32)
+
+    @cache_randomness
+    def _get_transform_params(self) -> tuple:
+        """Get random transform parameters.
+
+        Args:
+            num_bboxes (int): The number of bboxes
+
+        Returns:
+            tuple:
+            - offset (np.ndarray): Offset factor of each bbox in shape (n, 2)
+            - scale (np.ndarray): Scaling factor of each bbox in shape (n, 1)
+            - rotate (np.ndarray): Rotation degree of each bbox in shape (n,)
+        """
+        random_v = self._truncnorm()
+        offset_v = random_v[:2]
+        scale_v = random_v[2:3]
+        rotate_v = random_v[3]
+
+        # Get shift parameters
+        offset = offset_v * self.shift_factor
+        offset = np.where(np.random.rand(1) < self.shift_prob, offset, 0.0)
+
+        # Get scaling parameters
+        scale_min, scale_max = self.scale_factor
+        mu = (scale_max + scale_min) * 0.5
+        sigma = (scale_max - scale_min) * 0.5
+        scale = scale_v * sigma + mu
+        scale = np.where(np.random.rand(1) < self.scale_prob, scale, 1.0)
+
+        # Get rotation parameters
+        rotate = rotate_v * self.rotate_factor
+        rotate = np.where(np.random.rand() < self.rotate_prob, rotate, 0.0)
+
+        return offset, scale, rotate
+
+    def __call__(self, *_inputs: T_OTXDataEntity) -> T_OTXDataEntity | None:
+        """Transform function to adjust bbox_infos randomly."""
+        assert len(_inputs) == 1, "[tmp] Multiple entity is not supported yet."  # noqa: S101
+        inputs = _inputs[0]
+
+        offset, scale, rotate = self._get_transform_params()
+
+        bbox_scale = inputs.bbox_info.scale
+        inputs.bbox_info.center = inputs.bbox_info.center + offset * bbox_scale
+        inputs.bbox_info.scale = inputs.bbox_info.scale * scale
+        inputs.bbox_info.rotation = rotate
+
+        return inputs
+
+    def __repr__(self) -> str:
+        """Print the basic information of the transform.
+
+        Returns:
+            str: Formatted string.
+        """
+        repr_str = self.__class__.__name__
+        repr_str += f"(shift_prob={self.shift_prob}, "
+        repr_str += f"shift_factor={self.shift_factor}, "
+        repr_str += f"scale_prob={self.scale_prob}, "
+        repr_str += f"scale_factor={self.scale_factor}, "
+        repr_str += f"rotate_prob={self.rotate_prob}, "
+        repr_str += f"rotate_factor={self.rotate_factor})"
+        return repr_str
+
+
+class TopdownAffine(tvt_v2.Transform, NumpytoTVTensorMixin):
+    """Get the bbox image as the model input by affine transform.
+
+    Required Keys:
+
+        - img
+        - bbox_center
+        - bbox_scale
+        - bbox_rotation (optional)
+        - keypoints (optional)
+
+    Modified Keys:
+
+        - img
+        - bbox_scale
+
+    Added Keys:
+
+        - input_size
+        - transformed_keypoints
+
+    Args:
+        input_size (Tuple[int, int]): The input image size of the model in
+            [w, h]. The bbox region will be cropped and resize to `input_size`
+    """
+
+    def __init__(self, input_size: tuple[int, int], is_numpy_to_tvtensor: bool = False) -> None:
+        super().__init__()
+
+        self.input_size = input_size
+        self.is_numpy_to_tvtensor = is_numpy_to_tvtensor
+
+    @staticmethod
+    def _fix_aspect_ratio(bbox_scale: np.ndarray, aspect_ratio: float) -> np.ndarray:
+        """Reshape the bbox to a fixed aspect ratio.
+
+        Args:
+            bbox_scale (np.ndarray): The bbox scales (w, h) in shape (n, 2)
+            aspect_ratio (float): The ratio of ``w/h``
+
+        Returns:
+            np.darray: The reshaped bbox scales in (n, 2)
+        """
+        w, h = np.hsplit(bbox_scale, [1])
+        return np.where(w > h * aspect_ratio, np.hstack([w, w / aspect_ratio]), np.hstack([h * aspect_ratio, h]))
+
+    @staticmethod
+    def _get_warp_matrix(
+        center: np.ndarray,
+        scale: np.ndarray,
+        rot: float,
+        output_size: tuple[int, int],
+        shift: tuple[float, float] = (0.0, 0.0),
+        inv: bool = False,
+        fix_aspect_ratio: bool = True,
+    ) -> np.ndarray:
+        """Calculate the affine transformation matrix that can warp the bbox area.
+
+        Args:
+            center (np.ndarray[2, ]): Center of the bounding box (x, y).
+            scale (np.ndarray[2, ]): Scale of the bounding box
+                wrt [width, height].
+            rot (float): Rotation angle (degree).
+            output_size (np.ndarray[2, ] | list(2,)): Size of the
+                destination heatmaps.
+            shift (float): Shift translation ratio wrt the width/height.
+                Default (0., 0.).
+            inv (bool): Option to inverse the affine transform direction.
+                (inv=False: src->dst or inv=True: dst->src)
+            fix_aspect_ratio (bool): Whether to fix aspect ratio during transform.
+                Defaults to True.
+
+        Returns:
+            np.ndarray: A 2x3 transformation matrix
+        """
+        if len(center) != 2 or len(scale) != 2 or len(output_size) != 2 or len(shift) != 2:
+            msg = "center, scale, output_size, and shift should have the length of 2."
+            raise ValueError(msg)
+
+        def _rotate_point(pt: np.ndarray, angle_rad: float) -> np.ndarray:
+            """Rotate a point by an angle."""
+            sn, cs = np.sin(angle_rad), np.cos(angle_rad)
+            rot_mat = np.array([[cs, -sn], [sn, cs]])
+            return rot_mat @ pt
+
+        def _get_3rd_point(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+            """To calculate the affine matrix, three pairs of points are required.
+
+            This function is used to get the 3rd point, given 2D points a & b.
+
+            The 3rd point is defined by rotating vector `a - b` by 90 degrees
+            anticlockwise, using b as the rotation center.
+            """
+            direction = a - b
+            return b + np.r_[-direction[1], direction[0]]
+
+        shift = np.array(shift)
+        src_w, src_h = scale[:2]
+        dst_w, dst_h = output_size[:2]
+
+        rot_rad = np.deg2rad(rot)
+        src_dir = _rotate_point(np.array([src_w * -0.5, 0.0]), rot_rad)
+        dst_dir = np.array([dst_w * -0.5, 0.0])
+
+        src = np.zeros((3, 2), dtype=np.float32)
+        src[0, :] = center + scale * shift
+        src[1, :] = center + src_dir + scale * shift
+
+        dst = np.zeros((3, 2), dtype=np.float32)
+        dst[0, :] = [dst_w * 0.5, dst_h * 0.5]
+        dst[1, :] = np.array([dst_w * 0.5, dst_h * 0.5]) + dst_dir
+
+        if fix_aspect_ratio:
+            src[2, :] = _get_3rd_point(src[0, :], src[1, :])
+            dst[2, :] = _get_3rd_point(dst[0, :], dst[1, :])
+        else:
+            src_dir_2 = _rotate_point(np.array([0.0, src_h * -0.5]), rot_rad)
+            dst_dir_2 = np.array([0.0, dst_h * -0.5])
+            src[2, :] = center + src_dir_2 + scale * shift
+            dst[2, :] = np.array([dst_w * 0.5, dst_h * 0.5]) + dst_dir_2
+
+        if inv:
+            warp_mat = cv2.getAffineTransform(np.float32(dst), np.float32(src))
+        else:
+            warp_mat = cv2.getAffineTransform(np.float32(src), np.float32(dst))
+        return warp_mat
+
+    @staticmethod
+    def _get_warp_image(
+        image: torch.Tensor | np.ndarray,
+        warp_mat: np.ndarray,
+        warp_size: tuple[int, int],
+    ) -> torch.Tensor:
+        numpy_image: np.ndarray = to_np_image(image)
+        warped_image = cv2.warpAffine(numpy_image, warp_mat, warp_size, flags=cv2.INTER_LINEAR)
+        return torch.from_numpy(warped_image).to(dtype=torch.float32).permute(2, 0, 1)
+
+    def __call__(self, *_inputs: T_OTXDataEntity) -> T_OTXDataEntity | None:
+        """Transform function to affine image through warp matrix."""
+        assert len(_inputs) == 1, "[tmp] Multiple entity is not supported yet."  # noqa: S101
+        inputs = _inputs[0]
+
+        h, w = self.input_size
+        warp_size = (int(w), int(h))
+
+        # reshape bbox to fixed aspect ratio
+        center = inputs.bbox_info.center
+        scale = self._fix_aspect_ratio(inputs.bbox_info.scale, aspect_ratio=w / h)
+        rot = inputs.bbox_info.rotation
+
+        warp_mat = self._get_warp_matrix(center, scale, rot, output_size=(w, h))
+
+        if isinstance(inputs.image, list):
+            inputs.image = [self._get_warp_image(img, warp_mat, warp_size) for img in inputs.image]
+        else:
+            inputs.image = self._get_warp_image(inputs.image, warp_mat, warp_size)
+
+        if inputs.keypoints is not None:
+            keypoints = np.expand_dims(inputs.keypoints, axis=0)
+            inputs.keypoints = cv2.transform(keypoints, warp_mat)[0]
+        else:
+            inputs.keypoints = np.zeros([])
+            inputs.keypoints_visible = np.ones((1, 1, 1))
+
+        return self.convert(inputs)
+
+    def __repr__(self) -> str:
+        """Print the basic information of the transform.
+
+        Returns:
+            str: Formatted string.
+        """
+        repr_str = self.__class__.__name__
+        repr_str += f"(input_size={self.input_size},"
+        repr_str += f"is_numpy_to_tvtensor={self.is_numpy_to_tvtensor})."
+        return repr_str
+
+
+class Decode3DInputsAffineTransforms(TopdownAffine):
+    """Transform function for 3D Object Detection to affine image through warp matrix.
+
+    This transform decode the input annotations and apply affine transforms.
+
+    Args:
+        input_size (tuple[int, int]): Input image size.
+        random_horizontal_flip (bool): Randomly flip the image horizontally.
+        random_crop (bool): Randomly crop the image.
+        decode_annotations (bool): Whether to decode the annotations.
+        p_crop (float): Probability of cropping.
+        random_scale (float): Randomly scale the image.
+        random_shift (float): Randomly shift the image.
+        depth_threshold (int): Threshold of depth.
+        max_objects (int): Maximum number of objects.
+    """
+
+    def __init__(
+        self,
+        input_size: tuple[int, int] | None = None,  # (H, W),
+        random_horizontal_flip: bool = False,
+        random_crop: bool = False,
+        decode_annotations: bool = True,
+        p_crop: float = 0.5,
+        p_flip: float = 0.5,
+        random_scale: float = 0.05,
+        random_shift: float = 0.05,
+        depth_threshold: int = 65,
+        max_objects: int = 50,
+    ) -> None:
+        self.input_size = input_size  # type: ignore[assignment]
+        self.random_horizontal_flip = random_horizontal_flip
+        self.random_crop = random_crop
+        self.decode_annotations = decode_annotations
+        self.p_crop = p_crop
+        self.p_flip = p_flip
+        self.random_scale = random_scale
+        self.random_shift = random_shift
+        self.depth_threshold = depth_threshold
+        self.max_objects = max_objects
+
+    def _affine_transforms(
+        self,
+        image: np.ndarray,
+        ori_img_size: np.ndarray,
+        warp_size: tuple[int, int],
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, bool]:
+        """Get affine matrix and warp image.
+
+        Args:
+            image (np.ndarray): Input image.
+            ori_img_size (np.ndarray): Original image size.
+            warp_size (tuple[int, int]): Output image size.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray, np.ndarray, bool]:
+                Affine matrix, warped image, and random flip flag.
+        """
+        center = ori_img_size / 2
+        crop_size, crop_scale = ori_img_size, 1
+        random_flip_flag = False
+        if self.random_crop and (np.random.random() <= self.p_crop):
+            crop_scale = np.clip(
+                np.random.randn() * self.random_scale + 1,
+                1 - self.random_scale,
+                1 + self.random_scale,
+            )
+            crop_size = ori_img_size * crop_scale
+            center[0] += ori_img_size[0] * np.clip(
+                np.random.randn() * self.random_shift,
+                -2 * self.random_shift,
+                2 * self.random_shift,
+            )
+            center[1] += ori_img_size[1] * np.clip(
+                np.random.randn() * self.random_shift,
+                -2 * self.random_shift,
+                2 * self.random_shift,
+            )
+
+        if self.random_horizontal_flip and (np.random.random() <= self.p_flip):
+            random_flip_flag = True
+            image = np.fliplr(image)
+
+        trans = self._get_warp_matrix(center, crop_size, 0, warp_size)
+        return self._get_warp_image(image, trans, warp_size), crop_scale, trans, random_flip_flag
+
+    def __call__(self, *_inputs: T_OTXDataEntity) -> T_OTXDataEntity | None:
+        """Transform __call__ function to affine image through warp matrix."""
+        inputs = _inputs[0]
+        ori_img_size = np.array(inputs.img_info.ori_shape)[::-1]
+        # labels encoding
+        src_size_3d = np.zeros((self.max_objects, 3), dtype=np.float32)
+        mask_2d = np.zeros((self.max_objects), dtype=bool)
+        if self.input_size is None:
+            # No need to resize (OV IR)
+            inputs.img_info.img_shape = ori_img_size
+            return self.convert(inputs, mask_2d, image_to_tensor=True)
+
+        annotations_list = inputs.original_kitti_format
+        h, w = self.input_size
+        warp_size = (int(w), int(h))
+        # transform image
+        inputs.image, crop_scale, trans, random_flip_flag = self._affine_transforms(
+            inputs.image,
+            ori_img_size,
+            warp_size,
+        )
+
+        if not self.decode_annotations:
+            # resize only (val/test)
+            inputs.img_info.img_shape = self.input_size
+            return self.convert(inputs, mask_2d)
+
+        # decode annotations
+        if random_flip_flag:
+            for i in range(len(annotations_list["bbox"])):
+                [x1, _, x2, _] = annotations_list["bbox"][i]
+                annotations_list["bbox"][i][0], annotations_list["bbox"][i][2] = (
+                    ori_img_size[0] - x2,
+                    ori_img_size[0] - x1,
+                )
+                annotations_list["alpha"][i] = np.pi - annotations_list["alpha"][i]
+                annotations_list["rotation_y"][i] = np.pi - annotations_list["rotation_y"][i]
+                if annotations_list["alpha"][i] > np.pi:
+                    annotations_list["alpha"][i] -= 2 * np.pi  # check range
+                if annotations_list["alpha"][i] < -np.pi:
+                    annotations_list["alpha"][i] += 2 * np.pi
+                if annotations_list["rotation_y"][i] > np.pi:
+                    annotations_list["rotation_y"][i] -= 2 * np.pi
+                if annotations_list["rotation_y"][i] < -np.pi:
+                    annotations_list["rotation_y"][i] += 2 * np.pi
+
+        object_num = (
+            len(annotations_list["bbox"]) if len(annotations_list["bbox"]) < self.max_objects else self.max_objects
+        )
+        for i in range(object_num):
+            # ignore the samples beyond the threshold [hard encoding]
+            if annotations_list["location"][i][-1] > self.depth_threshold and annotations_list["location"][i][-1] < 2:
+                continue
+
+            # process 2d bbox & get 2d center
+            bbox_2d = annotations_list["bbox"][i].copy()
+
+            # add affine transformation for 2d boxes.
+            bbox_2d[:2] = self.affine_transform(bbox_2d[:2], trans)
+            bbox_2d[2:] = self.affine_transform(bbox_2d[2:], trans)
+
+            # process 3d center
+            center_2d = np.array(
+                [(bbox_2d[0] + bbox_2d[2]) / 2, (bbox_2d[1] + bbox_2d[3]) / 2],
+                dtype=np.float32,
+            )  # W * H
+            corner_2d = bbox_2d.copy()
+
+            center_3d = np.array(
+                annotations_list["location"][i]
+                + [
+                    0,
+                    -annotations_list["dimensions"][i][1] / 2,
+                    0,
+                ],
+            )  # real 3D center in 3D space
+            center_3d = center_3d.reshape(-1, 3)  # shape adjustment (N, 3)
+            center_3d, _ = self.rect_to_img(inputs.calib_matrix, center_3d)  # project 3D center to image plane
+            center_3d = center_3d[0]  # shape adjustment
+            if random_flip_flag:  # random flip for center3d
+                center_3d[0] = ori_img_size[0] - center_3d[0]
+            center_3d = self.affine_transform(center_3d.reshape(-1), trans)
+
+            # filter 3d center out of img
+            proj_inside_img = True
+
+            if center_3d[0] < 0 or center_3d[0] >= warp_size[0]:
+                proj_inside_img = False
+            if center_3d[1] < 0 or center_3d[1] >= warp_size[1]:
+                proj_inside_img = False
+
+            if not proj_inside_img:
+                continue
+
+            # class
+            inputs.labels[i] = annotations_list["name"][i]
+
+            # encoding 2d/3d boxes
+            w, h = bbox_2d[2] - bbox_2d[0], bbox_2d[3] - bbox_2d[1]
+            inputs.size_2d[i] = 1.0 * w, 1.0 * h
+
+            center_2d_norm = center_2d / warp_size
+            size_2d_norm = inputs.size_2d[i] / warp_size
+
+            corner_2d_norm = corner_2d
+            corner_2d_norm[0:2] = corner_2d[0:2] / warp_size
+            corner_2d_norm[2:4] = corner_2d[2:4] / warp_size
+            center_3d_norm = center_3d / warp_size
+
+            k, r = center_3d_norm[0] - corner_2d_norm[0], corner_2d_norm[2] - center_3d_norm[0]
+            t, b = center_3d_norm[1] - corner_2d_norm[1], corner_2d_norm[3] - center_3d_norm[1]
+
+            if k < 0 or r < 0 or t < 0 or b < 0:
+                continue
+
+            inputs.boxes[i] = center_2d_norm[0], center_2d_norm[1], size_2d_norm[0], size_2d_norm[1]
+            inputs.boxes_3d[i] = center_3d_norm[0], center_3d_norm[1], k, r, t, b
+
+            # encoding depth
+            inputs.depth[i] = annotations_list["location"][i][-1] * crop_scale
+
+            # encoding heading angle
+            heading_angle = self.ry2alpha(
+                inputs.calib_matrix,
+                annotations_list["rotation_y"][i],
+                (annotations_list["bbox"][i][0] + annotations_list["bbox"][i][2]) / 2,
+            )
+            if heading_angle > np.pi:
+                heading_angle -= 2 * np.pi  # check range
+            if heading_angle < -np.pi:
+                heading_angle += 2 * np.pi
+            inputs.heading_angle[i] = self.angle2class(heading_angle)
+
+            # encoding size_3d
+            src_size_3d[i] = np.array(
+                [
+                    annotations_list["dimensions"][i][1],
+                    annotations_list["dimensions"][i][2],
+                    annotations_list["dimensions"][i][0],
+                ],
+                dtype=np.float32,
+            )
+            inputs.size_3d[i] = src_size_3d[i]
+
+            # filter out the samples with truncated or occluded
+            if annotations_list["truncated"][i] <= 0.5 and annotations_list["occluded"][i] <= 2:
+                mask_2d[i] = 1
+
+        # update img_info
+        inputs.img_info.img_shape = self.input_size
+
+        return self.convert(inputs, mask_2d)
+
+    @staticmethod
+    def affine_transform(pt: np.ndarray, t: np.ndarray) -> np.ndarray:
+        """Apply an affine transformation to the points."""
+        new_pt = np.array([pt[0], pt[1], 1.0], dtype=np.float32).T
+        new_pt = np.dot(t, new_pt)
+        return new_pt[:2]
+
+    @staticmethod
+    def rect_to_img(p2: np.ndarray, pts_rect: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Convert camera coordinates to image coordinates.
+
+        Args:
+            p2 (np.ndarray): Projection matrix with shape (3, 4).
+            pts_rect (np.ndarray): Rectangular coordinates with shape (N, 4).
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: Image coordinates with shape (N, 2).
+        """
+
+        def cart_to_hom(pts: np.ndarray) -> np.ndarray:
+            """Convert Cartesian coordinates to homogeneous coordinates.
+
+            Args:
+                pts (np.ndarray): Array of Cartesian coordinates with shape (N, D),
+                    where N is the number of points and D is the number of dimensions.
+
+            Returns:
+                np.ndarray: Array of homogeneous coordinates with shape (N, D+1),
+                    where N is the number of points and D is the number of dimensions.
+            """
+            return np.hstack((pts, np.ones((pts.shape[0], 1), dtype=np.float32)))
+
+        pts_rect_hom = cart_to_hom(pts_rect)
+        pts_2d_hom = np.dot(pts_rect_hom, p2.T)
+        pts_img = (pts_2d_hom[:, 0:2].T / pts_rect_hom[:, 2]).T  # (N, 2)
+        pts_rect_depth = pts_2d_hom[:, 2] - p2.T[3, 2]  # depth in rect camera coord
+        return pts_img, pts_rect_depth
+
+    @staticmethod
+    def ry2alpha(p2: np.ndarray, ry: np.ndarray, u: np.ndarray) -> np.ndarray:
+        """Get observation angle of object.
+
+        Args:
+            p2 (np.ndarray): Projection matrix with shape (3, 4).
+            ry (np.ndarray): Observation angle of object with shape (N, ).
+            u (np.ndarray): Pixel coordinates with shape (N, 2).
+
+        Returns:
+            np.ndarray: Observation angle of object with shape (N, ).
+        """
+        alpha = ry - np.arctan2(u - p2[0, 2], p2[0, 0])
+
+        if alpha > np.pi:
+            alpha -= 2 * np.pi
+        if alpha < -np.pi:
+            alpha += 2 * np.pi
+
+        return alpha
+
+    @staticmethod
+    def angle2class(angle: float) -> tuple[int, float]:
+        """Convert continuous angle to discrete class and residual."""
+        num_heading_bin = 12
+        angle = angle % (2 * np.pi)
+        if not (angle >= 0 and angle <= 2 * np.pi):
+            msg = "angle not in 0 ~ 2pi"
+            raise ValueError(msg)
+
+        angle_per_class = 2 * np.pi / float(num_heading_bin)
+        shifted_angle = (angle + angle_per_class / 2) % (2 * np.pi)
+        class_id = int(shifted_angle / angle_per_class)
+        residual_angle = shifted_angle - (class_id * angle_per_class + angle_per_class / 2)
+        return class_id, residual_angle
+
+    def convert(self, inputs: T_OTXDataEntity, mask_2d: np.ndarray, image_to_tensor: bool = False) -> T_OTXDataEntity:  # type: ignore[override]
+        """Convert the data entity to torchvision format."""
+        if image_to_tensor:
+            inputs.image = torch.from_numpy(inputs.image).permute(2, 0, 1)
+        inputs.labels = torch.as_tensor(inputs.labels[mask_2d], dtype=torch.long)
+        inputs.boxes = tv_tensors.BoundingBoxes(inputs.boxes[mask_2d], format="XYXY", canvas_size=self.input_size)
+        inputs.boxes_3d = torch.as_tensor(inputs.boxes_3d[mask_2d], dtype=torch.float32)
+        inputs.size_2d = torch.as_tensor(inputs.size_2d[mask_2d], dtype=torch.float32)
+        inputs.size_3d = torch.as_tensor(inputs.size_3d[mask_2d], dtype=torch.float32)
+        inputs.depth = torch.as_tensor(inputs.depth[mask_2d], dtype=torch.float32)
+        inputs.heading_angle = torch.as_tensor(inputs.heading_angle[mask_2d], dtype=torch.float32)
+        inputs.calib_matrix = torch.as_tensor(inputs.calib_matrix, dtype=torch.float32)
+
+        return inputs
+
+
 class TorchVisionTransformLib:
     """Helper to support TorchVision transforms (only V2) in OTX."""
 
@@ -3131,6 +3800,8 @@ class TorchVisionTransformLib:
         transforms = []
         for cfg_transform in config.transforms:
             if isinstance(cfg_transform, (dict, DictConfig)):
+                if not cfg_transform.get("enable", True):  # Optional "enable: false" flag would remove the transform
+                    continue
                 cls._configure_input_size(cfg_transform, input_size)
             transform = cls._dispatch_transform(cfg_transform)
             transforms.append(transform)
@@ -3250,3 +3921,44 @@ class TorchVisionTransformLib:
             raise TypeError(msg)
 
         return transform
+
+
+class RandomIoUCrop(tvt_v2.RandomIoUCrop):
+    """Random IoU crop with the option to set probability.
+
+    Args:
+        min_scale (float, optional): the same as RandomIoUCrop. Defaults to 0.3.
+        max_scale (float, optional): the same as RandomIoUCrop. Defaults to 1.
+        min_aspect_ratio (float, optional): the same as RandomIoUCrop. Defaults to 0.5.
+        max_aspect_ratio (float, optional): the same as RandomIoUCrop. Defaults to 2.
+        sampler_options (list[float] | None, optional): the same as RandomIoUCrop. Defaults to None.
+        trials (int, optional): the same as RandomIoUCrop. Defaults to 40.
+        p (float, optional): probability. Defaults to 1.0.
+    """
+
+    def __init__(
+        self,
+        min_scale: float = 0.3,
+        max_scale: float = 1,
+        min_aspect_ratio: float = 0.5,
+        max_aspect_ratio: float = 2,
+        sampler_options: list[float] | None = None,
+        trials: int = 40,
+        p: float = 1.0,
+    ):
+        super().__init__(
+            min_scale,
+            max_scale,
+            min_aspect_ratio,
+            max_aspect_ratio,
+            sampler_options,
+            trials,
+        )
+        self.p = p
+
+    def __call__(self, *inputs: Any) -> Any:  # noqa: ANN401
+        """Apply the transform to the given inputs."""
+        if torch.rand(1) >= self.p:
+            return inputs if len(inputs) > 1 else inputs[0]
+
+        return super().forward(*inputs)

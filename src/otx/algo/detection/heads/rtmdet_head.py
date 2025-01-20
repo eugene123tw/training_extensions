@@ -8,27 +8,33 @@ Reference : https://github.com/open-mmlab/mmdetection/blob/v3.2.0/mmdet/models/d
 
 from __future__ import annotations
 
+from functools import partial
+from typing import Any, Callable, ClassVar
+
 import torch
 from torch import Tensor, nn
 
+from otx.algo.common.utils.coders import BaseBBoxCoder
 from otx.algo.common.utils.nms import multiclass_nms
-from otx.algo.common.utils.utils import distance2bbox, inverse_sigmoid, multi_apply, reduce_mean
-from otx.algo.detection.heads import ATSSHead
+from otx.algo.common.utils.prior_generators import BasePriorGenerator
+from otx.algo.common.utils.utils import distance2bbox, inverse_sigmoid, multi_apply
+from otx.algo.detection.heads.atss_head import ATSSHeadModule
 from otx.algo.detection.utils.prior_generators.utils import anchor_inside_flags
 from otx.algo.detection.utils.utils import (
     images_to_levels,
     sigmoid_geometric_mean,
     unmap,
 )
-from otx.algo.modules.conv_module import ConvModule
-from otx.algo.modules.depthwise_separable_conv_module import DepthwiseSeparableConvModule
-from otx.algo.modules.norm import is_norm
+from otx.algo.modules import build_activation_layer
+from otx.algo.modules.conv_module import Conv2dModule, DepthwiseSeparableConvModule
+from otx.algo.modules.norm import build_norm_layer, is_norm
 from otx.algo.modules.scale import Scale
 from otx.algo.utils.mmengine_utils import InstanceData
 from otx.algo.utils.weight_init import bias_init_with_prob, constant_init, normal_init
+from otx.core.data.entity.detection import DetBatchDataEntity
 
 
-class RTMDetHead(ATSSHead):
+class RTMDetHead(ATSSHeadModule):
     """Detection Head of RTMDet.
 
     Args:
@@ -36,8 +42,8 @@ class RTMDetHead(ATSSHead):
         in_channels (int): Number of channels in the input feature map.
         with_objectness (bool): Whether to add an objectness branch.
             Defaults to True.
-        act_cfg (dict): Config dict for activation layer.
-            Default: dict(type='ReLU')
+        activation (Callable[..., nn.Module]): Activation layer module.
+            Defaults to ``nn.ReLU``.
     """
 
     def __init__(
@@ -45,10 +51,10 @@ class RTMDetHead(ATSSHead):
         num_classes: int,
         in_channels: int,
         with_objectness: bool = True,
-        act_cfg: dict | None = None,
+        activation: Callable[..., nn.Module] = nn.ReLU,
         **kwargs,
     ) -> None:
-        self.act_cfg = act_cfg or {"type": "ReLU"}
+        self.activation = activation
         self.with_objectness = with_objectness
         super().__init__(num_classes, in_channels, **kwargs)
         if self.train_cfg:
@@ -61,27 +67,25 @@ class RTMDetHead(ATSSHead):
         for i in range(self.stacked_convs):
             chn = self.in_channels if i == 0 else self.feat_channels
             self.cls_convs.append(
-                ConvModule(
+                Conv2dModule(
                     chn,
                     self.feat_channels,
                     3,
                     stride=1,
                     padding=1,
-                    conv_cfg=self.conv_cfg,
-                    norm_cfg=self.norm_cfg,
-                    act_cfg=self.act_cfg,
+                    normalization=build_norm_layer(self.normalization, num_features=self.feat_channels),
+                    activation=build_activation_layer(self.activation),
                 ),
             )
             self.reg_convs.append(
-                ConvModule(
+                Conv2dModule(
                     chn,
                     self.feat_channels,
                     3,
                     stride=1,
                     padding=1,
-                    conv_cfg=self.conv_cfg,
-                    norm_cfg=self.norm_cfg,
-                    act_cfg=self.act_cfg,
+                    normalization=build_norm_layer(self.normalization, num_features=self.feat_channels),
+                    activation=build_activation_layer(self.activation),
                 ),
             )
         pred_pad_size = self.pred_kernel_size // 2
@@ -154,104 +158,26 @@ class RTMDetHead(ATSSHead):
             bbox_preds.append(reg_dist)
         return tuple(cls_scores), tuple(bbox_preds)
 
-    def loss_by_feat_single(  # type: ignore[override]
+    def prepare_loss_inputs(
         self,
-        cls_score: Tensor,
-        bbox_pred: Tensor,
-        labels: Tensor,
-        label_weights: Tensor,
-        bbox_targets: Tensor,
-        assign_metrics: Tensor,
-        stride: list[int],
-    ) -> tuple[Tensor, ...]:
-        """Compute loss of a single scale level.
+        x: tuple[Tensor],
+        entity: DetBatchDataEntity,
+    ) -> dict | tuple:
+        """Perform forward propagation of the detection head and prepare for loss calculation.
 
         Args:
-            cls_score (Tensor): Box scores for each scale level
-                Has shape (N, num_anchors * num_classes, H, W).
-            bbox_pred (Tensor): Decoded bboxes for each scale
-                level with shape (N, num_anchors * 4, H, W).
-            labels (Tensor): Labels of each anchors with shape
-                (N, num_total_anchors).
-            label_weights (Tensor): Label weights of each anchor with shape
-                (N, num_total_anchors).
-            bbox_targets (Tensor): BBox regression targets of each anchor with
-                shape (N, num_total_anchors, 4).
-            assign_metrics (Tensor): Assign metrics with shape
-                (N, num_total_anchors).
-            stride (list[int]): Downsample stride of the feature map.
+            x (tuple[Tensor]): Features from the upstream network, each is
+                a 4D-tensor.
+            entity (DetBatchDataEntity): Entity from OTX dataset.
 
         Returns:
-            dict[str, Tensor]: A dictionary of loss components.
+            dict: A dictionary of components for loss calculation.
         """
-        if stride[0] != stride[1]:
-            msg = "h stride is not equal to w stride!"
-            raise ValueError(msg)
-        cls_score = cls_score.permute(0, 2, 3, 1).reshape(-1, self.cls_out_channels).contiguous()
-        bbox_pred = bbox_pred.reshape(-1, 4)
-        bbox_targets = bbox_targets.reshape(-1, 4)
-        labels = labels.reshape(-1)
-        assign_metrics = assign_metrics.reshape(-1)
-        label_weights = label_weights.reshape(-1)
-        targets = (labels, assign_metrics)
+        (cls_scores, bbox_preds), batch_gt_instances, batch_img_metas = super(ATSSHeadModule, self).prepare_loss_inputs(
+            x,
+            entity,
+        )
 
-        loss_cls = self.loss_cls(cls_score, targets, label_weights, avg_factor=1.0)
-
-        # FG cat_id: [0, num_classes -1], BG cat_id: num_classes
-        bg_class_ind = self.num_classes
-        pos_inds = ((labels >= 0) & (labels < bg_class_ind)).nonzero().squeeze(1)
-
-        if len(pos_inds) > 0:
-            pos_bbox_targets = bbox_targets[pos_inds]
-            pos_bbox_pred = bbox_pred[pos_inds]
-
-            pos_decode_bbox_pred = pos_bbox_pred
-            pos_decode_bbox_targets = pos_bbox_targets
-
-            # regression loss
-            pos_bbox_weight = assign_metrics[pos_inds]
-
-            loss_bbox = self.loss_bbox(
-                pos_decode_bbox_pred,
-                pos_decode_bbox_targets,
-                weight=pos_bbox_weight,
-                avg_factor=1.0,
-            )
-        else:
-            loss_bbox = bbox_pred.sum() * 0
-            pos_bbox_weight = bbox_targets.new_tensor(0.0)
-
-        return loss_cls, loss_bbox, assign_metrics.sum(), pos_bbox_weight.sum()
-
-    def loss_by_feat(  # type: ignore[override]
-        self,
-        cls_scores: list[Tensor],
-        bbox_preds: list[Tensor],
-        batch_gt_instances: list[InstanceData],
-        batch_img_metas: list[dict],
-        batch_gt_instances_ignore: list[InstanceData] | None = None,
-    ) -> dict[str, Tensor]:
-        """Compute losses of the head.
-
-        Args:
-            cls_scores (list[Tensor]): Box scores for each scale level
-                Has shape (N, num_anchors * num_classes, H, W)
-            bbox_preds (list[Tensor]): Decoded box for each scale
-                level with shape (N, num_anchors * 4, H, W) in
-                [tl_x, tl_y, br_x, br_y] format.
-            batch_gt_instances (list[InstanceData]): Batch of
-                gt_instance.  It usually includes ``bboxes`` and ``labels``
-                attributes.
-            batch_img_metas (list[dict]): Meta information of each image, e.g.,
-                image size, scaling factor, etc.
-            batch_gt_instances_ignore (list[InstanceData], Optional):
-                Batch of gt_instances_ignore. It includes ``bboxes`` attribute
-                data that is ignored during training and testing.
-                Defaults to None.
-
-        Returns:
-            dict[str, Tensor]: A dictionary of loss components.
-        """
         num_imgs = len(batch_img_metas)
         featmap_sizes = [featmap.size()[-2:] for featmap in cls_scores]
         if len(featmap_sizes) != self.prior_generator.num_levels:
@@ -290,26 +216,18 @@ class RTMDetHead(ATSSHead):
             valid_flag_list,
             batch_gt_instances,
             batch_img_metas,
-            batch_gt_instances_ignore=batch_gt_instances_ignore,
         )
 
-        losses_cls, losses_bbox, cls_avg_factors, bbox_avg_factors = multi_apply(
-            self.loss_by_feat_single,
-            cls_scores,
-            decoded_bboxes,
-            labels_list,
-            label_weights_list,
-            bbox_targets_list,
-            assign_metrics_list,
-            self.prior_generator.strides,
-        )
-
-        cls_avg_factor = reduce_mean(sum(cls_avg_factors)).clamp_(min=1).item()
-        losses_cls = [x / cls_avg_factor for x in losses_cls]
-
-        bbox_avg_factor = reduce_mean(sum(bbox_avg_factors)).clamp_(min=1).item()
-        losses_bbox = [x / bbox_avg_factor for x in losses_bbox]
-        return {"loss_cls": losses_cls, "loss_bbox": losses_bbox}
+        return {
+            "cls_score": cls_scores,
+            "bbox_pred": decoded_bboxes,
+            "labels": labels_list,
+            "label_weights": label_weights_list,
+            "bbox_targets": bbox_targets_list,
+            "assign_metrics": assign_metrics_list,
+            "stride": self.prior_generator.strides,
+            "sampling_results_list": sampling_results_list,
+        }
 
     def export_by_feat(  # type: ignore[override]
         self,
@@ -573,7 +491,7 @@ class RTMDetHead(ATSSHead):
         if len(pos_inds) > 0:
             # point-based
             pos_bbox_targets = sampling_result.pos_gt_bboxes
-            bbox_targets[pos_inds, :] = pos_bbox_targets
+            bbox_targets[pos_inds, :] = pos_bbox_targets.to(bbox_targets)
 
             labels[pos_inds] = sampling_result.pos_gt_labels
             if self.train_cfg["pos_weight"] <= 0:
@@ -634,7 +552,7 @@ class RTMDetHead(ATSSHead):
         return anchor_list, valid_flag_list
 
 
-class RTMDetSepBNHead(RTMDetHead):
+class RTMDetSepBNHeadModule(RTMDetHead):
     """RTMDetHead with separated BN layers and shared conv layers.
 
     Args:
@@ -644,12 +562,14 @@ class RTMDetSepBNHead(RTMDetHead):
             Defaults to True.
         use_depthwise (bool): Whether to use depthwise separable convolution in head.
             Defaults to False.
-        norm_cfg (dict): Config dict for normalization layer.
-            Defaults to dict(type='BN', momentum=0.03, eps=0.001).
-        act_cfg (dict): Config dict for activation layer.
-            Defaults to dict(type='SiLU').
+        normalization (Callable[..., nn.Module]): Normalization layer module.
+            Defaults to ``partial(nn.BatchNorm2d, momentum=0.03, eps=0.001)``.
+        activation (Callable[..., nn.Module]): Activation layer module.
+            Defaults to ``nn.SiLU``.
         pred_kernel_size (int): Kernel size of prediction layer. Defaults to 1.
         exp_on_reg (bool): Whether using exponential of regression features or not. Defaults to False.
+        use_sigmoid_cls (bool): Whether to use a sigmoid activation function
+            for classification prediction. Defaults to True.
     """
 
     def __init__(
@@ -658,29 +578,29 @@ class RTMDetSepBNHead(RTMDetHead):
         in_channels: int,
         share_conv: bool = True,
         use_depthwise: bool = False,
-        norm_cfg: dict | None = None,
-        act_cfg: dict | None = None,
+        normalization: Callable[..., nn.Module] = partial(nn.BatchNorm2d, momentum=0.03, eps=0.001),
+        activation: Callable[..., nn.Module] = nn.SiLU,
         pred_kernel_size: int = 1,
         exp_on_reg: bool = False,
+        use_sigmoid_cls: bool = True,
         **kwargs,
     ) -> None:
-        act_cfg = act_cfg or {"type": "SiLU"}
-        norm_cfg = norm_cfg or {"type": "BN", "momentum": 0.03, "eps": 0.001}
         self.share_conv = share_conv
         self.exp_on_reg = exp_on_reg
         self.use_depthwise = use_depthwise
         super().__init__(
             num_classes,
             in_channels,
-            norm_cfg=norm_cfg,
-            act_cfg=act_cfg,
+            normalization=normalization,
+            activation=activation,
             pred_kernel_size=pred_kernel_size,
+            use_sigmoid_cls=use_sigmoid_cls,
             **kwargs,
         )
 
     def _init_layers(self) -> None:
         """Initialize layers of the head."""
-        conv = DepthwiseSeparableConvModule if self.use_depthwise else ConvModule
+        conv = DepthwiseSeparableConvModule if self.use_depthwise else Conv2dModule
         self.cls_convs = nn.ModuleList()
         self.reg_convs = nn.ModuleList()
 
@@ -700,9 +620,8 @@ class RTMDetSepBNHead(RTMDetHead):
                         3,
                         stride=1,
                         padding=1,
-                        conv_cfg=self.conv_cfg,
-                        norm_cfg=self.norm_cfg,
-                        act_cfg=self.act_cfg,
+                        normalization=build_norm_layer(self.normalization, num_features=self.feat_channels),
+                        activation=build_activation_layer(self.activation),
                     ),
                 )
                 reg_convs.append(
@@ -712,9 +631,8 @@ class RTMDetSepBNHead(RTMDetHead):
                         3,
                         stride=1,
                         padding=1,
-                        conv_cfg=self.conv_cfg,
-                        norm_cfg=self.norm_cfg,
-                        act_cfg=self.act_cfg,
+                        normalization=build_norm_layer(self.normalization, num_features=self.feat_channels),
+                        activation=build_activation_layer(self.activation),
                     ),
                 )
             self.cls_convs.append(cls_convs)
@@ -801,3 +719,42 @@ class RTMDetSepBNHead(RTMDetHead):
             cls_scores.append(cls_score)
             bbox_preds.append(reg_dist)
         return tuple(cls_scores), tuple(bbox_preds)
+
+
+class RTMDetSepBNHead:
+    """RTMDetSepBNHead factory for detection."""
+
+    RTMDETSEPBNHEAD_CFG: ClassVar[dict[str, Any]] = {
+        "rtmdet_tiny": {
+            "in_channels": 96,
+            "stacked_convs": 2,
+            "feat_channels": 96,
+            "with_objectness": False,
+            "normalization": nn.BatchNorm2d,
+            "activation": partial(nn.SiLU, inplace=True),
+            "use_sigmoid_cls": True,
+        },
+    }
+
+    def __new__(
+        cls,
+        model_name: str,
+        num_classes: int,
+        anchor_generator: BasePriorGenerator,
+        bbox_coder: BaseBBoxCoder,
+        train_cfg: dict,
+        test_cfg: dict | None = None,
+    ) -> RTMDetSepBNHeadModule:
+        """Constructor for RTMDetSepBNHead."""
+        if model_name not in cls.RTMDETSEPBNHEAD_CFG:
+            msg = f"model type '{model_name}' is not supported"
+            raise KeyError(msg)
+
+        return RTMDetSepBNHeadModule(
+            **cls.RTMDETSEPBNHEAD_CFG[model_name],
+            num_classes=num_classes,
+            anchor_generator=anchor_generator,
+            bbox_coder=bbox_coder,
+            train_cfg=train_cfg,  # TODO (sungchul, kirill): remove
+            test_cfg=test_cfg,  # TODO (sungchul, kirill): remove
+        )

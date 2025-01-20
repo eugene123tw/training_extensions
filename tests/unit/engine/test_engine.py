@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from otx.algo.classification.efficientnet import EfficientNetForMulticlassCls
-from otx.algo.classification.torchvision_model import OTXTVModel
+from otx.algo.classification.torchvision_model import TVModelForMulticlassCls
 from otx.core.model.base import OTXModel, OVModel
 from otx.core.types.export import OTXExportFormatType
 from otx.core.types.label import NullLabelInfo
@@ -51,8 +52,36 @@ class TestEngine:
         with pytest.raises(ValueError, match="Given model class (.*) requires a valid label_info to instantiate."):
             _ = Engine(work_dir=tmp_path, task="MULTI_CLASS_CLS")
 
+    @pytest.fixture()
+    def mock_datamodule(self, mocker):
+        input_size = (1234, 1234)
+        label_info = 4321
+        mock_datamodule = MagicMock()
+        mock_datamodule.label_info = label_info
+        mock_datamodule.input_size = input_size
+
+        return mocker.patch(
+            "otx.engine.utils.auto_configurator.AutoConfigurator.get_datamodule",
+            return_value=mock_datamodule,
+        )
+
+    def test_model_init(self, tmp_path, mock_datamodule):
+        data_root = "tests/assets/classification_dataset"
+        engine = Engine(work_dir=tmp_path, data_root=data_root)
+
+        assert engine._model.input_size == (1234, 1234)
+        assert engine._model.label_info.num_classes == 4321
+
+    def test_model_init_datamodule_ipt_size_int(self, tmp_path, mock_datamodule):
+        mock_datamodule.input_size = 1234
+        data_root = "tests/assets/classification_dataset"
+        engine = Engine(work_dir=tmp_path, data_root=data_root)
+
+        assert engine._model.input_size == (1234, 1234)
+        assert engine._model.label_info.num_classes == 4321
+
     def test_model_setter(self, fxt_engine, mocker) -> None:
-        assert isinstance(fxt_engine.model, OTXTVModel)
+        assert isinstance(fxt_engine.model, TVModelForMulticlassCls)
         fxt_engine.model = "efficientnet_b0"
         assert isinstance(fxt_engine.model, EfficientNetForMulticlassCls)
 
@@ -194,11 +223,7 @@ class TestEngine:
         checkpoint = "path/to/checkpoint.ckpt"
         fxt_engine.checkpoint = checkpoint
         fxt_engine.export()
-        mock_load_from_checkpoint.assert_called_once_with(
-            checkpoint_path=checkpoint,
-            map_location="cpu",
-            **fxt_engine.model.hparams,
-        )
+        mock_load_from_checkpoint.assert_called_once_with(checkpoint_path=checkpoint, map_location="cpu")
         mock_export.assert_called_once_with(
             output_dir=Path(fxt_engine.work_dir),
             base_name="exported_model",
@@ -367,3 +392,44 @@ class TestEngine:
         assert engine is not None
         assert engine.datamodule.train_subset.batch_size == 3
         assert engine.datamodule.test_subset.subset_name == "TESTING"
+
+    @pytest.mark.parametrize(
+        "checkpoint",
+        [
+            "path/to/checkpoint.ckpt",
+            "path/to/checkpoint.xml",
+        ],
+    )
+    def test_benchmark(self, fxt_engine, checkpoint, mocker: MockerFixture) -> None:
+        _ = mocker.patch("otx.engine.engine.AutoConfigurator.update_ov_subset_pipeline")
+        mock_get_ov_model = mocker.patch("otx.engine.engine.AutoConfigurator.get_ov_model")
+        mock_load_from_checkpoint = mocker.patch.object(fxt_engine.model.__class__, "load_from_checkpoint")
+
+        ext = Path(checkpoint).suffix
+
+        if ext == ".ckpt":
+            mock_model = mocker.create_autospec(OTXModel)
+
+            mock_load_from_checkpoint.return_value = mock_model
+        else:
+            mock_model = mocker.create_autospec(OVModel)
+
+            mock_get_ov_model.return_value = mock_model
+
+        # Correct label_info from the checkpoint
+        mock_model.label_info = fxt_engine.datamodule.label_info
+        result = fxt_engine.benchmark(checkpoint=checkpoint)
+        assert "latency" in result
+
+    def test_num_devices(self, fxt_engine, tmp_path) -> None:
+        assert fxt_engine.num_devices == 1
+        assert fxt_engine._cache.args.get("devices") == 1
+
+        fxt_engine.num_devices = 2
+        assert fxt_engine.num_devices == 2
+        assert fxt_engine._cache.args.get("devices") == 2
+
+        data_root = "tests/assets/classification_dataset"
+        engine = Engine(work_dir=tmp_path, data_root=data_root, num_devices=3)
+        assert engine.num_devices == 3
+        assert engine._cache.args.get("devices") == 3

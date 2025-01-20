@@ -9,7 +9,8 @@ Reference : https://github.com/open-mmlab/mmdetection/blob/v3.2.0/mmdet/models/b
 from __future__ import annotations
 
 import math
-from typing import Any, ClassVar, Sequence
+from functools import partial
+from typing import Any, Callable, ClassVar, Sequence
 
 import torch
 from torch import Tensor, nn
@@ -17,9 +18,10 @@ from torch.nn.modules.batchnorm import _BatchNorm
 
 from otx.algo.common.layers import SPPBottleneck
 from otx.algo.detection.layers import CSPLayer
+from otx.algo.modules.activation import Swish, build_activation_layer
 from otx.algo.modules.base_module import BaseModule
-from otx.algo.modules.conv_module import ConvModule
-from otx.algo.modules.depthwise_separable_conv_module import DepthwiseSeparableConvModule
+from otx.algo.modules.conv_module import Conv2dModule, DepthwiseSeparableConvModule
+from otx.algo.modules.norm import build_norm_layer
 
 
 class Focus(nn.Module):
@@ -30,12 +32,10 @@ class Focus(nn.Module):
         out_channels (int): The output channels of this Module.
         kernel_size (int): The kernel size of the convolution. Default: 1
         stride (int): The stride of the convolution. Default: 1
-        conv_cfg (dict): Config dict for convolution layer. Default: None,
-            which means using conv2d.
-        norm_cfg (dict): Config dict for normalization layer.
-            Default: dict(type='BN', momentum=0.03, eps=0.001).
-        act_cfg (dict): Config dict for activation layer.
-            Default: dict(type='Swish').
+        normalization (Callable[..., nn.Module] | None): Normalization layer module.
+            Defaults to ``partial(nn.BatchNorm2d, momentum=0.03, eps=0.001)``.
+        activation (Callable[..., nn.Module] | None): Activation layer module.
+            Defaults to ``Swish``.
     """
 
     def __init__(
@@ -44,22 +44,18 @@ class Focus(nn.Module):
         out_channels: int,
         kernel_size: int = 1,
         stride: int = 1,
-        conv_cfg: dict | None = None,
-        norm_cfg: dict | None = None,
-        act_cfg: dict | None = None,
+        normalization: Callable[..., nn.Module] = partial(nn.BatchNorm2d, momentum=0.03, eps=0.001),
+        activation: Callable[..., nn.Module] | None = Swish,
     ):
         super().__init__()
-        norm_cfg = norm_cfg or {"type": "BN", "momentum": 0.03, "eps": 0.001}
-        act_cfg = act_cfg or {"type": "Swish"}
-        self.conv = ConvModule(
+        self.conv = Conv2dModule(
             in_channels * 4,
             out_channels,
             kernel_size,
             stride,
             padding=(kernel_size - 1) // 2,
-            conv_cfg=conv_cfg,
-            norm_cfg=norm_cfg,
-            act_cfg=act_cfg,
+            normalization=build_norm_layer(normalization, num_features=out_channels),
+            activation=build_activation_layer(activation),
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -94,7 +90,7 @@ class Focus(nn.Module):
         return self.conv(x)
 
 
-class CSPDarknet(BaseModule):
+class CSPDarknetModule(BaseModule):
     """CSP-Darknet backbone used in YOLOv5 and YOLOX.
 
     Args:
@@ -113,11 +109,10 @@ class CSPDarknet(BaseModule):
         arch_ovewrite(list): Overwrite default arch settings. Default: None.
         spp_kernal_sizes: (tuple[int]): Sequential of kernel sizes of SPP
             layers. Default: (5, 9, 13).
-        conv_cfg (dict): Config dict for convolution layer. Default: None.
-        norm_cfg (dict): Dictionary to construct and config norm layer.
-            Default: dict(type='BN', requires_grad=True).
-        act_cfg (dict): Config dict for activation layer.
-            Default: dict(type='LeakyReLU', negative_slope=0.1).
+        normalization (Callable[..., nn.Module] | None): Normalization layer module.
+            Defaults to ``partial(nn.BatchNorm2d, momentum=0.03, eps=0.001)``.
+        activation (Callable[..., nn.Module] | None): Activation layer module.
+            Defaults to ``Swish``.
         norm_eval (bool): Whether to set norm layers to eval mode, namely,
             freeze running stats (mean and var). Note: Effect on Batch Norm
             and its variants only.
@@ -153,9 +148,8 @@ class CSPDarknet(BaseModule):
         use_depthwise: bool = False,
         arch_ovewrite: list | None = None,
         spp_kernal_sizes: tuple[int, ...] = (5, 9, 13),
-        conv_cfg: dict | None = None,
-        norm_cfg: dict | None = None,
-        act_cfg: dict | None = None,
+        normalization: Callable[..., nn.Module] = partial(nn.BatchNorm2d, momentum=0.03, eps=0.001),
+        activation: Callable[..., nn.Module] = Swish,
         norm_eval: bool = False,
         init_cfg: dict | list[dict] | None = None,
     ):
@@ -168,8 +162,6 @@ class CSPDarknet(BaseModule):
             "nonlinearity": "leaky_relu",
         }
         super().__init__(init_cfg=init_cfg)
-        norm_cfg = norm_cfg or {"type": "BN", "momentum": 0.03, "eps": 0.001}
-        act_cfg = act_cfg or {"type": "Swish"}
 
         arch_setting = self.arch_settings[arch]
         if arch_ovewrite:
@@ -183,15 +175,14 @@ class CSPDarknet(BaseModule):
         self.frozen_stages = frozen_stages
         self.use_depthwise = use_depthwise
         self.norm_eval = norm_eval
-        conv = DepthwiseSeparableConvModule if use_depthwise else ConvModule
+        conv = DepthwiseSeparableConvModule if use_depthwise else Conv2dModule
 
         self.stem = Focus(
             3,
             int(arch_setting[0][0] * widen_factor),
             kernel_size=3,
-            conv_cfg=conv_cfg,
-            norm_cfg=norm_cfg,
-            act_cfg=act_cfg,
+            normalization=normalization,
+            activation=activation,
         )
         self.layers = ["stem"]
 
@@ -206,9 +197,8 @@ class CSPDarknet(BaseModule):
                 3,
                 stride=2,
                 padding=1,
-                conv_cfg=conv_cfg,
-                norm_cfg=norm_cfg,
-                act_cfg=act_cfg,
+                normalization=build_norm_layer(normalization, num_features=out_channels),
+                activation=build_activation_layer(activation),
             )
             stage.append(conv_layer)
             if use_spp:
@@ -216,9 +206,8 @@ class CSPDarknet(BaseModule):
                     out_channels,
                     out_channels,
                     kernel_sizes=spp_kernal_sizes,
-                    conv_cfg=conv_cfg,
-                    norm_cfg=norm_cfg,
-                    act_cfg=act_cfg,
+                    normalization=normalization,
+                    activation=activation,
                 )
                 stage.append(spp)
             csp_layer = CSPLayer(
@@ -227,9 +216,8 @@ class CSPDarknet(BaseModule):
                 num_blocks=num_blocks,
                 add_identity=add_identity,
                 use_depthwise=use_depthwise,
-                conv_cfg=conv_cfg,
-                norm_cfg=norm_cfg,
-                act_cfg=act_cfg,
+                normalization=normalization,
+                activation=activation,
             )
             stage.append(csp_layer)
             self.add_module(f"stage{i + 1}", nn.Sequential(*stage))
@@ -261,3 +249,22 @@ class CSPDarknet(BaseModule):
             if i in self.out_indices:
                 outs.append(x)
         return tuple(outs)
+
+
+class CSPDarknet:
+    """CSPDarknet factory for detection."""
+
+    CSPDARKNET_CFG: ClassVar[dict[str, Any]] = {
+        "yolox_tiny": {"deepen_factor": 0.33, "widen_factor": 0.375},
+        "yolox_s": {"deepen_factor": 0.33, "widen_factor": 0.5},
+        "yolox_l": {},
+        "yolox_x": {"deepen_factor": 1.33, "widen_factor": 1.25},
+    }
+
+    def __new__(cls, model_name: str) -> CSPDarknetModule:
+        """Constructor for CSPDarknet."""
+        if model_name not in cls.CSPDARKNET_CFG:
+            msg = f"model type '{model_name}' is not supported"
+            raise KeyError(msg)
+
+        return CSPDarknetModule(**cls.CSPDARKNET_CFG[model_name])

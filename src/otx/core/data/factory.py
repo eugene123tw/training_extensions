@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2023-2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 #
 """Factory classes for dataset and transforms."""
@@ -67,12 +67,13 @@ class OTXDatasetFactory:
     """Factory class for OTXDataset."""
 
     @classmethod
-    def create(  # ignore too many return statements
+    def create(  # noqa: PLR0911
         cls: type[OTXDatasetFactory],
         task: OTXTaskType,
         dm_subset: DmDataset,
         cfg_subset: SubsetConfig,
         mem_cache_handler: MemCacheHandlerBase,
+        data_format: str,
         mem_cache_img_max_size: tuple[int, int] | None = None,
         image_color_channel: ImageColorChannel = ImageColorChannel.RGB,
         stack_images: bool = True,
@@ -85,6 +86,7 @@ class OTXDatasetFactory:
         common_kwargs = {
             "dm_subset": dm_subset,
             "transforms": transforms,
+            "data_format": data_format,
             "mem_cache_handler": mem_cache_handler,
             "mem_cache_img_max_size": mem_cache_img_max_size,
             "image_color_channel": image_color_channel,
@@ -93,6 +95,7 @@ class OTXDatasetFactory:
         }
 
         if task in (
+            OTXTaskType.ANOMALY,
             OTXTaskType.ANOMALY_CLASSIFICATION,
             OTXTaskType.ANOMALY_DETECTION,
             OTXTaskType.ANOMALY_SEGMENTATION,
@@ -149,5 +152,20 @@ class OTXDatasetFactory:
             use_bbox = getattr(vpm_config, "use_bbox", False)
             use_point = getattr(vpm_config, "use_point", False)
             return OTXZeroShotVisualPromptingDataset(use_bbox=use_bbox, use_point=use_point, **common_kwargs)
+
+        if task == OTXTaskType.KEYPOINT_DETECTION:
+            from .dataset.keypoint_detection import OTXKeypointDetectionDataset
+
+            return OTXKeypointDetectionDataset(**common_kwargs)
+
+        if task == OTXTaskType.DIFFUSION:
+            from .dataset.diffusion import OTXDiffusionDataset
+
+            return OTXDiffusionDataset(**common_kwargs)
+
+        if task == OTXTaskType.OBJECT_DETECTION_3D:
+            from .dataset.object_detection_3d import OTX3DObjectDetectionDataset
+
+            return OTX3DObjectDetectionDataset(**common_kwargs)
 
         raise NotImplementedError(task)

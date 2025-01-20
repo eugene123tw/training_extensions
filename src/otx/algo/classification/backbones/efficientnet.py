@@ -1,21 +1,22 @@
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2023-2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 #
 """EfficientNet Module."""
+
 from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import Literal
+from typing import Any, Callable, ClassVar, Literal
 
 import torch
 from pytorchcv.models.model_store import download_model
 from torch import nn
 from torch.nn import functional, init
 
-from otx.algo.modules.activation import build_activation_layer
-from otx.algo.modules.conv_module import ConvModule
-from otx.algo.utils.mmengine_utils import load_checkpoint_to_model
+from otx.algo.modules.activation import Swish, build_activation_layer
+from otx.algo.modules.conv_module import Conv2dModule
+from otx.algo.modules.norm import build_norm_layer
 
 PRETRAINED_ROOT = "https://github.com/osmr/imgclsmob/releases/download/v0.0.364/"
 pretrained_urls = {
@@ -32,10 +33,10 @@ def conv1x1_block(
     bias: bool = False,
     use_bn: bool = True,
     bn_eps: float = 1e-5,
-    activation: str | None = "ReLU",
-) -> ConvModule:
+    activation: Callable[..., nn.Module] | None = nn.ReLU,
+) -> Conv2dModule:
     """Conv block."""
-    return ConvModule(
+    return Conv2dModule(
         in_channels=in_channels,
         out_channels=out_channels,
         kernel_size=1,
@@ -43,8 +44,8 @@ def conv1x1_block(
         padding=padding,
         groups=groups,
         bias=bias,
-        norm_cfg=({"type": "BN", "eps": bn_eps} if use_bn else None),
-        act_cfg=({"type": activation} if activation else None),
+        normalization=build_norm_layer(nn.BatchNorm2d, num_features=out_channels, eps=bn_eps) if use_bn else None,
+        activation=build_activation_layer(activation),
     )
 
 
@@ -58,10 +59,10 @@ def conv3x3_block(
     bias: bool = False,
     use_bn: bool = True,
     bn_eps: float = 1e-5,
-    activation: str | None = "ReLU",
-) -> ConvModule:
+    activation: Callable[..., nn.Module] | None = nn.ReLU,
+) -> Conv2dModule:
     """Conv block."""
-    return ConvModule(
+    return Conv2dModule(
         in_channels=in_channels,
         out_channels=out_channels,
         kernel_size=3,
@@ -70,8 +71,8 @@ def conv3x3_block(
         dilation=dilation,
         groups=groups,
         bias=bias,
-        norm_cfg=({"type": "BN", "eps": bn_eps} if use_bn else None),
-        act_cfg=({"type": activation} if activation else None),
+        normalization=build_norm_layer(nn.BatchNorm2d, num_features=out_channels, eps=bn_eps) if use_bn else None,
+        activation=build_activation_layer(activation),
     )
 
 
@@ -84,10 +85,10 @@ def dwconv3x3_block(
     bias: bool = False,
     use_bn: bool = True,
     bn_eps: float = 1e-5,
-    activation: str | None = "ReLU",
-) -> ConvModule:
+    activation: Callable[..., nn.Module] | None = nn.ReLU,
+) -> Conv2dModule:
     """Conv block."""
-    return ConvModule(
+    return Conv2dModule(
         in_channels=in_channels,
         out_channels=out_channels,
         kernel_size=3,
@@ -96,8 +97,8 @@ def dwconv3x3_block(
         dilation=dilation,
         groups=out_channels,
         bias=bias,
-        norm_cfg=({"type": "BN", "eps": bn_eps} if use_bn else None),
-        act_cfg=({"type": activation} if activation else None),
+        normalization=build_norm_layer(nn.BatchNorm2d, num_features=out_channels, eps=bn_eps) if use_bn else None,
+        activation=build_activation_layer(activation),
     )
 
 
@@ -110,10 +111,10 @@ def dwconv5x5_block(
     bias: bool = False,
     use_bn: bool = True,
     bn_eps: float = 1e-5,
-    activation: str | None = "ReLU",
-) -> ConvModule:
+    activation: Callable[..., nn.Module] | None = nn.ReLU,
+) -> Conv2dModule:
     """Conv block."""
-    return ConvModule(
+    return Conv2dModule(
         in_channels=in_channels,
         out_channels=out_channels,
         kernel_size=5,
@@ -122,8 +123,8 @@ def dwconv5x5_block(
         dilation=dilation,
         groups=out_channels,
         bias=bias,
-        norm_cfg=({"type": "BN", "eps": bn_eps} if use_bn else None),
-        act_cfg=({"type": activation} if activation else None),
+        normalization=build_norm_layer(nn.BatchNorm2d, num_features=out_channels, eps=bn_eps) if use_bn else None,
+        activation=build_activation_layer(activation),
     )
 
 
@@ -163,13 +164,15 @@ class SEBlock(nn.Module):
     https://arxiv.org/abs/1709.01507.
 
     Args:
-        channels : int. Number of channels.
-        reduction : int, default 16. Squeeze reduction value.
-        mid_channels : int or None, default None. Number of middle channels.
-        round_mid : bool, default False. Whether to round middle channel number (make divisible by 8).
-        use_conv : bool, default True. Whether to convolutional layers instead of fully-connected ones.
-        activation : function, or str, or nn.Module, default 'relu'. Activation function after the first convolution.
-        out_activation : function, or str, or nn.Module, Activation function after the last convolution.
+        channels (int): Number of channels.
+        reduction (int): Squeeze reduction value. Default to 16.
+        mid_channels (int | None): Number of middle channels. Defaults to None.
+        round_mid (bool): Whether to round middle channel number (make divisible by 8). Defaults to False.
+        use_conv (bool): Whether to convolutional layers instead of fully-connected ones. Defaults to True.
+        mid_activation (Callable[..., nn.Module]): Activation layer module after the first convolution.
+            Defaults to ``nn.ReLU``.
+        out_activation (Callable[..., nn.Module]): Activation layer module after the last convolution.
+            Defaults to ``nn.Sigmoid``.
     """
 
     def __init__(
@@ -179,8 +182,8 @@ class SEBlock(nn.Module):
         mid_channels: int | None = None,
         round_mid: bool = False,
         use_conv: bool = True,
-        mid_activation: str | None = "ReLU",
-        out_activation: str | None = "Sigmoid",
+        mid_activation: Callable[..., nn.Module] = nn.ReLU,
+        out_activation: Callable[..., nn.Module] = nn.Sigmoid,
     ):
         super().__init__()
         self.use_conv = use_conv
@@ -199,7 +202,7 @@ class SEBlock(nn.Module):
             )
         else:
             self.fc1 = nn.Linear(in_features=channels, out_features=mid_channels)
-        self.activ = build_activation_layer({"type": mid_activation})
+        self.activ = mid_activation()
         if use_conv:
             self.conv2 = nn.Conv2d(
                 in_channels=mid_channels,
@@ -211,7 +214,7 @@ class SEBlock(nn.Module):
             )
         else:
             self.fc2 = nn.Linear(in_features=mid_channels, out_features=channels)
-        self.sigmoid = build_activation_layer({"type": out_activation})
+        self.sigmoid = out_activation()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward."""
@@ -231,12 +234,12 @@ class EffiDwsConvUnit(nn.Module):
     """EfficientNet specific depthwise separable conv block/unit with BatchNorms and activations at each conv.
 
     Args:
-        in_channels : int. Number of input channels.
-        out_channels : int. Number of output channels.
-        stride : int or tuple/list of 2 int. Strides of the second convolution layer.
-        bn_eps : float. Small float added to variance in Batch norm.
-        activation : str. Name of activation function.
-        tf_mode : bool. Whether to use TF-like mode.
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+        stride (int | tuple[int, int]): Strides of the second convolution layer.
+        bn_eps (float): Small float added to variance in Batch norm.
+        activation (Callable[..., nn.Module]): Activation layer module.
+        tf_mode (bool): Whether to use TF-like mode.
     """
 
     def __init__(
@@ -245,7 +248,7 @@ class EffiDwsConvUnit(nn.Module):
         out_channels: int,
         stride: int | tuple[int, int],
         bn_eps: float,
-        activation: str,
+        activation: Callable[..., nn.Module],
         tf_mode: bool,
     ):
         super().__init__()
@@ -285,15 +288,15 @@ class EffiInvResUnit(nn.Module):
     """EfficientNet inverted residual unit.
 
     Args:
-        in_channels : int. Number of input channels.
-        out_channels : int. Number of output channels.
-        kernel_size : int or tuple/list of 2 int. Convolution window size.
-        stride : int or tuple/list of 2 int. Strides of the second convolution layer.
-        exp_factor : int. Factor for expansion of channels.
-        se_factor : int. SE reduction factor for each unit.
-        bn_eps : float. Small float added to variance in Batch norm.
-        activation : str. Name of activation function.
-        tf_mode : bool. Whether to use TF-like mode.
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+        kernel_size (int | tuple[int, int]): Convolution window size.
+        stride (int | tuple[int, int]): Strides of the second convolution layer.
+        exp_factor (int): Factor for expansion of channels.
+        se_factor (int): SE reduction factor for each unit.
+        bn_eps (float): Small float added to variance in Batch norm.
+        activation (Callable[..., nn.Module]): Activation layer module.
+        tf_mode (bool): Whether to use TF-like mode.
     """
 
     def __init__(
@@ -305,7 +308,7 @@ class EffiInvResUnit(nn.Module):
         exp_factor: int,
         se_factor: int,
         bn_eps: float,
-        activation: str | None,
+        activation: Callable[..., nn.Module],
         tf_mode: bool,
     ):
         super().__init__()
@@ -367,11 +370,11 @@ class EffiInitBlock(nn.Module):
     """EfficientNet specific initial block.
 
     Args:
-        in_channels : int. Number of input channels.
-        out_channels : int. Number of output channels.
-        bn_eps : float. Small float added to variance in Batch norm.
-        activation : str. Name of activation function.
-        tf_mode : bool. Whether to use TF-like mode.
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+        bn_eps (float): Small float added to variance in Batch norm.
+        activation (Callable[..., nn.Module] | None): Activation layer module.
+        tf_mode (bool): Whether to use TF-like mode.
     """
 
     def __init__(
@@ -379,7 +382,7 @@ class EffiInitBlock(nn.Module):
         in_channels: int,
         out_channels: int,
         bn_eps: float,
-        activation: str | None,
+        activation: Callable[..., nn.Module] | None,
         tf_mode: bool,
     ):
         super().__init__()
@@ -415,12 +418,10 @@ class EfficientNet(nn.Module):
         bn_eps : float, default 1e-5. Small float added to variance in Batch norm.
         in_channels : int, default 3. Number of input channels.
         in_size : tuple of two ints, default (224, 224). Spatial size of the expected input image.
-        dropout_cls : dict, dropout configurations.
         pooling_type : str, default 'avg'. Pooling type to use.
         bn_eval : bool, default False. Whether to use BatchNorm eval mode.
         bn_frozen : bool, default False. Whether to freeze BatchNorm parameters.
         instance_norm_first : bool, default False. Whether to use instance normalization first.
-        pretrained : bool, default False. Whether to load ImageNet pre-trained weights.
     """
 
     def __init__(
@@ -435,24 +436,21 @@ class EfficientNet(nn.Module):
         bn_eps: float = 1e-5,
         in_channels: int = 3,
         in_size: tuple[int, int] = (224, 224),
-        dropout_cls: dict | None = None,
         pooling_type: str | None = "avg",
         bn_eval: bool = False,
         bn_frozen: bool = False,
         instance_norm_first: bool = False,
-        pretrained: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.num_classes = 1000
-        self.pretrained = pretrained
         self.in_size = in_size
         self.input_IN = nn.InstanceNorm2d(3, affine=True) if instance_norm_first else None
         self.bn_eval = bn_eval
         self.bn_frozen = bn_frozen
         self.pooling_type = pooling_type
         self.num_features = self.num_head_features = final_block_channels
-        activation = "Swish"
+        activation = Swish
         self.features = nn.Sequential()
         self.features.add_module(
             "init_block",
@@ -524,161 +522,158 @@ class EfficientNet(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        return_featuremaps: bool = False,
-        get_embeddings: bool = False,
+        **kwargs,
     ) -> tuple | list[torch.Tensor] | torch.Tensor:
         """Forward."""
         if self.input_IN is not None:
             x = self.input_IN(x)
 
         y = self.features(x)
-        if return_featuremaps:
-            return (y,)
-
-        glob_features = self._glob_feature_vector(y, self.pooling_type, reduce_dims=False)
-
-        logits = self.output(glob_features.view(x.shape[0], -1))
-
-        if not self.training and self.classification:
-            return [logits]
-
-        if get_embeddings:
-            out_data = [logits, glob_features.view(x.shape[0], -1)]
-        elif self.loss in ["softmax", "am_softmax"]:
-            out_data = logits if self.lr_finder.enable and self.lr_finder.mode == "automatic" else [logits]
-
-        elif self.loss in ["triplet"]:
-            out_data = [logits, glob_features]
-        else:
-            msg = f"Unsupported loss: {self.loss}"
-            raise KeyError(msg)
-
-        if self.lr_finder.enable and self.lr_finder.mode == "automatic":
-            return out_data
-        return tuple(out_data)
+        return (y,)
 
 
 EFFICIENTNET_VERSION = Literal["b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8"]
 
 
-class OTXEfficientNet(EfficientNet):
-    """Create EfficientNet model with specific parameters.
+class EfficientNetBackbone:
+    """EfficientNetBackbone class represents the backbone architecture of EfficientNet models.
 
-    Args:
-        version : str. Version of EfficientNet ('b0'...'b8').
-        in_size : tuple of two ints. Spatial size of the expected input image.
+    Attributes:
+        EFFICIENTNET_CFG (ClassVar[dict[str, Any]]): A dictionary containing configuration parameters
+            for different versions of EfficientNet.
+        init_block_channels (ClassVar[int]): The number of channels in the initial block of the backbone.
+        layers (ClassVar[list[int]]): A list specifying the number of layers in each stage of the backbone.
+        downsample (ClassVar[list[int]]): A list specifying whether downsampling is applied.
+        channels_per_layers (ClassVar[list[int]]): A list specifying the number of channels.
+        expansion_factors_per_layers (ClassVar[list[int]]): A list specifying the expansion factor.
+        kernel_sizes_per_layers (ClassVar[list[int]]): A list specifying the kernel size in each stage of the backbone.
+        strides_per_stage (ClassVar[list[int]]): A list specifying the stride in each stage of the backbone.
+        final_block_channels (ClassVar[int]): The number of channels in the final block of the backbone.
     """
 
-    def __init__(self, version: EFFICIENTNET_VERSION, **kwargs):
-        self.model_name = "efficientnet_" + version
+    EFFICIENTNET_CFG: ClassVar[dict[str, Any]] = {
+        "b0": {
+            "input_size": (224, 224),
+            "depth_factor": 1.0,
+            "width_factor": 1.0,
+        },
+        "b1": {
+            "input_size": (240, 240),
+            "depth_factor": 1.1,
+            "width_factor": 1.0,
+        },
+        "b2": {
+            "input_size": (260, 260),
+            "depth_factor": 1.2,
+            "width_factor": 1.1,
+        },
+        "b3": {
+            "input_size": (300, 300),
+            "depth_factor": 1.4,
+            "width_factor": 1.2,
+        },
+        "b4": {
+            "input_size": (380, 380),
+            "depth_factor": 1.8,
+            "width_factor": 1.4,
+        },
+        "b5": {
+            "input_size": (456, 456),
+            "depth_factor": 2.2,
+            "width_factor": 1.6,
+        },
+        "b6": {
+            "input_size": (528, 528),
+            "depth_factor": 2.6,
+            "width_factor": 1.8,
+        },
+        "b7": {
+            "input_size": (600, 600),
+            "depth_factor": 3.1,
+            "width_factor": 2.0,
+        },
+        "b8": {
+            "input_size": (672, 672),
+            "depth_factor": 3.6,
+            "width_factor": 2.2,
+        },
+    }
 
-        if version == "b0":
-            in_size = (224, 224)
-            depth_factor = 1.0
-            width_factor = 1.0
-        elif version == "b1":
-            in_size = (240, 240)
-            depth_factor = 1.1
-            width_factor = 1.0
-        elif version == "b2":
-            in_size = (260, 260)
-            depth_factor = 1.2
-            width_factor = 1.1
-        elif version == "b3":
-            in_size = (300, 300)
-            depth_factor = 1.4
-            width_factor = 1.2
-        elif version == "b4":
-            in_size = (380, 380)
-            depth_factor = 1.8
-            width_factor = 1.4
-        elif version == "b5":
-            in_size = (456, 456)
-            depth_factor = 2.2
-            width_factor = 1.6
-        elif version == "b6":
-            in_size = (528, 528)
-            depth_factor = 2.6
-            width_factor = 1.8
-        elif version == "b7":
-            in_size = (600, 600)
-            depth_factor = 3.1
-            width_factor = 2.0
-        elif version == "b8":
-            in_size = (672, 672)
-            depth_factor = 3.6
-            width_factor = 2.2
-        else:
-            msg = f"Unsupported EfficientNet version {version}"
-            raise ValueError(msg)
+    init_block_channels: ClassVar[int] = 32
+    layers: ClassVar[list[int]] = [1, 2, 2, 3, 3, 4, 1]
+    downsample: ClassVar[list[int]] = [1, 1, 1, 1, 0, 1, 0]
+    channels_per_layers: ClassVar[list[int]] = [16, 24, 40, 80, 112, 192, 320]
+    expansion_factors_per_layers: ClassVar[list[int]] = [1, 6, 6, 6, 6, 6, 6]
+    kernel_sizes_per_layers: ClassVar[list[int]] = [3, 3, 5, 3, 5, 5, 3]
+    strides_per_stage: ClassVar[list[int]] = [1, 2, 2, 2, 1, 2, 1]
+    final_block_channels: ClassVar[int] = 1280
 
-        init_block_channels = 32
-        layers = [1, 2, 2, 3, 3, 4, 1]
-        downsample = [1, 1, 1, 1, 0, 1, 0]
-        channels_per_layers = [16, 24, 40, 80, 112, 192, 320]
-        expansion_factors_per_layers = [1, 6, 6, 6, 6, 6, 6]
-        kernel_sizes_per_layers = [3, 3, 5, 3, 5, 5, 3]
-        _strides_per_stage = [1, 2, 2, 2, 1, 2, 1]
-        final_block_channels = 1280
+    def __new__(
+        cls,
+        version: EFFICIENTNET_VERSION,
+        input_size: tuple[int, int] | None = None,
+        pretrained: bool = True,
+        **kwargs,
+    ) -> EfficientNet:
+        """Create a new instance of the EfficientNet class.
 
-        layers = [int(math.ceil(li * depth_factor)) for li in layers]
-        channels_per_layers = [round_channels(ci * width_factor) for ci in channels_per_layers]
+        Args:
+            version (EFFICIENTNET_VERSION): The version of EfficientNet to use.
+            input_size (tuple[int, int] | None, optional): The input size of the model. Defaults to None.
+            pretrained (bool, optional): Whether to load pretrained weights. Defaults to True.
+            **kwargs: Additional keyword arguments to be passed to the EfficientNet constructor.
+
+        Returns:
+            EfficientNet: The created EfficientNet model instance.
+        """
+        origin_input_size, depth_factor, width_factor = cls.EFFICIENTNET_CFG[version].values()
+        input_size = input_size or origin_input_size
+        effnet_layers = [int(math.ceil(li * depth_factor)) for li in cls.layers]
+        channels_per_layers = [round_channels(ci * width_factor) for ci in cls.channels_per_layers]
 
         from functools import reduce
 
         channels: list = reduce(
             lambda x, y: [*x, [y[0]] * y[1]] if y[2] != 0 else x[:-1] + [x[-1] + [y[0]] * y[1]],
-            zip(channels_per_layers, layers, downsample),
+            zip(channels_per_layers, effnet_layers, cls.downsample),
             [],
         )
         kernel_sizes: list = reduce(
             lambda x, y: [*x, [y[0]] * y[1]] if y[2] != 0 else x[:-1] + [x[-1] + [y[0]] * y[1]],
-            zip(kernel_sizes_per_layers, layers, downsample),
+            zip(cls.kernel_sizes_per_layers, effnet_layers, cls.downsample),
             [],
         )
         expansion_factors: list = reduce(
             lambda x, y: [*x, [y[0]] * y[1]] if y[2] != 0 else x[:-1] + [x[-1] + [y[0]] * y[1]],
-            zip(expansion_factors_per_layers, layers, downsample),
+            zip(cls.expansion_factors_per_layers, effnet_layers, cls.downsample),
             [],
         )
         strides_per_stage: list = reduce(
             lambda x, y: [*x, [y[0]] * y[1]] if y[2] != 0 else x[:-1] + [x[-1] + [y[0]] * y[1]],
-            zip(_strides_per_stage, layers, downsample),
+            zip(cls.strides_per_stage, effnet_layers, cls.downsample),
             [],
         )
         strides_per_stage = [si[0] for si in strides_per_stage]
+        init_block_channels = round_channels(cls.init_block_channels * width_factor)
 
-        init_block_channels = round_channels(init_block_channels * width_factor)
-
+        final_block_channels = cls.final_block_channels
         if width_factor > 1.0:
             final_block_channels = round_channels(final_block_channels * width_factor)
 
-        super().__init__(
+        model = EfficientNet(
             channels=channels,
             init_block_channels=init_block_channels,
             final_block_channels=final_block_channels,
             kernel_sizes=kernel_sizes,
             strides_per_stage=strides_per_stage,
             expansion_factors=expansion_factors,
-            dropout_cls={"dist": "none"},
             tf_mode=False,
             bn_eps=1e-5,
-            in_size=in_size,
+            in_size=input_size,
             **kwargs,
         )
-        self.init_weights(self.pretrained)
-
-    def forward(self, x: torch.Tensor, return_featuremaps: bool = True, get_embeddings: bool = False) -> torch.Tensor:
-        """Forward."""
-        return super().forward(x, return_featuremaps=return_featuremaps, get_embeddings=get_embeddings)
-
-    def init_weights(self, pretrained: bool | str | None = None) -> None:
-        """Initialize weights."""
-        if isinstance(pretrained, str) and Path(pretrained).exists():
-            checkpoint = torch.load(pretrained, None)
-            load_checkpoint_to_model(self, checkpoint)
-            print(f"init weight - {pretrained}")
-        elif pretrained is not None:
+        if pretrained:
             cache_dir = Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
-            download_model(net=self, model_name=self.model_name, local_model_store_dir_path=str(cache_dir))
-            print(f"init weight - {pretrained_urls[self.model_name]}")
+            download_model(net=model, model_name=f"efficientnet_{version}", local_model_store_dir_path=str(cache_dir))
+            print(f"Download model weight in {cache_dir!s}")
+        return model
