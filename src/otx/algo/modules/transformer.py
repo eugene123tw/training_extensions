@@ -325,17 +325,25 @@ def deformable_attention_core_func(
 ) -> torch.Tensor:
     """Deformable attention core function.
 
+    Note:
+        bs: batch size
+        len_q: query length
+        n_head: number of heads
+        n_levels: number of levels
+        n_points: number of sampling points
+        head_dim: head feature dimension
+
     Args:
-        value (Tensor): [bs, value_length, n_head, c]
+        value (Tensor): [bs, value_length, n_head, head_dim]
         value_spatial_shapes (Tensor|List): [n_levels, 2]
         value_level_start_index (Tensor|List): [n_levels]
         sampling_locations (Tensor): [bs, query_length, n_head, n_levels, n_points, 2]
         attention_weights (Tensor): [bs, query_length, n_head, n_levels, n_points]
 
     Returns:
-        output (Tensor): [bs, Length_{query}, C]
+        output (Tensor): [bs, query length, head_dim]
     """
-    bs, _, n_head, c = value.shape
+    bs, _, n_head, head_dim = value.shape
     _, len_q, _, n_levels, n_points, _ = sampling_locations.shape
 
     split_shape = [h * w for h, w in value_spatial_shapes]
@@ -343,11 +351,13 @@ def deformable_attention_core_func(
     sampling_grids = 2 * sampling_locations - 1
     sampling_value_list = []
     for level, (h, w) in enumerate(value_spatial_shapes):
-        # N_, H_*W_, M_, D_ -> N_, H_*W_, M_*D_ -> N_, M_*D_, H_*W_ -> N_*M_, D_, H_, W_
-        value_l_ = value_list[level].flatten(2).permute(0, 2, 1).reshape(bs * n_head, c, h, w)
-        # N_, Lq_, M_, P_, 2 -> N_, M_, Lq_, P_, 2 -> N_*M_, Lq_, P_, 2
+        # bs, H*W, n_head, head_dim -> bs, H*W, n_head*head_dim -> bs, n_head*head_dim, H*W -> bs*n_head, head_dim, H, W
+        value_l_ = value_list[level].flatten(2).permute(0, 2, 1).reshape(bs * n_head, head_dim, h, w)
+
+        # bs, len_q, n_head, n_points, 2 -> bs, n_head, len_q, n_points, 2 -> bs*n_head, len_q, n_points, 2
         sampling_grid_l_ = sampling_grids[:, :, :, level].permute(0, 2, 1, 3, 4).flatten(0, 1)
-        # N_*M_, D_, Lq_, P_
+
+        # bs*n_head, head_dim, len_q, n_points
         sampling_value_l_ = nn.functional.grid_sample(
             value_l_,
             sampling_grid_l_,
@@ -356,13 +366,14 @@ def deformable_attention_core_func(
             align_corners=False,
         )
         sampling_value_list.append(sampling_value_l_)
-    # (N_, Lq_, M_, L_, P_) -> (N_, M_, Lq_, L_, P_) -> (N_*M_, 1, Lq_, L_*P_)
+    # (bs, len_q, n_head, n_levels, n_points) -> (bs, n_head, len_q, n_levels, n_points)
+    #   -> (bs*n_head, 1, len_q, n_levels*n_points)
     attention_weights = attention_weights.permute(0, 2, 1, 3, 4).reshape(bs * n_head, 1, len_q, n_levels * n_points)
-    output = (
-        (torch.stack(sampling_value_list, dim=-2).flatten(-2) * attention_weights)
-        .sum(-1)
-        .reshape(bs, n_head * c, len_q)
-    )
+
+    # (bs*n_head, head_dim, len_q, n_levels*n_points)
+    sampling_value_list = torch.stack(sampling_value_list, dim=-2).flatten(-2)
+
+    output = (sampling_value_list * attention_weights).sum(-1).reshape(bs, n_head * head_dim, len_q)
 
     return output.permute(0, 2, 1)
 
