@@ -24,10 +24,10 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
-    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=0a108b04" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=6232a102" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
@@ -147,7 +147,8 @@
           
           
           
-          <a href="https://github.com/openvinotoolkit/training_extensions" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><img src="../../../../_static/logos/github_icon.png" class="icon-link-image" alt="GitHub"/></a>
+          <a href="https://github.com/openvinotoolkit/training_extensions" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fab fa-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
         </li>
       </ul>
       </div>
@@ -216,7 +217,8 @@
           
           
           
-          <a href="https://github.com/openvinotoolkit/training_extensions" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><img src="../../../../_static/logos/github_icon.png" class="icon-link-image" alt="GitHub"/></a>
+          <a href="https://github.com/openvinotoolkit/training_extensions" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fab fa-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
         </li>
       </ul>
       </div>
@@ -251,33 +253,34 @@
             <article class="bd-article" role="main">
               
   <h1>Source code for otx.core.schedulers.callable</h1><div class="highlight"><pre>
-<span></span><span class="c1"># Copyright (C) 2024 Intel Corporation</span>
+<span></span><span class="sd">&quot;&quot;&quot;Scheduler callable to support adaptive batch size.&quot;&quot;&quot;</span>
+
+<span class="c1"># Copyright (C) 2024-2025 Intel Corporation</span>
 <span class="c1"># SPDX-License-Identifier: Apache-2.0</span>
-<span class="sd">&quot;&quot;&quot;Scheduler callable to support hyper-parameter optimization (HPO) algorithm.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span> <span class="nn">importlib</span>
-<span class="kn">import</span> <span class="nn">inspect</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">importlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
 
-<span class="kn">from</span> <span class="nn">lightning.pytorch.cli</span> <span class="kn">import</span> <span class="n">ReduceLROnPlateau</span>
-<span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">nn</span>
-<span class="kn">from</span> <span class="nn">torch.optim</span> <span class="kn">import</span> <span class="n">Optimizer</span>
-<span class="kn">from</span> <span class="nn">torch.optim.lr_scheduler</span> <span class="kn">import</span> <span class="n">LRScheduler</span>
-<span class="kn">from</span> <span class="nn">torch.optim.lr_scheduler</span> <span class="kn">import</span> <span class="n">ReduceLROnPlateau</span> <span class="k">as</span> <span class="n">TorchReduceLROnPlateau</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lightning.pytorch.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">ReduceLROnPlateau</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">nn</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.optim</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optimizer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.optim.lr_scheduler</span><span class="w"> </span><span class="kn">import</span> <span class="n">LRScheduler</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.optim.lr_scheduler</span><span class="w"> </span><span class="kn">import</span> <span class="n">ReduceLROnPlateau</span> <span class="k">as</span> <span class="n">TorchReduceLROnPlateau</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
-    <span class="kn">from</span> <span class="nn">lightning.pytorch.cli</span> <span class="kn">import</span> <span class="n">LRSchedulerCallable</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">lightning.pytorch.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">LRSchedulerCallable</span>
 
 
-<div class="viewcode-block" id="SchedulerCallableSupportHPO">
-<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.schedulers.html#otx.core.schedulers.SchedulerCallableSupportHPO">[docs]</a>
-<span class="k">class</span> <span class="nc">SchedulerCallableSupportHPO</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;LR scheduler callable supports OTX hyper-parameter optimization (HPO) algorithm.</span>
+<div class="viewcode-block" id="SchedulerCallableSupportAdaptiveBS">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.schedulers.html#otx.core.schedulers.SchedulerCallableSupportAdaptiveBS">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SchedulerCallableSupportAdaptiveBS</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;LR scheduler callable supports OTX adaptive batch size.</span>
 
 <span class="sd">    It makes SchedulerCallable pickelable and accessible to parameters.</span>
-<span class="sd">    It is used for HPO and adaptive batch size.</span>
+<span class="sd">    It is used for adaptive batch size.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        scheduler_cls: `LRScheduler` class type or string class import path. See examples for details.</span>
@@ -293,7 +296,7 @@
 
 <span class="sd">        model = MobileNetV3ForMulticlassCls(</span>
 <span class="sd">            num_classes=3,</span>
-<span class="sd">            scheduler=SchedulerCallableSupportHPO(</span>
+<span class="sd">            scheduler=SchedulerCallableSupportAdaptiveBS(</span>
 <span class="sd">                scheduler_cls=StepLR,</span>
 <span class="sd">                scheduler_kwargs={</span>
 <span class="sd">                    &quot;step_size&quot;: 10,</span>
@@ -310,7 +313,7 @@
 
 <span class="sd">        model = MobileNetV3ForMulticlassCls(</span>
 <span class="sd">            num_classes=3,</span>
-<span class="sd">            optimizer=SchedulerCallableSupportHPO(</span>
+<span class="sd">            optimizer=SchedulerCallableSupportAdaptiveBS(</span>
 <span class="sd">                scheduler_cls=&quot;torch.optim.lr_scheduler.StepLR&quot;,</span>
 <span class="sd">                scheduler_kwargs={</span>
 <span class="sd">                    &quot;step_size&quot;: 10,</span>
@@ -321,7 +324,7 @@
 <span class="sd">        ```</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">scheduler_cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">LRScheduler</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">scheduler_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">str</span><span class="p">],</span>
@@ -342,23 +345,23 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_kwargs</span> <span class="o">=</span> <span class="n">scheduler_kwargs</span>
         <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">scheduler_kwargs</span><span class="p">)</span>
 
-<div class="viewcode-block" id="SchedulerCallableSupportHPO.__call__">
-<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.schedulers.html#otx.core.schedulers.SchedulerCallableSupportHPO.__call__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">:</span> <span class="n">Optimizer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LRScheduler</span><span class="p">:</span>
+<div class="viewcode-block" id="SchedulerCallableSupportAdaptiveBS.__call__">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.schedulers.html#otx.core.schedulers.SchedulerCallableSupportAdaptiveBS.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">:</span> <span class="n">Optimizer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LRScheduler</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create `torch.optim.LRScheduler` instance for the given parameters.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_init</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">scheduler_kwargs</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">,</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_path</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_kwargs</span><span class="p">,</span>
         <span class="p">)</span>
 
-<div class="viewcode-block" id="SchedulerCallableSupportHPO.from_callable">
-<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.schedulers.html#otx.core.schedulers.SchedulerCallableSupportHPO.from_callable">[docs]</a>
+<div class="viewcode-block" id="SchedulerCallableSupportAdaptiveBS.from_callable">
+<a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.schedulers.html#otx.core.schedulers.SchedulerCallableSupportAdaptiveBS.from_callable">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_callable</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">func</span><span class="p">:</span> <span class="n">LRSchedulerCallable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SchedulerCallableSupportHPO</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_callable</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">func</span><span class="p">:</span> <span class="n">LRSchedulerCallable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SchedulerCallableSupportAdaptiveBS</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create this class instance from an existing optimizer callable.&quot;&quot;&quot;</span>
         <span class="n">dummy_params</span> <span class="o">=</span> <span class="p">[</span><span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">()]</span>
         <span class="n">optimizer</span> <span class="o">=</span> <span class="n">Optimizer</span><span class="p">(</span><span class="n">dummy_params</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;lr&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">})</span>
@@ -377,7 +380,7 @@
             <span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">allow_names</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">block_names</span>
         <span class="p">}</span>
 
-        <span class="k">return</span> <span class="n">SchedulerCallableSupportHPO</span><span class="p">(</span>
+        <span class="k">return</span> <span class="n">SchedulerCallableSupportAdaptiveBS</span><span class="p">(</span>
             <span class="n">scheduler_cls</span><span class="o">=</span><span class="n">scheduler</span><span class="o">.</span><span class="vm">__class__</span><span class="p">,</span>
             <span class="n">scheduler_kwargs</span><span class="o">=</span><span class="n">scheduler_kwargs</span><span class="p">,</span>
         <span class="p">)</span></div>
@@ -458,10 +461,6 @@
   
   <div class="footer-item">
     
-<p class="sphinx-version">
-Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.2.6.<br>
-</p>
-
   </div>
   
 </div>
