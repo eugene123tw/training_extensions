@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>otx.algo.callbacks.iteration_timer &#8212; OpenVINO™ Training Extensions 2.3.0rc0 documentation</title>
+    <title>otx.algo.callbacks.iteration_timer &#8212; OpenVINO™ Training Extensions 2.4.0dev documentation</title>
   
   
   
@@ -33,7 +33,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script src="../../../../_static/documentation_options.js?v=931ecc87"></script>
+    <script src="../../../../_static/documentation_options.js?v=66e02a33"></script>
     <script src="../../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -371,16 +371,10 @@
         <span class="n">batch_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Log iteration data time on the training batch start.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
-                <span class="n">batch_size</span> <span class="o">+=</span> <span class="n">batch</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">batch_size</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch</span><span class="o">.</span><span class="n">batch_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_on_batch_start</span><span class="p">(</span>
             <span class="n">pl_module</span><span class="o">=</span><span class="n">pl_module</span><span class="p">,</span>
             <span class="n">phase</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span>
-            <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+            <span class="n">batch_size</span><span class="o">=</span><span class="n">batch</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
@@ -395,16 +389,10 @@
         <span class="n">batch_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Log iteration time on the training batch end.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
-                <span class="n">batch_size</span> <span class="o">+=</span> <span class="n">batch</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">batch_size</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch</span><span class="o">.</span><span class="n">batch_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_on_batch_end</span><span class="p">(</span>
             <span class="n">pl_module</span><span class="o">=</span><span class="n">pl_module</span><span class="p">,</span>
             <span class="n">phase</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span>
-            <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+            <span class="n">batch_size</span><span class="o">=</span><span class="n">batch</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 

@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>otx.core.data.factory &#8212; OpenVINO™ Training Extensions 2.3.0rc0 documentation</title>
+    <title>otx.core.data.factory &#8212; OpenVINO™ Training Extensions 2.4.0dev documentation</title>
   
   
   
@@ -33,7 +33,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script src="../../../../_static/documentation_options.js?v=931ecc87"></script>
+    <script src="../../../../_static/documentation_options.js?v=66e02a33"></script>
     <script src="../../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -332,7 +332,7 @@
 <div class="viewcode-block" id="OTXDatasetFactory.create">
 <a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.data.html#otx.core.data.OTXDatasetFactory.create">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span>  <span class="c1"># noqa: PLR0911</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span>
         <span class="bp">cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">OTXDatasetFactory</span><span class="p">],</span>
         <span class="n">task</span><span class="p">:</span> <span class="n">OTXTaskType</span><span class="p">,</span>
         <span class="n">dm_subset</span><span class="p">:</span> <span class="n">DmDataset</span><span class="p">,</span>
@@ -406,22 +406,10 @@
             <span class="n">use_point</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">vpm_config</span><span class="p">,</span> <span class="s2">&quot;use_point&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">OTXVisualPromptingDataset</span><span class="p">(</span><span class="n">use_bbox</span><span class="o">=</span><span class="n">use_bbox</span><span class="p">,</span> <span class="n">use_point</span><span class="o">=</span><span class="n">use_point</span><span class="p">,</span> <span class="o">**</span><span class="n">common_kwargs</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">task</span> <span class="o">==</span> <span class="n">OTXTaskType</span><span class="o">.</span><span class="n">ZERO_SHOT_VISUAL_PROMPTING</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">.dataset.visual_prompting</span><span class="w"> </span><span class="kn">import</span> <span class="n">OTXZeroShotVisualPromptingDataset</span>
-
-            <span class="n">use_bbox</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">vpm_config</span><span class="p">,</span> <span class="s2">&quot;use_bbox&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-            <span class="n">use_point</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">vpm_config</span><span class="p">,</span> <span class="s2">&quot;use_point&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">OTXZeroShotVisualPromptingDataset</span><span class="p">(</span><span class="n">use_bbox</span><span class="o">=</span><span class="n">use_bbox</span><span class="p">,</span> <span class="n">use_point</span><span class="o">=</span><span class="n">use_point</span><span class="p">,</span> <span class="o">**</span><span class="n">common_kwargs</span><span class="p">)</span>
-
         <span class="k">if</span> <span class="n">task</span> <span class="o">==</span> <span class="n">OTXTaskType</span><span class="o">.</span><span class="n">KEYPOINT_DETECTION</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">.dataset.keypoint_detection</span><span class="w"> </span><span class="kn">import</span> <span class="n">OTXKeypointDetectionDataset</span>
 
             <span class="k">return</span> <span class="n">OTXKeypointDetectionDataset</span><span class="p">(</span><span class="o">**</span><span class="n">common_kwargs</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">task</span> <span class="o">==</span> <span class="n">OTXTaskType</span><span class="o">.</span><span class="n">OBJECT_DETECTION_3D</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">.dataset.object_detection_3d</span><span class="w"> </span><span class="kn">import</span> <span class="n">OTX3DObjectDetectionDataset</span>
-
-            <span class="k">return</span> <span class="n">OTX3DObjectDetectionDataset</span><span class="p">(</span><span class="o">**</span><span class="n">common_kwargs</span><span class="p">)</span>
 
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="n">task</span><span class="p">)</span></div>
 </div>

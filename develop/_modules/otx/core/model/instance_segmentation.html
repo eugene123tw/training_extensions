@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>otx.core.model.instance_segmentation &#8212; OpenVINO™ Training Extensions 2.3.0rc0 documentation</title>
+    <title>otx.core.model.instance_segmentation &#8212; OpenVINO™ Training Extensions 2.4.0dev documentation</title>
   
   
   
@@ -33,7 +33,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script src="../../../../_static/documentation_options.js?v=931ecc87"></script>
+    <script src="../../../../_static/documentation_options.js?v=66e02a33"></script>
     <script src="../../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -257,6 +257,8 @@
 <span class="c1"># SPDX-License-Identifier: Apache-2.0</span>
 <span class="sd">&quot;&quot;&quot;Class definition for instance segmentation model entity used in OTX.&quot;&quot;&quot;</span>
 
+<span class="c1"># type: ignore[override]</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
@@ -303,7 +305,7 @@
 
 <div class="viewcode-block" id="OTXInstanceSegModel">
 <a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.model.instance_segmentation.html#otx.core.model.instance_segmentation.OTXInstanceSegModel">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">OTXInstanceSegModel</span><span class="p">(</span><span class="n">OTXModel</span><span class="p">[</span><span class="n">InstanceSegBatchDataEntity</span><span class="p">,</span> <span class="n">InstanceSegBatchPredEntity</span><span class="p">]):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">OTXInstanceSegModel</span><span class="p">(</span><span class="n">OTXModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for the Instance Segmentation models used in OTX.</span>
 
 <span class="sd">    Args:</span>
@@ -482,7 +484,7 @@
 
 <div class="viewcode-block" id="OTXInstanceSegModel.forward_tiles">
 <a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.model.instance_segmentation.html#otx.core.model.instance_segmentation.OTXInstanceSegModel.forward_tiles">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">forward_tiles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="n">OTXTileBatchDataEntity</span><span class="p">[</span><span class="n">InstanceSegBatchDataEntity</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">InstanceSegBatchPredEntity</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward_tiles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="n">OTXTileBatchDataEntity</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InstanceSegBatchPredEntity</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Unpack instance segmentation tiles.</span>
 
 <span class="sd">        Args:</span>
@@ -872,7 +874,7 @@
 <div class="viewcode-block" id="OVInstanceSegmentationModel">
 <a class="viewcode-back" href="../../../../guide/reference/_autosummary/otx.core.model.instance_segmentation.html#otx.core.model.instance_segmentation.OVInstanceSegmentationModel">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">OVInstanceSegmentationModel</span><span class="p">(</span>
-    <span class="n">OVModel</span><span class="p">[</span><span class="n">InstanceSegBatchDataEntity</span><span class="p">,</span> <span class="n">InstanceSegBatchPredEntity</span><span class="p">],</span>
+    <span class="n">OVModel</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Instance segmentation model compatible for OpenVINO IR inference.</span>
 
