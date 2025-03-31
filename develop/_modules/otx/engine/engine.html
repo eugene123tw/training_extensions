@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>otx.engine.engine &#8212; OpenVINO™ Training Extensions 2.4.0dev documentation</title>
+    <title>otx.engine.engine &#8212; OpenVINO™ Training Extensions 2.5.0dev documentation</title>
   
   
   
@@ -33,7 +33,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script src="../../../_static/documentation_options.js?v=66e02a33"></script>
+    <script src="../../../_static/documentation_options.js?v=9b901575"></script>
     <script src="../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -278,7 +278,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.config.device</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeviceConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.config.explain</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExplainConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.data.module</span><span class="w"> </span><span class="kn">import</span> <span class="n">OTXDataModule</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.model.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">OTXModel</span><span class="p">,</span> <span class="n">OVModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.model.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataInputParams</span><span class="p">,</span> <span class="n">OTXModel</span><span class="p">,</span> <span class="n">OVModel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">PathLike</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.types.device</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeviceType</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.types.export</span><span class="w"> </span><span class="kn">import</span> <span class="n">OTXExportFormatType</span>
@@ -400,8 +400,13 @@
         <span class="n">get_model_args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datamodule</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">get_model_args</span><span class="p">[</span><span class="s2">&quot;label_info&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datamodule</span><span class="o">.</span><span class="n">label_info</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">input_size</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datamodule</span><span class="o">.</span><span class="n">input_size</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">get_model_args</span><span class="p">[</span><span class="s2">&quot;input_size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">input_size</span><span class="p">,</span> <span class="n">input_size</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="n">input_size</span>
+            <span class="n">input_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datamodule</span><span class="o">.</span><span class="n">input_size</span>
+            <span class="n">get_model_args</span><span class="p">[</span><span class="s2">&quot;data_input_params&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">DataInputParams</span><span class="p">(</span>
+                <span class="n">input_size</span><span class="o">=</span><span class="n">input_size</span><span class="p">,</span>
+                <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_datamodule</span><span class="o">.</span><span class="n">input_mean</span><span class="p">,</span>
+                <span class="n">std</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_datamodule</span><span class="o">.</span><span class="n">input_std</span><span class="p">,</span>
+            <span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">:</span> <span class="n">OTXModel</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">model</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">OTXModel</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_configurator</span><span class="o">.</span><span class="n">get_model</span><span class="p">(</span><span class="o">**</span><span class="n">get_model_args</span><span class="p">)</span>
         <span class="p">)</span>
@@ -956,7 +961,6 @@
         <span class="n">checkpoint</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">datamodule</span><span class="p">:</span> <span class="n">EVAL_DATALOADERS</span> <span class="o">|</span> <span class="n">OTXDataModule</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">explain_config</span><span class="p">:</span> <span class="n">ExplainConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">dump</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Run XAI using the specified model and data (test subset).</span>
@@ -965,7 +969,6 @@
 <span class="sd">            checkpoint (PathLike | None, optional): The path to the checkpoint file to load the model from.</span>
 <span class="sd">            datamodule (EVAL_DATALOADERS | OTXDataModule | None, optional): The data module to use for predictions.</span>
 <span class="sd">            explain_config (ExplainConfig | None, optional): Config used to handle saliency maps.</span>
-<span class="sd">            dump (bool): Whether to dump &quot;saliency_map&quot; or not.</span>
 <span class="sd">            **kwargs: Additional keyword arguments for pl.Trainer configuration.</span>
 
 <span class="sd">        Returns:</span>
@@ -976,7 +979,6 @@
 <span class="sd">            ...     datamodule=OTXDataModule(),</span>
 <span class="sd">            ...     checkpoint=&lt;checkpoint/path&gt;,</span>
 <span class="sd">            ...     explain_config=ExplainConfig(),</span>
-<span class="sd">            ...     dump=True,</span>
 <span class="sd">            ... )</span>
 
 <span class="sd">        CLI Usage:</span>
@@ -999,7 +1001,6 @@
 <span class="sd">                ```</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">otx.algo.utils.xai_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-            <span class="n">dump_saliency_maps</span><span class="p">,</span>
             <span class="n">process_saliency_maps_in_pred_entity</span><span class="p">,</span>
             <span class="n">set_crop_padded_map_flag</span><span class="p">,</span>
         <span class="p">)</span>
@@ -1044,13 +1045,6 @@
         <span class="n">explain_config</span> <span class="o">=</span> <span class="n">set_crop_padded_map_flag</span><span class="p">(</span><span class="n">explain_config</span><span class="p">,</span> <span class="n">datamodule</span><span class="p">)</span>
 
         <span class="n">predict_result</span> <span class="o">=</span> <span class="n">process_saliency_maps_in_pred_entity</span><span class="p">(</span><span class="n">predict_result</span><span class="p">,</span> <span class="n">explain_config</span><span class="p">,</span> <span class="n">datamodule</span><span class="o">.</span><span class="n">label_info</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">dump</span><span class="p">:</span>
-            <span class="n">dump_saliency_maps</span><span class="p">(</span>
-                <span class="n">predict_result</span><span class="p">,</span>
-                <span class="n">explain_config</span><span class="p">,</span>
-                <span class="n">datamodule</span><span class="p">,</span>
-                <span class="n">output_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">work_dir</span><span class="p">),</span>
-            <span class="p">)</span>
         <span class="n">model</span><span class="o">.</span><span class="n">explain_mode</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="n">predict_result</span></div>
 

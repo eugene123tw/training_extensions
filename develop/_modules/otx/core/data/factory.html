@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>otx.core.data.factory &#8212; OpenVINO™ Training Extensions 2.4.0dev documentation</title>
+    <title>otx.core.data.factory &#8212; OpenVINO™ Training Extensions 2.5.0dev documentation</title>
   
   
   
@@ -33,7 +33,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
 
-    <script src="../../../../_static/documentation_options.js?v=66e02a33"></script>
+    <script src="../../../../_static/documentation_options.js?v=9b901575"></script>
     <script src="../../../../_static/doctools.js?v=888ff710"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -262,7 +262,6 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.config.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">VisualPromptingConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.types.image</span><span class="w"> </span><span class="kn">import</span> <span class="n">ImageColorChannel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.types.task</span><span class="w"> </span><span class="kn">import</span> <span class="n">OTXTaskType</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">otx.core.types.transformer_libs</span><span class="w"> </span><span class="kn">import</span> <span class="n">TransformLibType</span>
@@ -294,31 +293,6 @@
 
             <span class="k">return</span> <span class="n">TorchVisionTransformLib</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">transform_lib_type</span> <span class="o">==</span> <span class="n">TransformLibType</span><span class="o">.</span><span class="n">MMCV</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">.transform_libs.mmcv</span><span class="w"> </span><span class="kn">import</span> <span class="n">MMCVTransformLib</span>
-
-            <span class="k">return</span> <span class="n">MMCVTransformLib</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">transform_lib_type</span> <span class="o">==</span> <span class="n">TransformLibType</span><span class="o">.</span><span class="n">MMPRETRAIN</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">.transform_libs.mmpretrain</span><span class="w"> </span><span class="kn">import</span> <span class="n">MMPretrainTransformLib</span>
-
-            <span class="k">return</span> <span class="n">MMPretrainTransformLib</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">transform_lib_type</span> <span class="o">==</span> <span class="n">TransformLibType</span><span class="o">.</span><span class="n">MMDET</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">.transform_libs.mmdet</span><span class="w"> </span><span class="kn">import</span> <span class="n">MMDetTransformLib</span>
-
-            <span class="k">return</span> <span class="n">MMDetTransformLib</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">transform_lib_type</span> <span class="o">==</span> <span class="n">TransformLibType</span><span class="o">.</span><span class="n">MMSEG</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">.transform_libs.mmseg</span><span class="w"> </span><span class="kn">import</span> <span class="n">MMSegTransformLib</span>
-
-            <span class="k">return</span> <span class="n">MMSegTransformLib</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">transform_lib_type</span> <span class="o">==</span> <span class="n">TransformLibType</span><span class="o">.</span><span class="n">MMACTION</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">.transform_libs.mmaction</span><span class="w"> </span><span class="kn">import</span> <span class="n">MMActionTransformLib</span>
-
-            <span class="k">return</span> <span class="n">MMActionTransformLib</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">transform_lib_type</span><span class="p">)</span></div>
 </div>
 
@@ -341,10 +315,8 @@
         <span class="n">data_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">mem_cache_img_max_size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">image_color_channel</span><span class="p">:</span> <span class="n">ImageColorChannel</span> <span class="o">=</span> <span class="n">ImageColorChannel</span><span class="o">.</span><span class="n">RGB</span><span class="p">,</span>
-        <span class="n">stack_images</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">include_polygons</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">ignore_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">255</span><span class="p">,</span>
-        <span class="n">vpm_config</span><span class="p">:</span> <span class="n">VisualPromptingConfig</span> <span class="o">=</span> <span class="n">VisualPromptingConfig</span><span class="p">(),</span>  <span class="c1"># noqa: B008</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OTXDataset</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create OTXDataset.&quot;&quot;&quot;</span>
         <span class="n">transforms</span> <span class="o">=</span> <span class="n">TransformLibFactory</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">cfg_subset</span><span class="p">)</span>
@@ -355,7 +327,6 @@
             <span class="s2">&quot;mem_cache_handler&quot;</span><span class="p">:</span> <span class="n">mem_cache_handler</span><span class="p">,</span>
             <span class="s2">&quot;mem_cache_img_max_size&quot;</span><span class="p">:</span> <span class="n">mem_cache_img_max_size</span><span class="p">,</span>
             <span class="s2">&quot;image_color_channel&quot;</span><span class="p">:</span> <span class="n">image_color_channel</span><span class="p">,</span>
-            <span class="s2">&quot;stack_images&quot;</span><span class="p">:</span> <span class="n">stack_images</span><span class="p">,</span>
             <span class="s2">&quot;to_tv_image&quot;</span><span class="p">:</span> <span class="n">cfg_subset</span><span class="o">.</span><span class="n">to_tv_image</span><span class="p">,</span>
         <span class="p">}</span>
 
@@ -398,13 +369,6 @@
             <span class="kn">from</span><span class="w"> </span><span class="nn">.dataset.segmentation</span><span class="w"> </span><span class="kn">import</span> <span class="n">OTXSegmentationDataset</span>
 
             <span class="k">return</span> <span class="n">OTXSegmentationDataset</span><span class="p">(</span><span class="n">ignore_index</span><span class="o">=</span><span class="n">ignore_index</span><span class="p">,</span> <span class="o">**</span><span class="n">common_kwargs</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">task</span> <span class="o">==</span> <span class="n">OTXTaskType</span><span class="o">.</span><span class="n">VISUAL_PROMPTING</span><span class="p">:</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">.dataset.visual_prompting</span><span class="w"> </span><span class="kn">import</span> <span class="n">OTXVisualPromptingDataset</span>
-
-            <span class="n">use_bbox</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">vpm_config</span><span class="p">,</span> <span class="s2">&quot;use_bbox&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-            <span class="n">use_point</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">vpm_config</span><span class="p">,</span> <span class="s2">&quot;use_point&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">OTXVisualPromptingDataset</span><span class="p">(</span><span class="n">use_bbox</span><span class="o">=</span><span class="n">use_bbox</span><span class="p">,</span> <span class="n">use_point</span><span class="o">=</span><span class="n">use_point</span><span class="p">,</span> <span class="o">**</span><span class="n">common_kwargs</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">task</span> <span class="o">==</span> <span class="n">OTXTaskType</span><span class="o">.</span><span class="n">KEYPOINT_DETECTION</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">.dataset.keypoint_detection</span><span class="w"> </span><span class="kn">import</span> <span class="n">OTXKeypointDetectionDataset</span>
