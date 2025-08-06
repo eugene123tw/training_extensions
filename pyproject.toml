@@ -78,7 +78,6 @@ docs = [
     "furo",
     "myst-parser",
     "sphinx==7.2.6",
-    "pydata-sphinx-theme==0.12.0",
     "sphinx-tabs",
     "sphinx-panels",
     "sphinx-design",
@@ -88,6 +87,7 @@ docs = [
     "nbsphinx",
     "myst-parser>=2.0.0",
     "linkify-it-py",
+    "sphinx-book-theme",
 ]
 
 ci_tox = [
