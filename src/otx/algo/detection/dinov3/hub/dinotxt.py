@@ -14,6 +14,10 @@ from .backbones import dinov3_vitl16, Weights as BackboneWeights, convert_path_o
 from .utils import DINOV3_BASE_URL
 
 
+from otx.algo.detection.dinov3.eval.text.dinotxt_model import DINOTxt, DINOTxtConfig
+from otx.algo.detection.dinov3.eval.text.text_transformer import TextTransformer
+from otx.algo.detection.dinov3.eval.text.tokenizer import get_tokenizer
+
 class DINOTxtWeights(Enum):
     LVTD2300M = "LVTD2300M"
 
@@ -27,9 +31,7 @@ def dinov3_vitl16_dinotxt_tet1280d20h24l(
     bpe_path_or_url: str = "https://dl.fbaipublicfiles.com/dinov3/thirdparty/bpe_simple_vocab_16e6.txt.gz",
     check_hash: bool = False,
 ) -> Tuple[nn.Module, Any]:
-    from dinov3.eval.text.dinotxt_model import DINOTxt, DINOTxtConfig
-    from dinov3.eval.text.text_transformer import TextTransformer
-    from dinov3.eval.text.tokenizer import get_tokenizer
+    
 
     dinotxt_config = DINOTxtConfig(
         embed_dim=2048,
