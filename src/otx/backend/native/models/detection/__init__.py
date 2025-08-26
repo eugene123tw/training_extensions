@@ -10,5 +10,15 @@ from .rtdetr import RTDETR
 from .rtmdet import RTMDet
 from .ssd import SSD
 from .yolox import YOLOX
+from .dinov3 import DINOv3DETR
 
-__all__ = ["SSD", "YOLOX", "ATSS", "RTDETR", "RTMDet", "DFine", "DEIMDFine"]
+__all__ = [
+    "SSD",
+    "YOLOX",
+    "ATSS",
+    "RTDETR",
+    "RTMDet",
+    "DFine",
+    "DEIMDFine",
+    "DINOv3DETR",
+]

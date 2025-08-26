@@ -166,7 +166,8 @@ class HungarianMatcher(nn.Module):
         target_bboxes = output["target_boxes"]
 
         # Compute the L1 cost between boxes
-        return torch.cdist(pred_bboxes, target_bboxes, p=1) * cost_bbox
+        # "cdist_cuda" not implemented for 'Half
+        return torch.cdist(pred_bboxes.to(torch.float32), target_bboxes.to(torch.float32), p=1) * cost_bbox
 
     @torch.no_grad()
     def giou_cost(self, output: dict[str, Tensor], cost_giou: float | int) -> Tensor:

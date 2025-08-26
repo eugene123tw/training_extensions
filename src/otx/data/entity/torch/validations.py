@@ -208,7 +208,7 @@ class ValidateBatchMixin:
             msg = f"Image batch must be a torch tensor or list of tensors. Got {type(image_batch)}"
             raise TypeError(msg)
         if isinstance(image_batch, torch.Tensor):
-            if image_batch.dtype not in (torch.float32, torch.uint8):
+            if image_batch.dtype not in (torch.float32, torch.uint8, torch.bfloat16):
                 msg = f"Image batch must have dtype float32 or uint8. Found {image_batch.dtype}"
                 raise ValueError(msg)
             if image_batch.ndim != 4:
