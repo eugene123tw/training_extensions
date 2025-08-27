@@ -19,44 +19,63 @@ DatasetInfo = NamedTuple("DatasetInfo", [("name", str), ("path", Path), ("group"
 
 def dataset_collections():
     return [
-    DatasetInfo(
-        name="multiclass_tiny_pneumonia",
-        path=Path("multiclass_classification/mcls_tiny_pneumonia_12_6_200"),
-        group="tiny",
-    ),
-    DatasetInfo(
-        name="multiclass_tiny_cub_woodpecker",
-        path=Path("multiclass_classification/mcls_tiny_cub_woodpecker_24_12_200"),
-        group="tiny",
-    ),
-    DatasetInfo(
-        name="multiclass_small_flowers",
-        path=Path("multiclass_classification/mcls_small_flowers_60_12_200"),
-        group="small",
-    ),
-    DatasetInfo(
-        name="multiclass_small_eurosat",
-        path=Path("multiclass_classification/mcls_small_eurosat_80_40_200"),
-        group="small",
-    ),
-    DatasetInfo(
-        name="multiclass_medium_resisc",
-        path=Path("multiclass_classification/mcls_medium_resisc_500_100_400"),
-        group="medium",
-    ),
-    DatasetInfo(
-        name="multiclass_large_cub100",
-        path=Path("multiclass_classification/mcls_large_cub100_3764_900_1200"),
-        group="large",
-    ),
+        # DatasetInfo(
+        #     name="multiclass_tiny_pneumonia",
+        #     path=Path("multiclass_classification/mcls_tiny_pneumonia_12_6_200"),
+        #     group="tiny",
+        # ),
+        # DatasetInfo(
+        #     name="multiclass_tiny_cub_woodpecker",
+        #     path=Path("multiclass_classification/mcls_tiny_cub_woodpecker_24_12_200"),
+        #     group="tiny",
+        # ),
+        # DatasetInfo(
+        #     name="multiclass_small_flowers",
+        #     path=Path("multiclass_classification/mcls_small_flowers_60_12_200"),
+        #     group="small",
+        # ),
+        DatasetInfo(
+            name="multiclass_small_eurosat",
+            path=Path("multiclass_classification/mcls_small_eurosat_80_40_200"),
+            group="small",
+        ),
+        DatasetInfo(
+            name="multiclass_medium_resisc",
+            path=Path("multiclass_classification/mcls_medium_resisc_500_100_400"),
+            group="medium",
+        ),
+        # DatasetInfo(
+        #     name="multiclass_large_cub100",
+        #     path=Path("multiclass_classification/mcls_large_cub100_3764_900_1200"),
+        #     group="large",
+        # ),
 ]
 
 
-def main(dataset_root: Path, output_dir: Path):
+def main(dataset_root: Path, output_dir: Path, result_name: str):
     """Main function for zero-shot classification evaluation."""
+
+    mean = (109.65 , 104.805,  75.48)
+    std = (54.315, 39.78 , 36.465)
+
+    # or 
+    
+    # mean = [123.675, 116.28, 103.53]
+    # std = [58.395, 57.12, 57.375]
+
+
     dataset_infos = dataset_collections()
 
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Load DinoTXT model
+    print("\nLoading DinoTXT model...")
+    model, tokenizer = dinov3_vitl16_dinotxt_tet1280d20h24l(
+        # backbone_weights="/home/yuchunli/git/dinov3/weights/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth",
+        backbone_weights="/home/yuchunli/git/dinov3/weights/dinov3_vitl16_pretrain_sat493m-eadcf0ff.pth",
+        dinotxt_weights="/home/yuchunli/git/dinov3/weights/dinov3_vitl16_dinotxt_vision_head_and_text_encoder-a442d8f5.pth"
+    )
+    model = model.to(device).eval()
 
     results = {}
     for dataset_info in dataset_infos:
@@ -66,15 +85,7 @@ def main(dataset_root: Path, output_dir: Path):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         print(f"Using device: {device}")
-        print(f"Dataset: {dataset_path}")
-        
-        # 1. Load DinoTXT model
-        print("\nLoading DinoTXT model...")
-        model, tokenizer = dinov3_vitl16_dinotxt_tet1280d20h24l(
-            backbone_weights="weights/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth",
-            dinotxt_weights="weights/dinov3_vitl16_dinotxt_vision_head_and_text_encoder-a442d8f5.pth"
-        )
-        model = model.to(device).eval()
+        print(f"Dataset: {dataset_path}")    
         
         # 2. Load dataset
         print("Loading dataset...")
@@ -100,8 +111,8 @@ def main(dataset_root: Path, output_dir: Path):
                 {
                     "class_path": "torchvision.transforms.v2.Normalize",
                     "init_args": {
-                        "mean": [123.675, 116.28, 103.53],
-                        "std": [58.395, 57.12, 57.375]
+                        "mean": mean,
+                        "std": std
                     }
                 }
             ]
@@ -120,7 +131,7 @@ def main(dataset_root: Path, output_dir: Path):
         
         # 3. Create text prompts for zero-shot classification
         class_names = otx_dataset.label_info.label_names
-        text_prompts = [f"photo of {name.lower()}" for name in class_names]
+        text_prompts = [f"satellite photo of {name.lower()}" for name in class_names]
         
         print(f"Text prompts: {text_prompts}")
         
@@ -181,13 +192,14 @@ def main(dataset_root: Path, output_dir: Path):
 
         results[dataset_info.name] = metric_values
 
-    with open(output_dir / "results.json", "w") as f:
+    with open(output_dir / f"{result_name}.json", "w") as f:
         json.dump(results, f)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_root", type=Path, default=Path("/home/yuchunli/datasets/perf-benchmark-dataset"))
-    parser.add_argument("--output_dir", type=Path, default=Path("results"))
+    parser.add_argument("--output_dir", type=Path, default=Path("zero_shot_result"))
+    parser.add_argument("--result_name", type=str, default="satellite_prompt_satellite_backbone")
     args = parser.parse_args()
-    main(args.dataset_root, args.output_dir)
+    main(args.dataset_root, args.output_dir, args.result_name)

@@ -1,0 +1,9 @@
+{
+    "multiclass_tiny_pneumonia": {"accuracy": 0.5}, 
+    "multiclass_tiny_cub_woodpecker": {"accuracy": 0.9850000143051147}, 
+    "multiclass_small_flowers": {"accuracy": 0.8450000286102295}, 
+    "multiclass_small_eurosat": {"accuracy": 0.3799999952316284}, 
+    "multiclass_medium_resisc": {"accuracy": 0.4650000035762787}, 
+    "multiclass_large_cub100": {"accuracy": 0.8142493367195129},
+    "multiclass_large_eurosat": {"accuracy": 0.3799999952316284}
+}

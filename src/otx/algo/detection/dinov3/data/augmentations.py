@@ -9,7 +9,7 @@ import numpy as np
 from torch import nn
 from torchvision import transforms
 
-from dinov3.data.transforms import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, GaussianBlur, make_normalize_transform
+from otx.algo.detection.dinov3.data.transforms import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, GaussianBlur, make_normalize_transform
 
 logger = logging.getLogger("dinov3")
 

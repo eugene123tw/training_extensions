@@ -11,7 +11,7 @@ import numpy as np
 import torch
 from torch.utils.data.sampler import Sampler
 
-from dinov3.distributed import get_rank, get_world_size
+from otx.algo.detection.dinov3.distributed import get_rank, get_world_size
 
 
 class EpochSampler(Sampler):
